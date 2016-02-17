@@ -763,6 +763,10 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-project-info-reports-plugin</artifactId>
           <version>2.4</version>
+          <configuration>
+            <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
+            <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
+          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -817,7 +821,7 @@
               <version>[3.0.0,)</version>
             </requireMavenVersion>
             <requireJavaVersion>
-              <version>1.6</version>
+              <version>1.7</version>
             </requireJavaVersion>
           </rules>
         </configuration>

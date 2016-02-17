@@ -343,6 +343,7 @@
         <executions>
           <execution>
             <configuration>
+              <dependencyDetailsEnabled>false</dependencyDetailsEnabled>
               <dependencyLocationsEnabled>false</dependencyLocationsEnabled>
             </configuration>
             <goals>
