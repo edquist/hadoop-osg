@@ -160,7 +160,7 @@ Source7: hadoop-fuse-dfs.1
 Source8: hdfs.conf
 Source9: yarn.conf
 Source10: mapreduce.conf
-Source11: init.d.tmpl 
+Source11: init.d.tmpl
 Source12: hadoop-hdfs-namenode.svc
 Source13: hadoop-hdfs-datanode.svc
 Source14: hadoop-hdfs-secondarynamenode.svc
@@ -180,16 +180,46 @@ Source27: hadoop-0.20-mapreduce-zkfc.svc
 Source28: hadoop-0.20-mapreduce-jobtrackerha.svc
 Source29: %{name}-bigtop-packaging.tar.gz
 Source30: 0.20.default
+Source31: hadoop-fuse.te
 Buildroot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id} -u -n)
-BuildRequires: fuse-devel, fuse, cmake
+
+Patch0: mvn304.patch
+Patch1: javafuse.patch
+Patch2: libhdfs-soversion.patch
+Patch3: libhdfs-soversion-install.patch
+Patch4: fix_chown.patch
+Patch5: pom.xml.patch
+Patch6: 1184-extendable-client.patch
+Patch7: HDFS-5341.004.patch
+Patch8: 2006-HDFS-4997.patch
+
+
+BuildRequires: python >= 2.4
+BuildRequires: git
+BuildRequires: fuse-devel
+BuildRequires: fuse
+BuildRequires: automake
+BuildRequires: autoconf
+%if 0%{?rhel} >= 7
+BuildRequires: maven >= 3.0.0
+%else
+BuildRequires: maven3
+%endif
+BuildRequires: protobuf-compiler
+BuildRequires: cmake
+BuildRequires: java7-devel
+BuildRequires: jpackage-utils
+BuildRequires: /usr/lib/java-1.7.0
+
 Requires: coreutils, /usr/sbin/useradd, /usr/sbin/usermod, /sbin/chkconfig, /sbin/service, bigtop-utils >= 0.6, zookeeper >= 3.4.0
 Requires: psmisc, %{netcat_package}
 Requires: parquet
+Requires: java7
+Requires: jpackage-utils
+Requires: /usr/lib/java-1.7.0
 Conflicts: hadoop-0.20
-# Sadly, Sun/Oracle JDK in RPM form doesn't provide libjvm.so, which means we have
-# to set AutoReq to no in order to minimize confusion. Not ideal, but seems to work.
-# I wish there was a way to disable just one auto dependency (libjvm.so)
-AutoReq: no
+Provides: hadoop
+Obsoletes: hadoop-0.20 <= 0.20.2+737
 
 %if  %{?suse_version:1}0
 BuildRequires: pkg-config, libfuse2, libopenssl-devel, gcc-c++
@@ -311,8 +341,9 @@ located.
 Summary: The Hadoop namenode manages the block locations of HDFS files
 Group: System/Daemons
 Requires: %{name}-hdfs = %{version}-%{release}
-Requires(pre): %{name} = %{version}-%{release}
-Requires(pre): %{name}-hdfs = %{version}-%{release}
+# Requires(pre): %{name} = %{version}-%{release}
+# Requires(pre): %{name}-hdfs = %{version}-%{release}
+Obsoletes: hadoop-0.20-namenode <= 0.20.2+737
 
 %description hdfs-namenode
 The Hadoop Distributed Filesystem (HDFS) requires one unique server, the
@@ -323,8 +354,9 @@ namenode, which manages the block locations of files on the filesystem.
 Summary: Hadoop Secondary namenode
 Group: System/Daemons
 Requires: %{name}-hdfs = %{version}-%{release}
-Requires(pre): %{name} = %{version}-%{release}
-Requires(pre): %{name}-hdfs = %{version}-%{release}
+# Requires(pre): %{name} = %{version}-%{release}
+# Requires(pre): %{name}-hdfs = %{version}-%{release}
+Obsoletes: hadoop-0.20-secondarynamenode <= 0.20.2+737
 
 %description hdfs-secondarynamenode
 The Secondary Name Node periodically compacts the Name Node EditLog
@@ -360,8 +392,9 @@ separate machines in the cluster.
 Summary: Hadoop Data Node
 Group: System/Daemons
 Requires: %{name}-hdfs = %{version}-%{release}
-Requires(pre): %{name} = %{version}-%{release}
-Requires(pre): %{name}-hdfs = %{version}-%{release}
+# Requires(pre): %{name} = %{version}-%{release}
+# Requires(pre): %{name}-hdfs = %{version}-%{release}
+Obsoletes: hadoop-0.20-datanode <= 0.20.2+737
 
 %description hdfs-datanode
 The Data Nodes in the Hadoop Cluster are responsible for serving up
@@ -401,26 +434,26 @@ The NodeManager is the per-machine framework agent who is responsible for
 containers, monitoring their resource usage (cpu, memory, disk, network) and
 reporting the same to the ResourceManager/Scheduler.
 
-%package yarn-proxyserver
-Summary: Yarn Web Proxy
-Group: System/Daemons
-Requires: %{name}-yarn = %{version}-%{release}
-Requires(pre): %{name} = %{version}-%{release}
-Requires(pre): %{name}-yarn = %{version}-%{release}
+#%package yarn-proxyserver
+#Summary: Yarn Web Proxy
+#Group: System/Daemons
+#Requires: %{name}-yarn = %{version}-%{release}
+#Requires(pre): %{name} = %{version}-%{release}
+#Requires(pre): %{name}-yarn = %{version}-%{release}
 
-%description yarn-proxyserver
-The web proxy server sits in front of the YARN application master web UI.
+#%description yarn-proxyserver
+#The web proxy server sits in front of the YARN application master web UI.
 
-%package mapreduce-historyserver
-Summary: MapReduce History Server
-Group: System/Daemons
-Requires: %{name}-mapreduce = %{version}-%{release}
-Requires: %{name}-hdfs = %{version}-%{release}
-Requires(pre): %{name} = %{version}-%{release}
-Requires(pre): %{name}-mapreduce = %{version}-%{release}
+#%package mapreduce-historyserver
+#Summary: MapReduce History Server
+#Group: System/Daemons
+#Requires: %{name}-mapreduce = %{version}-%{release}
+#Requires: %{name}-hdfs = %{version}-%{release}
+#Requires(pre): %{name} = %{version}-%{release}
+#Requires(pre): %{name}-mapreduce = %{version}-%{release}
 
-%description mapreduce-historyserver
-The History server keeps records of the different activities being performed on a Apache Hadoop cluster
+#%description mapreduce-historyserver
+#The History server keeps records of the different activities being performed on a Apache Hadoop cluster
 
 %package 0.20-mapreduce-jobtracker
 Summary: Hadoop JobTracker
@@ -494,10 +527,14 @@ Summary: Hadoop client side dependencies
 Group: System/Daemons
 Requires: %{name} = %{version}-%{release}
 Requires: %{name}-hdfs = %{version}-%{release}
-Requires: %{name}-yarn = %{version}-%{release}
-Requires: %{name}-mapreduce = %{version}-%{release}
-Requires: %{name}-0.20-mapreduce = %{version}-%{release}
-Requires(pre): %{name}-0.20-mapreduce = %{version}-%{release}
+#disabling mapreduce in the client, we don't need it
+#Requires: %{name}-yarn = %{version}-%{release}
+#Requires: %{name}-mapreduce = %{version}-%{release}
+#I have no idea why it requires this, disabling for now
+#Requires: %{name}-yarn = %{version}-%{release}
+#Requires: %{name}-mapreduce = %{version}-%{release}
+#Requires: %{name}-0.20-mapreduce = %{version}-%{release}
+#Requires(pre): %{name}-0.20-mapreduce = %{version}-%{release}
 
 %description client
 Installation of this package will provide you with all the dependencies for Hadoop clients.
@@ -528,6 +565,7 @@ Documentation for Hadoop
 Summary: Hadoop Filesystem Library
 Group: Development/Libraries
 Requires: %{name}-hdfs = %{version}-%{release}
+Obsoletes: hadoop-0.20-libhdfs <= 0.20.2+737
 # TODO: reconcile libjvm
 AutoReq: no
 
@@ -542,6 +580,9 @@ Requires: %{name} = %{version}-%{release}
 Requires: %{name}-libhdfs = %{version}-%{release}
 Requires: %{name}-client = %{version}-%{release}
 Requires: fuse
+Requires: java7-devel
+Obsoletes: hadoop-0.20-osg <= 0.20.2+737
+Obsoletes: hadoop-0.20-fuse <= 0.20.2+737
 AutoReq: no
 
 %if %{?suse_version:1}0
@@ -555,16 +596,62 @@ Requires: fuse-libs
 These projects (enumerated below) allow HDFS to be mounted (on most flavors of Unix) as a standard file system using
 
 
+%define selinux_variants mls strict targeted
+%global selinux_policyver %(%{__sed} -e 's,.*selinux-policy-\\([^/]*\\)/.*,\\1,' /usr/share/selinux/devel/policyhelp || echo 0.0.0)
+
+%package hdfs-fuse-selinux
+Summary: SELinux policy files for fuse mount
+Group:          System Environment/Daemons
+BuildRequires:  checkpolicy selinux-policy-devel hardlink selinux-policy-targeted
+Requires: %{name} = %{version}-%{release}
+Requires:       selinux-policy >= %{selinux_policyver}
+Requires(post):         /usr/sbin/semodule /usr/sbin/semanage /sbin/fixfiles
+Requires(preun):        /sbin/service /usr/sbin/semodule /usr/sbin/semanage /sbin/fixfiles
+Requires(postun):       /usr/sbin/semodule
+Obsoletes: hadoop-0.20-fuse-selinux <= 0.20.2+737
+
+%description hdfs-fuse-selinux
+selinux policy files for the Hadoop fuse hdfs mounts
+
+
 %prep
 %setup -n %{name}-%{hadoop_patched_version}
 tar -C `dirname %{SOURCE29}` -xzf %{SOURCE29}
+pushd `dirname %{SOURCE29}`
+%if 0%{?rhel} <= 6
+%patch0 -p1
+%endif
+%patch1 -p1
+%patch3 -p1
+popd
+%patch2 -p0
+%patch4 -p0
+%patch5 -p0
+%patch6 -p1
+%patch7 -p1
+%patch8 -p0
 
 %build
 # This assumes that you installed Java JDK 6 and set JAVA_HOME
 # This assumes that you installed Java JDK 5 and set JAVA5_HOME
 # This assumes that you installed Forrest and set FORREST_HOME
 
+# Build the selinux policy file
+mkdir SELinux
+cp %{SOURCE31} SELinux/%{name}.te
+pushd SELinux
+for variant in %{selinux_variants}
+do
+    make NAME=${variant} -f %{_datadir}/selinux/devel/Makefile
+    mv %{name}.pp %{name}.pp.${variant}
+    make NAME=${variant} -f %{_datadir}/selinux/devel/Makefile clean
+done
+popd
+
+
+export JAVA_HOME=%{java_home}
 env FULL_VERSION=%{hadoop_patched_version} HADOOP_VERSION=%{hadoop_version} HADOOP_ARCH=%{hadoop_arch} bash %{SOURCE1}
+
 
 %clean
 %__rm -rf $RPM_BUILD_ROOT
@@ -634,6 +721,22 @@ done
 # FIXME: we need to think how to get rid of the following file
 %__cp %{SOURCE30} $RPM_BUILD_ROOT/etc/default/hadoop-0.20-mapreduce
 
+%ifarch noarch
+%else
+
+# Install selinux policies
+pushd SELinux
+for variant in %{selinux_variants}
+do
+    install -d $RPM_BUILD_ROOT%{_datadir}/selinux/${variant}
+    install -p -m 644 %{name}.pp.${variant} \
+           $RPM_BUILD_ROOT%{_datadir}/selinux/${variant}/%{name}.pp
+done
+popd
+# Hardlink identical policy module packages together
+/usr/sbin/hardlink -cv $RPM_BUILD_ROOT%{_datadir}/selinux
+%endif
+
 # /var/lib/*/cache
 %__install -d -m 1777 $RPM_BUILD_ROOT/%{state_yarn}/cache
 %__install -d -m 1777 $RPM_BUILD_ROOT/%{state_hdfs}/cache
@@ -651,22 +754,38 @@ done
 
 %pre
 getent group hadoop >/dev/null || groupadd -r hadoop
+ alternatives --remove hadoop-default /usr/bin/hadoop-0.20 || true
+ alternatives --remove hadoop-0.20-conf /etc/hadoop-0.20/conf.empty || true
+ alternatives --remove hadoop-0.20-conf /etc/hadoop-0.20/conf.osg || true
 
 %pre hdfs
 getent group hdfs >/dev/null   || groupadd -r hdfs
-getent passwd hdfs >/dev/null || /usr/sbin/useradd --comment "Hadoop HDFS" --shell /bin/bash -M -r -g hdfs -G hadoop --home %{state_hdfs} hdfs
+getent passwd hdfs >/dev/null || /usr/sbin/useradd --comment "Hadoop HDFS" --shell /bin/bash -M -r -g hdfs --home %{state_hdfs} hdfs
+ alternatives --remove hadoop-default /usr/bin/hadoop-0.20 || true
+ alternatives --remove hadoop-0.20-conf /etc/hadoop-0.20/conf.empty || true
+ alternatives --remove hadoop-0.20-conf /etc/hadoop-0.20/conf.osg || true
 
-%pre httpfs 
+%pre client
+ alternatives --remove hadoop-default /usr/bin/hadoop-0.20 || true
+ alternatives --remove hadoop-0.20-conf /etc/hadoop-0.20/conf.empty || true
+ alternatives --remove hadoop-0.20-conf /etc/hadoop-0.20/conf.osg || true
+
+%pre libhdfs
+ alternatives --remove hadoop-default /usr/bin/hadoop-0.20 || true
+ alternatives --remove hadoop-0.20-conf /etc/hadoop-0.20/conf.empty || true
+ alternatives --remove hadoop-0.20-conf /etc/hadoop-0.20/conf.osg || true
+
+%pre httpfs
 getent group httpfs >/dev/null   || groupadd -r httpfs
-getent passwd httpfs >/dev/null || /usr/sbin/useradd --comment "Hadoop HTTPFS" --shell /bin/bash -M -r -g httpfs -G httpfs --home %{run_httpfs} httpfs
+getent passwd httpfs >/dev/null || /usr/sbin/useradd --comment "Hadoop HTTPFS" --shell /bin/bash -M -r -g httpfs --home %{run_httpfs} httpfs
 
-%pre yarn
-getent group yarn >/dev/null   || groupadd -r yarn
-getent passwd yarn >/dev/null || /usr/sbin/useradd --comment "Hadoop Yarn" --shell /bin/bash -M -r -g yarn -G hadoop --home %{state_yarn} yarn
+#%pre yarn
+#getent group yarn >/dev/null   || groupadd -r yarn
+#getent passwd yarn >/dev/null || /usr/sbin/useradd --comment "Hadoop Yarn" --shell /bin/bash -M -r -g yarn -G hadoop --home %{state_yarn} yarn
 
-%pre mapreduce
-getent group mapred >/dev/null   || groupadd -r mapred
-getent passwd mapred >/dev/null || /usr/sbin/useradd --comment "Hadoop MapReduce" --shell /bin/bash -M -r -g mapred -G hadoop --home %{state_mapreduce} mapred
+#%pre mapreduce
+#getent group mapred >/dev/null   || groupadd -r mapred
+#getent passwd mapred >/dev/null || /usr/sbin/useradd --comment "Hadoop MapReduce" --shell /bin/bash -M -r -g mapred -G hadoop --home %{state_mapreduce} mapred
 
 %pre 0.20-mapreduce
 getent group mapred >/dev/null || groupadd -r mapred
@@ -675,9 +794,17 @@ getent passwd mapred >/dev/null || /usr/sbin/useradd --comment "Hadoop MapReduce
 %post
 %{alternatives_cmd} --install %{config_hadoop} %{name}-conf %{etc_hadoop}/conf.empty 10
 
+# Add "httpfs" user to the "hadoop" group. This is in %%post because it needs to
+# be done after the "hadoop" group is created, i.e. after "hadoop"'s %%pre.
 %post httpfs
+getent group hadoop >/dev/null && /usr/sbin/usermod -G hadoop httpfs || true
 %{alternatives_cmd} --install %{config_httpfs} %{name}-httpfs-conf %{etc_httpfs}/conf.empty 10
 chkconfig --add %{name}-httpfs
+
+# Add "hdfs" user to the "hadoop" group. This is in %%post because it needs to
+# be done after the "hadoop" group is created, i.e. after "hadoop"'s %%pre.
+%post hdfs
+getent group hadoop >/dev/null && /usr/sbin/usermod -G hadoop hdfs || true
 
 %preun
 if [ "$1" = 0 ]; then
@@ -694,6 +821,51 @@ fi
 %postun httpfs
 if [ $1 -ge 1 ]; then
   service %{name}-httpfs condrestart >/dev/null 2>&1
+fi
+
+%post libhdfs
+/sbin/ldconfig
+# Force symlinks to be created if they are not
+#   Otherwise shared linking can be broken from hadoop-0.20 to hadoop 2.0.0
+if [ $1 -gt 0 ]; then
+    for link in %{_libdir}/libhdfs.so.0 %{_libdir}/libhdfs.so.0.0; do
+        [[ ! -e $link ]] && ln -s %{_libdir}/libhdfs.so.0.0.0 $link || :
+    done
+fi
+
+
+%postun libhdfs
+/sbin/ldconfig
+if [ $1 -eq 0 ]; then
+    # Now delete symlinks
+    for link in %{_libdir}/libhdfs.so.0 %{_libdir}/libhdfs.so.0.0; do
+        [[ -L $link ]] && rm -f $link || :
+    done
+fi
+
+
+%post hdfs-fuse-selinux
+# Install SELinux policy modules
+for selinuxvariant in %{selinux_variants}
+do
+  /usr/sbin/semodule -s ${selinuxvariant} -i \
+    %{_datadir}/selinux/${selinuxvariant}/%{name}.pp &> /dev/null || :
+done
+
+%preun hdfs-fuse-selinux
+if [ "$1" -lt "1" ] ; then
+    for variant in %{selinux_variants} ; do
+        /usr/sbin/semodule -s ${variant} -r %{name} &> /dev/null || :
+    done
+fi
+
+%postun hdfs-fuse-selinux
+if [ "$1" -ge "1" ] ; then
+    # Replace the module if it is already loaded. semodule -u also
+    # checks the module version
+    for variant in %{selinux_variants} ; do
+        /usr/sbin/semodule -u %{_datadir}/selinux/${variant}/%{name}.pp || :
+    done
 fi
 
 
@@ -796,12 +968,8 @@ chkconfig --add %{name}-%1 \
 \
 %preun %1 \
 if [ $1 = 0 ]; then \
-  service %{name}-%1 stop > /dev/null 2>&1 \
-  chkconfig --del %{name}-%1 \
-fi \
-%postun %1 \
-if [ $1 -ge 1 ]; then \
-  service %{name}-%1 condrestart >/dev/null 2>&1 \
+  service %{name}-%1 stop > /dev/null 2>&1 || :\
+  chkconfig --del %{name}-%1 || :\
 fi
 
 %service_macro hdfs-namenode
@@ -809,15 +977,15 @@ fi
 %service_macro hdfs-zkfc
 %service_macro hdfs-journalnode
 %service_macro hdfs-datanode
-%service_macro yarn-resourcemanager
-%service_macro yarn-nodemanager
-%service_macro yarn-proxyserver
-%service_macro mapreduce-historyserver
-%service_macro 0.20-mapreduce-jobtracker
-%service_macro 0.20-mapreduce-tasktracker
-%service_macro 0.20-mapreduce-zkfc
-%service_macro 0.20-mapreduce-jobtrackerha
 
+#service_macro yarn-resourcemanager
+#service_macro yarn-nodemanager
+#service_macro yarn-proxyserver
+#service_macro mapreduce-historyserver
+#service_macro 0.20-mapreduce-jobtracker
+#service_macro 0.20-mapreduce-tasktracker
+#service_macro 0.20-mapreduce-zkfc
+#service_macro 0.20-mapreduce-jobtrackerha
 
 # Pseudo-distributed Hadoop installation
 %post conf-pseudo
@@ -874,3 +1042,70 @@ fi
 # %{man_hadoop}/man1/%{hadoop_name}.1.gz
 %attr(0775,root,hadoop) /var/run/hadoop-0.20-mapreduce
 %attr(0775,root,hadoop) /var/log/hadoop-0.20-mapreduce
+
+%files hdfs-fuse-selinux
+%defattr(-,root,root,-)
+%doc SELinux/*.??
+%{_datadir}/selinux/*/%{name}.pp
+
+
+%changelog
+* Sat Jan 16 2016 Carl Edquist <edquist@cs.wisc.edu> - 2.0.0+545-1.cdh4.1.1.p0.22
+- Build for EL7 (SOFTWARE-2162)
+
+* Thu Apr 10 2014 Edgar Fajardo <efajardo@physics.ucsd.edu> - 2.0.0+545-1.cdh4.1.1.p0.21
+- Patch for error codes don't seem to be working HDFS-4997.patch SOFTWARE-2006
+
+* Thu Apr 10 2014 Edgar Fajardo <efajardo@physics.ucsd.edu> - 2.0.0+545-1.cdh4.1.1.p0.20
+- Adding a patch for large datanodes time out during block reports
+- Credit to Erik Gough for providing the patch
+
+* Tue Nov 12 2013 Matyas Selmeci <matyas@cs.wisc.edu> 2.0.0+545-1.cdh4.1.1.p0.19
+- Build with Jeff Dost's extendable client patch (SOFTWARE-1184)
+
+* Thu May 23 2013 Matyas Selmeci <matyas@cs.wisc.edu> - 2.0.0+545-1.cdh4.1.1.p0.18
+- Fix creation of hdfs user in pre script
+- Fix creation of httpfs user in pre script
+
+* Tue May 21 2013 Matyas Selmeci <matyas@cs.wisc.edu> - 2.0.0+545-1.cdh4.1.1.p0.17
+- Fix libhdfs postun script to not remove symlinks on upgrades
+- Turn AutoReq back on
+
+* Mon May 20 2013 Matyas Selmeci <matyas@cs.wisc.edu> - 2.0.0+545-1.cdh4.1.1.p0.16
+- Add java7-devel dependency to hdfs-fuse subpackage -- needed for libjvm.so
+
+* Thu May 16 2013 Matyas Selmeci <matyas@cs.wisc.edu> - 2.0.0+545-1.cdh4.1.1.p0.15
+- Rebuild with java7
+
+* Fri Dec 28 2012 Brian Bockelman <bbockelm@cse.unl.edu> - 2.0.0+545-1.cdh4.1.1.p0.14
+- Fix chown implementation in FUSE.
+
+* Mon Nov 26 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+545-1.cdh4.1.1.p0.13
+- Fixing libhdfs obsoletes clauses
+
+* Mon Nov 26 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+545-1.cdh4.1.1.p0.12
+- Adding patches to fix libhdfs 
+-- Credit to Brian Bockelman for providing the patches
+
+* Wed Nov 21 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+545-1.cdh4.1.1.p0.11
+- Forcing libhdfs symlinks to be created to fix linking on shared libs
+
+* Thu Oct 18 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+545-1.cdh4.1.1.p0.10
+- Adding ldconfig and requires java
+
+* Thu Oct 18 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+545-1.cdh4.1.1.p0.6
+- Repackaging for CDH4.1
+
+* Thu Oct 4 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+88-1.cdh4.0.0.p0.39
+- Got rid of postun script since it was failing.
+
+* Tue Aug 7 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+88-1.cdh4.0.0.p0.33
+- Changed hadoop-fuse default JAVA_HOME changes to a patch instead
+- Added config path to classpath so fuse picks up default replication etc
+
+* Wed Aug 1 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+88-1.cdh4.0.0.p0.31
+- Changed hadoop init scripts to be off by default
+- Added JAVA_HOME to hadoop-fuse default
+
+* Tue Jul 17 2012 Doug Strain <dstrain@fnal.gov> - 2.0.0+88-1.cdh4.0.0.p0.30
+- Initial packaging of Hadoop for OSG (based on Cloudera CDH4)
