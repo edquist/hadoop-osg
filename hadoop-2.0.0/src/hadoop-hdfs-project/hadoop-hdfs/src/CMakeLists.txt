@@ -92,7 +92,7 @@ target_link_dual_libraries(hdfs
     ${JAVA_JVM_LIBRARY}
 )
 dual_output_directory(hdfs target/usr/local/lib)
-set(LIBHDFS_VERSION "0.0.0")
+set(LIBHDFS_VERSION "0")
 set_target_properties(hdfs PROPERTIES
     SOVERSION ${LIBHDFS_VERSION})
 
