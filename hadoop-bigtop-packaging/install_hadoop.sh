@@ -310,6 +310,9 @@ done
 CLASSPATH+="\${HADOOP_CONF_DIR:-\${HADOOP_HOME}/etc/hadoop}"
 
 
+#OSG change: needed to pick up xml defaults
+CLASSPATH="/etc/hadoop/conf:\$CLASSPATH"
+
 env CLASSPATH="\${CLASSPATH}" \${HADOOP_HOME}/bin/fuse_dfs \$@
 EOF
 
