@@ -560,7 +560,7 @@ public class DFSClient implements java.io.Closeable {
     return dfsClientConf.connectToDnViaHostname;
   }
 
-  void checkOpen() throws IOException {
+  public void checkOpen() throws IOException {
     if (!clientRunning) {
       IOException result = new IOException("Filesystem closed");
       throw result;
@@ -2264,5 +2264,9 @@ public class DFSClient implements java.io.Closeable {
 
   public boolean useLegacyBlockReaderLocal() {
     return shouldUseLegacyBlockReaderLocal;
+  }
+  
+  public FileSystem.Statistics getStats() {
+    return stats;
   }
 }
