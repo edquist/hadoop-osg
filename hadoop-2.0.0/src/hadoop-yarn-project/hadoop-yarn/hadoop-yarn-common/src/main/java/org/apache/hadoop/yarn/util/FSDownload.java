@@ -25,6 +25,7 @@ import java.net.URISyntaxException;
 import java.security.PrivilegedExceptionAction;
 import java.util.Random;
 import java.util.concurrent.Callable;
+import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -36,6 +37,7 @@ import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Options.Rename;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.util.RunJar;
 import org.apache.hadoop.yarn.api.records.LocalResource;
@@ -82,6 +84,92 @@ public class FSDownload implements Callable<Path> {
     return resource;
   }
 
+  private void createDir(Path path, FsPermission perm) throws IOException {
+    files.mkdir(path, perm, false);
+    if (!perm.equals(files.getUMask().applyUMask(perm))) {
+      files.setPermission(path, perm);
+    }
+  }
+
+  /**
+   * Returns a boolean to denote whether a cache file is visible to all(public)
+   * or not
+   * @param conf
+   * @param uri
+   * @return true if the path in the uri is visible to all, false otherwise
+   * @throws IOException
+   */
+  private static boolean isPublic(FileSystem fs, Path current) throws IOException {
+    current = fs.makeQualified(current);
+    //the leaf level file should be readable by others
+    if (!checkPublicPermsForAll(fs, current, FsAction.READ_EXECUTE, FsAction.READ)) {
+      return false;
+    }
+    return ancestorsHaveExecutePermissions(fs, current.getParent());
+  }
+
+  private static boolean checkPublicPermsForAll(FileSystem fs, Path current, 
+      FsAction dir, FsAction file) 
+    throws IOException {
+    return checkPublicPermsForAll(fs, fs.getFileStatus(current), dir, file);
+  }
+    
+  private static boolean checkPublicPermsForAll(FileSystem fs, 
+        FileStatus status, FsAction dir, FsAction file) 
+    throws IOException {
+    FsPermission perms = status.getPermission();
+    FsAction otherAction = perms.getOtherAction();
+    if (status.isDirectory()) {
+      if (!otherAction.implies(dir)) {
+        return false;
+      }
+      
+      for (FileStatus child : fs.listStatus(status.getPath())) {
+        if(!checkPublicPermsForAll(fs, child, dir, file)) {
+          return false;
+        }
+      }
+      return true;
+    }
+    return (otherAction.implies(file));
+  }
+
+  /**
+   * Returns true if all ancestors of the specified path have the 'execute'
+   * permission set for all users (i.e. that other users can traverse
+   * the directory heirarchy to the given path)
+   */
+  private static boolean ancestorsHaveExecutePermissions(FileSystem fs, Path path)
+    throws IOException {
+    Path current = path;
+    while (current != null) {
+      //the subdirs in the path should have execute permissions for others
+      if (!checkPermissionOfOther(fs, current, FsAction.EXECUTE)) {
+        return false;
+      }
+      current = current.getParent();
+    }
+    return true;
+  }
+
+  /**
+   * Checks for a given path whether the Other permissions on it 
+   * imply the permission in the passed FsAction
+   * @param fs
+   * @param path
+   * @param action
+   * @return true if the path in the uri is visible to all, false otherwise
+   * @throws IOException
+   */
+  private static boolean checkPermissionOfOther(FileSystem fs, Path path,
+      FsAction action) throws IOException {
+    FileStatus status = fs.getFileStatus(path);
+    FsPermission perms = status.getPermission();
+    FsAction otherAction = perms.getOtherAction();
+    return otherAction.implies(action);
+  }
+
+  
   private Path copy(Path sCopy, Path dstdir) throws IOException {
     FileSystem sourceFs = sCopy.getFileSystem(conf);
     Path dCopy = new Path(dstdir, sCopy.getName() + ".tmp");
@@ -91,14 +179,21 @@ public class FSDownload implements Callable<Path> {
           " changed on src filesystem (expected " + resource.getTimestamp() +
           ", was " + sStat.getModificationTime());
     }
-
+    if (resource.getVisibility() == LocalResourceVisibility.PUBLIC) {
+      if (!isPublic(sourceFs, sCopy)) {
+        throw new IOException("Resource " + sCopy +
+            " is not publicly accessable and as such cannot be part of the" +
+            " public cache.");
+      }
+    }
+    
     sourceFs.copyToLocalFile(sCopy, dCopy);
     return dCopy;
   }
 
-  private long unpack(File localrsrc, File dst) throws IOException {
+  private long unpack(File localrsrc, File dst, Pattern pattern) throws IOException {
     switch (resource.getType()) {
-    case ARCHIVE:
+    case ARCHIVE: {
       String lowerDst = dst.getName().toLowerCase();
       if (lowerDst.endsWith(".jar")) {
         RunJar.unJar(localrsrc, dst);
@@ -115,7 +210,39 @@ public class FSDownload implements Callable<Path> {
               + "] to [" + dst + "]");
         }
       }
-      break;
+    }
+    break;
+    case PATTERN: {
+      String lowerDst = dst.getName().toLowerCase();
+      if (lowerDst.endsWith(".jar")) {
+        RunJar.unJar(localrsrc, dst, pattern);
+        File newDst = new File(dst, dst.getName());
+        if (!dst.exists() && !dst.mkdir()) {
+          throw new IOException("Unable to create directory: [" + dst + "]");
+        }
+        if (!localrsrc.renameTo(newDst)) {
+          throw new IOException("Unable to rename file: [" + localrsrc
+              + "] to [" + newDst + "]");
+        }
+      } else if (lowerDst.endsWith(".zip")) {
+        LOG.warn("Treating [" + localrsrc + "] as an archive even though it " +
+        		"was specified as PATTERN");
+        FileUtil.unZip(localrsrc, dst);
+      } else if (lowerDst.endsWith(".tar.gz") ||
+                 lowerDst.endsWith(".tgz") ||
+                 lowerDst.endsWith(".tar")) {
+        LOG.warn("Treating [" + localrsrc + "] as an archive even though it " +
+        "was specified as PATTERN");
+        FileUtil.unTar(localrsrc, dst);
+      } else {
+        LOG.warn("Cannot unpack " + localrsrc);
+        if (!localrsrc.renameTo(dst)) {
+          throw new IOException("Unable to rename file: [" + localrsrc
+              + "] to [" + dst + "]");
+        }
+      }
+    }
+    break;
     case FILE:
     default:
       if (!localrsrc.renameTo(dst)) {
@@ -144,9 +271,9 @@ public class FSDownload implements Callable<Path> {
     } while (files.util().exists(tmp));
     destDirPath = tmp;
 
-    files.mkdir(destDirPath, cachePerms, false);
+    createDir(destDirPath, cachePerms);
     final Path dst_work = new Path(destDirPath + "_tmp");
-    files.mkdir(dst_work, cachePerms, false);
+    createDir(dst_work, cachePerms);
 
     Path dFinal = files.makeQualified(new Path(dst_work, sCopy.getName()));
     try {
@@ -156,8 +283,13 @@ public class FSDownload implements Callable<Path> {
             public Path run() throws Exception {
               return files.makeQualified(copy(sCopy, dst_work));
             };
-      });
-      unpack(new File(dTmp.toUri()), new File(dFinal.toUri()));
+          });
+      Pattern pattern = null;
+      String p = resource.getPattern();
+      if(p != null) {
+        pattern = Pattern.compile(p);
+      }
+      unpack(new File(dTmp.toUri()), new File(dFinal.toUri()), pattern);
       changePermissions(dFinal.getFileSystem(conf), dFinal);
       files.rename(dst_work, destDirPath, Rename.OVERWRITE);
     } catch (Exception e) {

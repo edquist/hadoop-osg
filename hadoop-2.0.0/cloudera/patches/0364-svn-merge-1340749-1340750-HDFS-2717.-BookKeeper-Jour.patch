@@ -1,7 +1,7 @@
 From a946b6551d83768c537dbf2a9653871e5d8e5bf6 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:25:36 -0700
-Subject: [PATCH 364/545] svn merge 1340749:1340750 HDFS-2717. BookKeeper Journal output stream doesn't check addComplete rc. Contributed by Ivan Kelly.
+Subject: [PATCH 0364/1612] svn merge 1340749:1340750 HDFS-2717. BookKeeper Journal output stream doesn't check addComplete rc. Contributed by Ivan Kelly.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1340754 13f79535-47bb-0310-9956-ffa450edef68
 

@@ -1,0 +1,55 @@
+From 6a45927605c974ad193b2aa9b6be8607d305ae4c Mon Sep 17 00:00:00 2001
+From: Sanford Ryza <sandy@apache.org>
+Date: Fri, 1 Nov 2013 08:51:54 +0000
+Subject: [PATCH 1507/1612] MAPREDUCE-5601. ShuffleHandler fadvises file regions as DONTNEED even when fetch fails (Sandy Ryza)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1537855 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit c4e82a8d57e3e0416cd22febe7766b8203cad096)
+---
+ .../apache/hadoop/mapred/FadvisedFileRegion.java   |    9 ++++++++-
+ .../org/apache/hadoop/mapred/ShuffleHandler.java   |    3 +++
+ 2 files changed, 11 insertions(+), 1 deletions(-)
+
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/FadvisedFileRegion.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/FadvisedFileRegion.java
+index 6ccbe25..fd880b7 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/FadvisedFileRegion.java
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/FadvisedFileRegion.java
+@@ -69,6 +69,14 @@ public class FadvisedFileRegion extends DefaultFileRegion {
+     if (readaheadRequest != null) {
+       readaheadRequest.cancel();
+     }
++    super.releaseExternalResources();
++  }
++  
++  /**
++   * Call when the transfer completes successfully so we can advise the OS that
++   * we don't need the region to be cached anymore.
++   */
++  public void transferSuccessful() {
+     if (manageOsCache && getCount() > 0) {
+       try {
+         NativeIO.posixFadviseIfPossible(fd, getPosition(), getCount(),
+@@ -77,6 +85,5 @@ public class FadvisedFileRegion extends DefaultFileRegion {
+         LOG.warn("Failed to manage OS cache for " + identifier, t);
+       }
+     }
+-    super.releaseExternalResources();
+   }
+ }
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java
+index cb3dfad..1c8f97f 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-shuffle/src/main/java/org/apache/hadoop/mapred/ShuffleHandler.java
+@@ -562,6 +562,9 @@ public class ShuffleHandler extends AbstractService
+             //      attribute to appropriate spill output
+           @Override
+           public void operationComplete(ChannelFuture future) {
++            if (future.isSuccess()) {
++              partition.transferSuccessful();
++            }
+             partition.releaseExternalResources();
+           }
+         });
+-- 
+1.7.0.4
+

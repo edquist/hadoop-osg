@@ -1,7 +1,7 @@
 From 4ecbd9bbde9ce34f24f43e924811525267e0f413 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 13 Jul 2012 00:46:13 +0000
-Subject: [PATCH 202/545] HDFS-3306. fuse_dfs: don't lock release operations. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0202/1612] HDFS-3306. fuse_dfs: don't lock release operations. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1361022 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b99c8c875770e6088261d925db41eee766974990)

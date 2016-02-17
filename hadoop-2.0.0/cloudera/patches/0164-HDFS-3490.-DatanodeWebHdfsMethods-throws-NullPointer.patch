@@ -1,7 +1,7 @@
 From 003bd9cbc6e4f7dc4573649e9b41429ed6980005 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Sat, 9 Jun 2012 00:54:10 +0000
-Subject: [PATCH 164/545] HDFS-3490. DatanodeWebHdfsMethods throws NullPointerException if NamenodeRpcAddressParam is not set.
+Subject: [PATCH 0164/1612] HDFS-3490. DatanodeWebHdfsMethods throws NullPointerException if NamenodeRpcAddressParam is not set.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1348287 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 9d9e32ef403ca5ea093fce24b6aac926ebca6c2b)

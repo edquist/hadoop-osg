@@ -1,7 +1,7 @@
 From a51f19c761eb145bbea71171b32e8d5dc454d2ea Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sat, 14 Jul 2012 17:19:26 +0000
-Subject: [PATCH 211/545] HDFS-3610. fuse_dfs: Provide a way to use the default (configured) NN URI. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0211/1612] HDFS-3610. fuse_dfs: Provide a way to use the default (configured) NN URI. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1361566 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e5b8f22049a28dfc688e1f6962e4db7a5a22bd8d)

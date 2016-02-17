@@ -34,7 +34,7 @@ public interface ApplicationConstants {
 
   // TODO: They say tokens via env isn't good.
   public static final String APPLICATION_CLIENT_SECRET_ENV_NAME =
-    "AppClientTokenEnv";
+    "AppClientSecretEnv";
   
   /**
    * The environment variable for CONTAINER_ID. Set in AppMaster environment
@@ -141,6 +141,11 @@ public interface ApplicationConstants {
      * $CLASSPATH
      */
     CLASSPATH("CLASSPATH"),
+    
+    /**
+     * $APP_CLASSPATH
+     */
+    APP_CLASSPATH("APP_CLASSPATH"),
     
     /**
      * $LD_LIBRARY_PATH

@@ -79,8 +79,15 @@ public class FileStatus implements Writable, Comparable {
     this.blocksize = blocksize;
     this.modification_time = modification_time;
     this.access_time = access_time;
-    this.permission = (permission == null) ? 
-                      FsPermission.getDefault() : permission;
+    if (permission != null) {
+      this.permission = permission;
+    } else if (isdir) {
+      this.permission = FsPermission.getDirDefault();
+    } else if (symlink!=null) {
+      this.permission = FsPermission.getDefault();
+    } else {
+      this.permission = FsPermission.getFileDefault();
+    }
     this.owner = (owner == null) ? "" : owner;
     this.group = (group == null) ? "" : group;
     this.symlink = symlink;
@@ -217,7 +224,7 @@ public class FileStatus implements Writable, Comparable {
    */
   protected void setPermission(FsPermission permission) {
     this.permission = (permission == null) ? 
-                      FsPermission.getDefault() : permission;
+                      FsPermission.getFileDefault() : permission;
   }
   
   /**
@@ -330,5 +337,30 @@ public class FileStatus implements Writable, Comparable {
    */
   public int hashCode() {
     return getPath().hashCode();
+  }
+  
+  @Override
+  public String toString() {
+    StringBuilder sb = new StringBuilder();
+    sb.append(getClass().getSimpleName()); 
+    sb.append("{");
+    sb.append("path=" + path);
+    sb.append("; isDirectory=" + isdir);
+    if(!isDirectory()){
+      sb.append("; length=" + length);
+      sb.append("; replication=" + block_replication);
+      sb.append("; blocksize=" + blocksize);
+    }
+    sb.append("; modification_time=" + modification_time);
+    sb.append("; access_time=" + access_time);
+    sb.append("; owner=" + owner);
+    sb.append("; group=" + group);
+    sb.append("; permission=" + permission);
+    sb.append("; isSymlink=" + isSymlink());
+    if(isSymlink()) {
+      sb.append("; symlink=" + symlink);
+    }
+    sb.append("}");
+    return sb.toString();
   }
 }

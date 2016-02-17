@@ -1,7 +1,7 @@
 From 04b7709ebce4d0239ef14c465ac2b196c83f4639 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Mon, 30 Jul 2012 23:35:22 +0000
-Subject: [PATCH 377/545] HDFS-3725. Fix QJM startup when individual JNs have gaps. Contributed by Todd Lipcon.
+Subject: [PATCH 0377/1612] HDFS-3725. Fix QJM startup when individual JNs have gaps. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1367366 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f7141bc4a6a1d28aa44f36d41d77ff4f6eacd50c)

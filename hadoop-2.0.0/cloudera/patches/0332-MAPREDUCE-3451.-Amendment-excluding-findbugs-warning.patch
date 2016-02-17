@@ -1,7 +1,7 @@
 From 5b2ea144ff779f3c3009cefa34d5642bf8e370b0 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 13 Jul 2012 22:56:08 +0000
-Subject: [PATCH 332/545] MAPREDUCE-3451. Amendment, excluding findbugs warnings (tucu)
+Subject: [PATCH 0332/1612] MAPREDUCE-3451. Amendment, excluding findbugs warnings (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1361436 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit bd40a36a6f6e01fb44df1ab9f026cd512a509438)

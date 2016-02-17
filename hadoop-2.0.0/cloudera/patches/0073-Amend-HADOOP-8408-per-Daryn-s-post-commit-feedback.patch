@@ -1,7 +1,7 @@
 From e91367d4791f6d0ec9dbb4e73ad724e35892cd05 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Tue, 22 May 2012 07:50:00 +0000
-Subject: [PATCH 073/545] Amend HADOOP-8408 per Daryn's post-commit feedback.
+Subject: [PATCH 0073/1612] Amend HADOOP-8408 per Daryn's post-commit feedback.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1341338 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0bfd8de94883acbde299a15351703b0d86a2ebf6)

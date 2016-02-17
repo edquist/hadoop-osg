@@ -1,0 +1,278 @@
+From 081d4e3f2d7e6a1443277121e8276747da81293b Mon Sep 17 00:00:00 2001
+From: Kihwal Lee <kihwal@apache.org>
+Date: Mon, 7 Apr 2014 18:25:12 +0000
+Subject: [PATCH 1585/1612] HDFS-6191. Disable quota checks when replaying edit log.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1585544 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 3ab91bbeb165b7ecfbf4a5768def44e25ab309d2)
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSDirectory.java
+---
+ .../hadoop/hdfs/server/namenode/BackupNode.java    |    1 +
+ .../hadoop/hdfs/server/namenode/FSDirectory.java   |   15 ++-
+ .../hadoop/hdfs/server/namenode/FSNamesystem.java  |    9 ++
+ .../hdfs/server/namenode/SecondaryNameNode.java    |    5 +-
+ .../hdfs/server/namenode/TestFSDirectory.java      |  131 ++++++++++++++++++++
+ 5 files changed, 158 insertions(+), 3 deletions(-)
+ create mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSDirectory.java
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/BackupNode.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/BackupNode.java
+index 3a6cdeb..12d90f6 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/BackupNode.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/BackupNode.java
+@@ -130,6 +130,7 @@ public class BackupNode extends NameNode {
+   protected void loadNamesystem(Configuration conf) throws IOException {
+     BackupImage bnImage = new BackupImage(conf);
+     this.namesystem = new FSNamesystem(conf, bnImage);
++    namesystem.dir.disableQuotaChecks();
+     bnImage.setNamesystem(namesystem);
+     bnImage.recoverCreateRead();
+   }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java
+index 0c0ebdb..4035f5a 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java
+@@ -79,6 +79,7 @@ public class FSDirectory implements Closeable {
+   private final FSNamesystem namesystem;
+   private volatile boolean ready = false;
+   private static final long UNKNOWN_DISK_SPACE = -1;
++  private volatile boolean skipQuotaCheck = false; //skip while consuming edits
+   private final int maxComponentLength;
+   private final int maxDirItems;
+   private final int lsLimit;  // max list limit
+@@ -219,6 +220,16 @@ public class FSDirectory implements Closeable {
+     }
+   }
+ 
++  /** Enable quota verification */
++  void enableQuotaChecks() {
++    skipQuotaCheck = false;
++  }
++
++  /** Disable quota verification */
++  void disableQuotaChecks() {
++    skipQuotaCheck = true;
++  }
++
+   /**
+    * Add the given filename to the fs.
+    * @throws QuotaExceededException 
+@@ -1366,7 +1377,7 @@ public class FSDirectory implements Closeable {
+     if (numOfINodes>inodes.length) {
+       numOfINodes = inodes.length;
+     }
+-    if (checkQuota) {
++    if (checkQuota && !skipQuotaCheck) {
+       verifyQuota(inodes, numOfINodes, nsDelta, dsDelta, null);
+     }
+     for(int i = 0; i < numOfINodes; i++) {
+@@ -1650,7 +1661,7 @@ public class FSDirectory implements Closeable {
+    */
+   private void verifyQuotaForRename(INode[] srcInodes, INode[]dstInodes)
+       throws QuotaExceededException {
+-    if (!ready) {
++    if (!ready || skipQuotaCheck) {
+       // Do not check quota if edits log is still being processed
+       return;
+     }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+index 104b107..549782c 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+@@ -860,6 +860,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+ 
+         dir.fsImage.editLog.openForWrite();
+       }
++
++      // Enable quota checks.
++      dir.enableQuotaChecks();
+       if (haEnabled) {
+         // Renew all of the leases before becoming active.
+         // This is because, while we were in standby mode,
+@@ -957,6 +960,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     
+     blockManager.setPostponeBlocksFromFuture(true);
+ 
++    // Disable quota checks while in standby.
++    dir.disableQuotaChecks();
+     editLogTailer = new EditLogTailer(this, conf);
+     editLogTailer.start();
+     if (standbyShouldCheckpoint) {
+@@ -5809,6 +5814,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+   public BlockManager getBlockManager() {
+     return blockManager;
+   }
++  /** @return the FSDirectory. */
++  public FSDirectory getFSDirectory() {
++    return dir;
++  }
+   
+   /**
+    * Verifies that the given identifier and password are valid and match.
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java
+index 83128f5..f51674b 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java
+@@ -251,6 +251,9 @@ public class SecondaryNameNode implements Runnable {
+     
+     namesystem = new FSNamesystem(conf, checkpointImage);
+ 
++    // Disable quota checks
++    namesystem.dir.disableQuotaChecks();
++
+     // Initialize other scheduling parameters from the configuration
+     checkpointConf = new CheckpointConf(conf);
+ 
+@@ -821,7 +824,7 @@ public class SecondaryNameNode implements Runnable {
+                       Collection<URI> imageDirs,
+                       List<URI> editsDirs) throws IOException {
+       super(conf, imageDirs, editsDirs);
+-      
++
+       // the 2NN never writes edits -- it only downloads them. So
+       // we shouldn't have any editLog instance. Setting to null
+       // makes sure we don't accidentally depend on it.
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSDirectory.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSDirectory.java
+new file mode 100644
+index 0000000..c412598
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSDirectory.java
+@@ -0,0 +1,131 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.hadoop.hdfs.server.namenode;
++
++
++import java.io.BufferedReader;
++import java.io.IOException;
++import java.io.StringReader;
++
++import org.apache.commons.logging.Log;
++import org.apache.commons.logging.LogFactory;
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.fs.FileSystem;
++import org.apache.hadoop.fs.Path;
++import org.apache.hadoop.hdfs.protocol.NSQuotaExceededException;
++import org.apache.hadoop.hdfs.DFSTestUtil;
++import org.apache.hadoop.hdfs.DistributedFileSystem;
++import org.apache.hadoop.hdfs.MiniDFSCluster;
++import org.junit.After;
++import org.junit.Assert;
++import org.junit.Before;
++import org.junit.Test;
++
++/**
++ * Test {@link FSDirectory}, the in-memory namespace tree.
++ */
++public class TestFSDirectory {
++  public static final Log LOG = LogFactory.getLog(TestFSDirectory.class);
++
++  private static final long seed = 0;
++  private static final short REPLICATION = 3;
++
++  private final Path dir = new Path("/" + getClass().getSimpleName());
++  
++  private final Path sub1 = new Path(dir, "sub1");
++  private final Path file1 = new Path(sub1, "file1");
++  private final Path file2 = new Path(sub1, "file2");
++
++  private final Path sub11 = new Path(sub1, "sub11");
++  private final Path file3 = new Path(sub11, "file3");
++  private final Path file5 = new Path(sub1, "z_file5");
++
++  private final Path sub2 = new Path(dir, "sub2");
++  private final Path file6 = new Path(sub2, "file6");
++
++  private Configuration conf;
++  private MiniDFSCluster cluster;
++  private FSNamesystem fsn;
++  private FSDirectory fsdir;
++
++  private DistributedFileSystem hdfs;
++
++  @Before
++  public void setUp() throws Exception {
++    conf = new Configuration();
++    cluster = new MiniDFSCluster.Builder(conf)
++      .numDataNodes(REPLICATION)
++      .build();
++    cluster.waitActive();
++    
++    fsn = cluster.getNamesystem();
++    fsdir = fsn.getFSDirectory();
++    
++    hdfs = cluster.getFileSystem();
++    DFSTestUtil.createFile(hdfs, file1, 1024, REPLICATION, seed);
++    DFSTestUtil.createFile(hdfs, file2, 1024, REPLICATION, seed);
++    DFSTestUtil.createFile(hdfs, file3, 1024, REPLICATION, seed);
++
++    DFSTestUtil.createFile(hdfs, file5, 1024, REPLICATION, seed);
++    hdfs.mkdirs(sub2);
++  }
++
++  @After
++  public void tearDown() throws Exception {
++    if (cluster != null) {
++      cluster.shutdown();
++    }
++  }
++
++  @Test
++  public void testSkipQuotaCheck() throws Exception {
++    try {
++      // set quota. nsQuota of 1 means no files can be created
++      //  under this directory.
++      hdfs.setQuota(sub2, 1, Long.MAX_VALUE);
++
++      // create a file
++      try {
++        // this should fail
++        DFSTestUtil.createFile(hdfs, file6, 1024, REPLICATION, seed);
++        throw new IOException("The create should have failed.");
++      } catch (NSQuotaExceededException qe) {
++        // ignored
++      }
++      // disable the quota check and retry. this should succeed.
++      fsdir.disableQuotaChecks();
++      DFSTestUtil.createFile(hdfs, file6, 1024, REPLICATION, seed);
++
++      // trying again after re-enabling the check.
++      hdfs.delete(file6, false); // cleanup
++      fsdir.enableQuotaChecks();
++      try {
++        // this should fail
++        DFSTestUtil.createFile(hdfs, file6, 1024, REPLICATION, seed);
++        throw new IOException("The create should have failed.");
++      } catch (NSQuotaExceededException qe) {
++        // ignored
++      }
++    } finally {
++      hdfs.delete(file6, false); // cleanup, in case the test failed in the middle.
++      hdfs.setQuota(sub2, Long.MAX_VALUE, Long.MAX_VALUE);
++    }
++  }
++  
++}
+-- 
+1.7.0.4
+

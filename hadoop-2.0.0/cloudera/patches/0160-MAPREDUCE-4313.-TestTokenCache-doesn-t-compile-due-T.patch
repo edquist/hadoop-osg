@@ -1,7 +1,7 @@
 From de46b874a27b4e44386b1d2d809039f29c07f7b2 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 5 Jun 2012 15:01:26 +0000
-Subject: [PATCH 160/545] MAPREDUCE-4313. TestTokenCache doesn't compile due TokenCache.getDelegationToken compilation error (bobby)
+Subject: [PATCH 0160/1612] MAPREDUCE-4313. TestTokenCache doesn't compile due TokenCache.getDelegationToken compilation error (bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1346406 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 88976ac84486ce239abf07cd61115ea04b460e1c)

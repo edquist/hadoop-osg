@@ -1,0 +1,144 @@
+From ef04963f91182ea21ccf10d7c31aba8582748baa Mon Sep 17 00:00:00 2001
+From: Aaron Twining Myers <atm@apache.org>
+Date: Thu, 5 Sep 2013 16:31:50 +0000
+Subject: [PATCH 1481/1612] HDFS-5159. Secondary NameNode fails to checkpoint if error occurs downloading edits on first checkpoint. Contributed by Aaron T. Myers.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1520366 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit f40a81a117a797350f0b44b406ab1aff10c51ddc)
+---
+ .../hdfs/server/namenode/SecondaryNameNode.java    |    6 +-
+ .../hdfs/server/namenode/TestCheckpoint.java       |   59 ++++++++++++++++++--
+ 2 files changed, 57 insertions(+), 8 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java
+index fad35bd..077dbf3 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/SecondaryNameNode.java
+@@ -408,10 +408,8 @@ public class SecondaryNameNode implements Runnable {
+             dstImage.getStorage().cTime = sig.cTime;
+ 
+             // get fsimage
+-            boolean downloadImage = true;
+             if (sig.mostRecentCheckpointTxId ==
+                 dstImage.getStorage().getMostRecentCheckpointTxId()) {
+-              downloadImage = false;
+               LOG.info("Image has not changed. Will not download image.");
+             } else {
+               LOG.info("Image has changed. Downloading updated image from NN.");
+@@ -427,7 +425,9 @@ public class SecondaryNameNode implements Runnable {
+                   nnHostPort, log, dstImage.getStorage());
+             }
+         
+-            return Boolean.valueOf(downloadImage);
++            // true if we haven't loaded all the transactions represented by the
++            // downloaded fsimage.
++            return dstImage.getLastAppliedTxId() < sig.mostRecentCheckpointTxId;
+           }
+         });
+         return b.booleanValue();
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java
+index 385d3ea..bb98d12 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java
+@@ -39,7 +39,6 @@ import java.util.Collection;
+ import java.util.List;
+ 
+ import org.apache.commons.cli.ParseException;
+-import org.apache.commons.io.filefilter.FileFilterUtils;
+ import org.apache.commons.logging.Log;
+ import org.apache.commons.logging.LogFactory;
+ import org.apache.commons.logging.impl.Log4JLogger;
+@@ -1197,7 +1196,6 @@ public class TestCheckpoint {
+   }
+   
+   /* Test case to test CheckpointSignature */
+-  @SuppressWarnings("deprecation")
+   @Test
+   public void testCheckpointSignature() throws IOException {
+ 
+@@ -1521,12 +1519,65 @@ public class TestCheckpoint {
+       Mockito.reset(faultInjector);
+     }
+   }
++  
++  /**
++   * Test that a fault while downloading edits the first time after the 2NN
++   * starts up does not prevent future checkpointing.
++   */
++  @Test(timeout = 30000)
++  public void testEditFailureOnFirstCheckpoint() throws IOException {
++    Configuration conf = new HdfsConfiguration();
++    SecondaryNameNode secondary = null;
++    MiniDFSCluster cluster = null;
++    FileSystem fs = null;
++    try {
++      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(numDatanodes)
++          .build();
++      cluster.waitActive();
++      fs = cluster.getFileSystem();
++      fs.mkdirs(new Path("test-file-1"));
++      
++      // Make sure the on-disk fsimage on the NN has txid > 0.
++      FSNamesystem fsns = cluster.getNamesystem();
++      fsns.enterSafeMode(false);
++      fsns.saveNamespace();
++      fsns.leaveSafeMode(false);
++      
++      secondary = startSecondaryNameNode(conf);
++
++      // Cause edit rename to fail during next checkpoint
++      Mockito.doThrow(new IOException("Injecting failure before edit rename"))
++          .when(faultInjector).beforeEditsRename();
++      
++      try {
++        secondary.doCheckpoint();
++        fail("Fault injection failed.");
++      } catch (IOException ioe) {
++        GenericTestUtils.assertExceptionContains(
++            "Injecting failure before edit rename", ioe);
++      }
++      Mockito.reset(faultInjector);
++      
++      // Next checkpoint should succeed
++      secondary.doCheckpoint();
++    } finally {
++      if (secondary != null) {
++        secondary.shutdown();
++      }
++      if (fs != null) {
++        fs.close();
++      }
++      if (cluster != null) {
++        cluster.shutdown();
++      }
++      Mockito.reset(faultInjector);
++    }
++  }
+ 
+   /**
+    * Test that the secondary namenode correctly deletes temporary edits
+    * on startup.
+    */
+-
+   @Test(timeout = 30000)
+   public void testDeleteTemporaryEditsOnStartup() throws IOException {
+     Configuration conf = new HdfsConfiguration();
+@@ -1905,7 +1956,6 @@ public class TestCheckpoint {
+    * Test that, if a storage directory is failed when a checkpoint occurs,
+    * the non-failed storage directory receives the checkpoint.
+    */
+-  @SuppressWarnings("deprecation")
+   @Test
+   public void testCheckpointWithFailedStorageDir() throws Exception {
+     MiniDFSCluster cluster = null;
+@@ -1970,7 +2020,6 @@ public class TestCheckpoint {
+    * should function correctly.
+    * @throws Exception
+    */
+-  @SuppressWarnings("deprecation")
+   @Test
+   public void testCheckpointWithSeparateDirsAfterNameFails() throws Exception {
+     MiniDFSCluster cluster = null;
+-- 
+1.7.0.4
+

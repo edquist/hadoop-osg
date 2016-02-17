@@ -1,7 +1,7 @@
 From 4bba5ec542bbae398f75ab10a423594bfae0c45d Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Tue, 14 Aug 2012 03:02:43 +0000
-Subject: [PATCH 346/545] HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.
+Subject: [PATCH 0346/1612] HDFS-3658. Fix bugs in TestDFSClientRetries and add more tests.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1372707 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7480cd863174882f5165d7e04e7d6ffa4a3c8a79)

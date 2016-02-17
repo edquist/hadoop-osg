@@ -1,0 +1,506 @@
+From da950d753cf745d140dfd8e64920b182e2cfda29 Mon Sep 17 00:00:00 2001
+From: Andrew Wang <andrew.wang@cloudera.com>
+Date: Fri, 18 Apr 2014 14:23:39 -0700
+Subject: [PATCH 1590/1612] Revert "HDFS-5496. Make replication queue initialization asynchronous. Contributed by Vinay."
+
+This reverts commit 5e2ee1792387e53fd2805cf68a6691f97f9bf971.
+---
+ .../org/apache/hadoop/util/LightWeightGSet.java    |    9 +-
+ .../java/org/apache/hadoop/hdfs/DFSConfigKeys.java |    4 +-
+ .../hdfs/server/blockmanagement/BlockManager.java  |  172 ++++----------------
+ .../hdfs/server/blockmanagement/BlocksMap.java     |   16 +--
+ .../hadoop/hdfs/server/namenode/FSNamesystem.java  |   79 +++++-----
+ .../hdfs/server/namenode/NameNodeAdapter.java      |    9 +-
+ 6 files changed, 85 insertions(+), 204 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/LightWeightGSet.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/LightWeightGSet.java
+index 1767d85..f1661d7 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/LightWeightGSet.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/LightWeightGSet.java
+@@ -244,14 +244,13 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
+     out.println("\n]");
+   }
+ 
+-  public class SetIterator implements Iterator<E> {
++  private class SetIterator implements Iterator<E> {
+     /** The starting modification for fail-fast. */
+     private int iterModification = modification;
+     /** The current index of the entry array. */
+     private int index = -1;
+     private LinkedElement cur = null;
+     private LinkedElement next = nextNonemptyEntry();
+-    private boolean trackModification = true;
+ 
+     /** Find the next nonempty entry starting at (index + 1). */
+     private LinkedElement nextNonemptyEntry() {
+@@ -260,7 +259,7 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
+     }
+ 
+     private void ensureNext() {
+-      if (trackModification && modification != iterModification) {
++      if (modification != iterModification) {
+         throw new ConcurrentModificationException("modification=" + modification
+             + " != iterModification = " + iterModification);
+       }
+@@ -305,10 +304,6 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
+       iterModification++;
+       cur = null;
+     }
+-
+-    public void setTrackModification(boolean trackModification) {
+-      this.trackModification = trackModification;
+-    }
+   }
+   
+   /**
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+index b9b84ab..b5cc48d 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+@@ -354,9 +354,7 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
+   public static final int     DFS_BLOCK_INVALIDATE_LIMIT_DEFAULT = 1000;
+   public static final String  DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED_KEY = "dfs.corruptfilesreturned.max";
+   public static final int     DFS_DEFAULT_MAX_CORRUPT_FILES_RETURNED = 500;
+-  /* Maximum number of blocks to process for initializing replication queues */
+-  public static final String  DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT = "dfs.block.misreplication.processing.limit";
+-  public static final int     DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT = 10000;
++
+   public static final String DFS_CLIENT_READ_SHORTCIRCUIT_KEY = "dfs.client.read.shortcircuit";
+   public static final boolean DFS_CLIENT_READ_SHORTCIRCUIT_DEFAULT = false;
+   public static final String DFS_CLIENT_READ_SHORTCIRCUIT_SKIP_CHECKSUM_KEY = "dfs.client.read.shortcircuit.skip.checksum";
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+index a503d73..277a2a8 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+@@ -225,22 +225,6 @@ public class BlockManager {
+    */
+   private boolean shouldPostponeBlocksFromFuture = false;
+ 
+-  /**
+-   * Process replication queues asynchronously to allow namenode safemode exit
+-   * and failover to be faster. HDFS-5496
+-   */
+-  private Daemon replicationQueuesInitializer = null;
+-  /**
+-   * Number of blocks to process asychronously for replication queues
+-   * initialization once aquired the namesystem lock. Remaining blocks will be
+-   * processed again after aquiring lock again.
+-   */
+-  private int numBlocksPerIteration;
+-  /**
+-   * Progress of the Replication queues initialisation.
+-   */
+-  private double replicationQueuesInitProgress = 0.0;
+-
+   /** for block replicas placement */
+   private BlockPlacementPolicy blockplacement;
+   
+@@ -306,9 +290,6 @@ public class BlockManager {
+     this.maxNumBlocksToLog =
+         conf.getLong(DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_KEY,
+             DFSConfigKeys.DFS_MAX_NUM_BLOCKS_TO_LOG_DEFAULT);
+-    this.numBlocksPerIteration = conf.getInt(
+-        DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT,
+-        DFSConfigKeys.DFS_BLOCK_MISREPLICATION_PROCESSING_LIMIT_DEFAULT);
+     
+     LOG.info("defaultReplication         = " + defaultReplication);
+     LOG.info("maxReplication             = " + maxReplication);
+@@ -2230,127 +2211,45 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+    */
+   public void processMisReplicatedBlocks() {
+     assert namesystem.hasWriteLock();
+-    stopReplicationInitializer();
+-    neededReplications.clear();
+-    replicationQueuesInitializer = new Daemon() {
+-
+-      @Override
+-      public void run() {
+-        try {
+-          processMisReplicatesAsync();
+-        } catch (InterruptedException ie) {
+-          LOG.info("Interrupted while processing replication queues.");
+-        } catch (Exception e) {
+-          LOG.error("Error while processing replication queues async", e);
+-        }
+-      }
+-    };
+-    replicationQueuesInitializer.setName("Replication Queue Initializer");
+-    replicationQueuesInitializer.start();
+-  }
+ 
+-  /*
+-   * Stop the ongoing initialisation of replication queues
+-   */
+-  private void stopReplicationInitializer() {
+-    if (replicationQueuesInitializer != null) {
+-      replicationQueuesInitializer.interrupt();
+-      try {
+-        replicationQueuesInitializer.join();
+-      } catch (final InterruptedException e) {
+-        LOG.warn("Interrupted while waiting for replicationQueueInitializer. Returning..");
+-        return;
+-      } finally {
+-        replicationQueuesInitializer = null;
++    long nrInvalid = 0, nrOverReplicated = 0, nrUnderReplicated = 0, nrPostponed = 0,
++         nrUnderConstruction = 0;
++    neededReplications.clear();
++    for (BlockInfo block : blocksMap.getBlocks()) {
++      MisReplicationResult res = processMisReplicatedBlock(block);
++      if (LOG.isTraceEnabled()) {
++        LOG.trace("block " + block + ": " + res);
+       }
+-    }
+-  }
+-
+-  /*
+-   * Since the BlocksMapGset does not throw the ConcurrentModificationException
+-   * and supports further iteration after modification to list, there is a
+-   * chance of missing the newly added block while iterating. Since every
+-   * addition to blocksMap will check for mis-replication, missing mis-replication
+-   * check for new blocks will not be a problem.
+-   */
+-  private void processMisReplicatesAsync() throws InterruptedException {
+-    long nrInvalid = 0, nrOverReplicated = 0;
+-    long nrUnderReplicated = 0, nrPostponed = 0, nrUnderConstruction = 0;
+-    long startTimeMisReplicatedScan = Time.now();
+-    Iterator<BlockInfo> blocksItr = blocksMap.getBlocks().iterator();
+-    long totalBlocks = blocksMap.size();
+-    replicationQueuesInitProgress = 0;
+-    long totalProcessed = 0;
+-    while (namesystem.isRunning() && !Thread.currentThread().isInterrupted()) {
+-      int processed = 0;
+-      namesystem.writeLockInterruptibly();
+-      try {
+-        while (processed < numBlocksPerIteration && blocksItr.hasNext()) {
+-          BlockInfo block = blocksItr.next();
+-          MisReplicationResult res = processMisReplicatedBlock(block);
+-          if (LOG.isTraceEnabled()) {
+-            LOG.trace("block " + block + ": " + res);
+-          }
+-          switch (res) {
+-          case UNDER_REPLICATED:
+-            nrUnderReplicated++;
+-            break;
+-          case OVER_REPLICATED:
+-            nrOverReplicated++;
+-            break;
+-          case INVALID:
+-            nrInvalid++;
+-            break;
+-          case POSTPONE:
+-            nrPostponed++;
+-            postponeBlock(block);
+-            break;
+-          case UNDER_CONSTRUCTION:
+-            nrUnderConstruction++;
+-            break;
+-          case OK:
+-            break;
+-          default:
+-            throw new AssertionError("Invalid enum value: " + res);
+-          }
+-          processed++;
+-        }
+-        totalProcessed += processed;
+-        // there is a possibility that if any of the blocks deleted/added during
+-        // initialisation, then progress might be different.
+-        replicationQueuesInitProgress = Math.min((double) totalProcessed
+-            / totalBlocks, 1.0);
+-
+-        if (!blocksItr.hasNext()) {
+-          LOG.info("Total number of blocks            = " + blocksMap.size());
+-          LOG.info("Number of invalid blocks          = " + nrInvalid);
+-          LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
+-          LOG.info("Number of  over-replicated blocks = " + nrOverReplicated
+-              + ((nrPostponed > 0) ? (" (" + nrPostponed + " postponed)") : ""));
+-          LOG.info("Number of blocks being written    = " + nrUnderConstruction);
+-          NameNode.stateChangeLog
+-              .info("STATE* Replication Queue initialization "
+-                  + "scan for invalid, over- and under-replicated blocks "
+-                  + "completed in " + (Time.now() - startTimeMisReplicatedScan)
+-                  + " msec");
+-          break;
+-        }
+-      } finally {
+-        namesystem.writeUnlock();
++      switch (res) {
++      case UNDER_REPLICATED:
++        nrUnderReplicated++;
++        break;
++      case OVER_REPLICATED:
++        nrOverReplicated++;
++        break;
++      case INVALID:
++        nrInvalid++;
++        break;
++      case POSTPONE:
++        nrPostponed++;
++        postponeBlock(block);
++        break;
++      case UNDER_CONSTRUCTION:
++        nrUnderConstruction++;
++        break;
++      case OK:
++        break;
++      default:
++        throw new AssertionError("Invalid enum value: " + res);
+       }
+     }
+-    if (Thread.currentThread().isInterrupted()) {
+-      LOG.info("Interrupted while processing replication queues.");
+-    }
+-  }
+-
+-  /**
+-   * Get the progress of the Replication queues initialisation
+-   * 
+-   * @return Returns values between 0 and 1 for the progress.
+-   */
+-  public double getReplicationQueuesInitProgress() {
+-    return replicationQueuesInitProgress;
++    
++    LOG.info("Total number of blocks            = " + blocksMap.size());
++    LOG.info("Number of invalid blocks          = " + nrInvalid);
++    LOG.info("Number of under-replicated blocks = " + nrUnderReplicated);
++    LOG.info("Number of  over-replicated blocks = " + nrOverReplicated +
++        ((nrPostponed > 0) ? ( " (" + nrPostponed + " postponed)") : ""));
++    LOG.info("Number of blocks being written    = " + nrUnderConstruction);
+   }
+ 
+   /**
+@@ -3267,7 +3166,6 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+   }
+ 
+   public void shutdown() {
+-    stopReplicationInitializer();
+     blocksMap.close();
+   }
+ }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
+index e0f11c4..033e1b9 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
+@@ -22,7 +22,6 @@ import java.util.Iterator;
+ import org.apache.hadoop.hdfs.protocol.Block;
+ import org.apache.hadoop.util.GSet;
+ import org.apache.hadoop.util.LightWeightGSet;
+-import org.apache.hadoop.util.LightWeightGSet.SetIterator;
+ 
+ /**
+  * This class maintains the map from a block to its metadata.
+@@ -63,20 +62,7 @@ class BlocksMap {
+   BlocksMap(final float loadFactor) {
+     // Use 2% of total memory to size the GSet capacity
+     this.capacity = LightWeightGSet.computeCapacity(2.0, "BlocksMap");
+-    this.blocks = new LightWeightGSet<Block, BlockInfo>(capacity) {
+-      @Override
+-      public Iterator<BlockInfo> iterator() {
+-        SetIterator iterator = new SetIterator();
+-        /*
+-         * Not tracking any modifications to set. As this set will be used
+-         * always under FSNameSystem lock, modifications will not cause any
+-         * ConcurrentModificationExceptions. But there is a chance of missing
+-         * newly added elements during iteration.
+-         */
+-        iterator.setTrackModification(false);
+-        return iterator;
+-      }
+-    };
++    this.blocks = new LightWeightGSet<Block, BlockInfo>(capacity);
+   }
+ 
+ 
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+index 84f8d15..087d6bd 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+@@ -427,14 +427,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+   private HAContext haContext;
+ 
+   private final boolean haEnabled;
+-
+-  /** flag indicating whether replication queues have been initialized */
+-  boolean initializedReplQueues = false;
+-
+-  /**
+-   * Whether the namenode is in the middle of starting the active service
+-   */
+-  private volatile boolean startingActiveService = false;
+     
+   /**
+    * Clear all loaded data
+@@ -792,7 +784,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     try {
+       nnResourceChecker = new NameNodeResourceChecker(conf);
+       checkAvailableResources();
+-      assert safeMode != null && !isPopulatingReplQueues();
++      assert safeMode != null &&
++        !safeMode.isPopulatingReplQueues();
+       setBlockTotal();
+       blockManager.activate(conf);
+     } finally {
+@@ -840,13 +833,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+         blockManager.getDatanodeManager().markAllDatanodesStale();
+         blockManager.clearQueues();
+         blockManager.processAllPendingDNMessages();
+-
+-        // Only need to re-process the queue, If not in SafeMode.
+-        if (!isInSafeMode()) {
++        
++        if (!isInSafeMode() ||
++            (isInSafeMode() && safeMode.isPopulatingReplQueues())) {
+           LOG.info("Reprocessing replication and invalidation queues");
+-          initializeReplQueues();
++          blockManager.processMisReplicatedBlocks();
+         }
+-
++        
+         if (LOG.isDebugEnabled()) {
+           LOG.debug("NameNode metadata after re-processing " +
+               "replication and invalidation queues during failover:\n" +
+@@ -886,25 +879,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     }
+   }
+ 
+-  /**
+-   * Initialize replication queues.
+-   */
+-  private void initializeReplQueues() {
+-    LOG.info("initializing replication queues");
+-    blockManager.processMisReplicatedBlocks();
+-    initializedReplQueues = true;
+-  }
+-
+-  /**
+-   * @return Whether the namenode is transitioning to active state and is in the
+-   *         middle of the {@link #startActiveServices()}
+-   */
+-  public boolean inTransitionToActive() {
+-    return haEnabled && haContext != null
+-        && haContext.getState().getServiceState() == HAServiceState.ACTIVE
+-        && startingActiveService;
+-  }
+-
+   private boolean shouldUseDelegationTokens() {
+     return UserGroupInformation.isSecurityEnabled() ||
+       alwaysUseDelegationTokensForTests;
+@@ -938,9 +912,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+         // so that the tailer starts from the right spot.
+         dir.fsImage.updateLastAppliedTxIdFromWritten();
+       }
+-      // Don't want to keep replication queues when not in Active.
+-      blockManager.clearQueues();
+-      initializedReplQueues = false;
+     } finally {
+       writeUnlock();
+     }
+@@ -4031,6 +4002,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     private int safeReplication;
+     /** threshold for populating needed replication queues */
+     private double replQueueThreshold;
++      
+     // internal fields
+     /** Time when threshold was reached.
+      * 
+@@ -4048,6 +4020,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     private int blockReplQueueThreshold;
+     /** time of the last status printout */
+     private long lastStatusReport = 0;
++    /** flag indicating whether replication queues have been initialized */
++    boolean initializedReplQueues = false;
+     /** Was safemode entered automatically because available resources were low. */
+     private boolean resourcesLow = false;
+     /** Should safemode adjust its block totals as blocks come in */
+@@ -4128,6 +4102,13 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     }
+       
+     /**
++     * Check if we are populating replication queues.
++     */
++    private synchronized boolean isPopulatingReplQueues() {
++      return initializedReplQueues;
++    }
++
++    /**
+      * Enter safe mode.
+      */
+     private void enter() {
+@@ -4181,6 +4162,21 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     }
+ 
+     /**
++     * Initialize replication queues.
++     */
++    private synchronized void initializeReplQueues() {
++      LOG.info("initializing replication queues");
++      assert !isPopulatingReplQueues() : "Already initialized repl queues";
++      long startTimeMisReplicatedScan = now();
++      blockManager.processMisReplicatedBlocks();
++      initializedReplQueues = true;
++      NameNode.stateChangeLog.info("STATE* Replication Queue initialization "
++          + "scan for invalid, over- and under-replicated blocks "
++          + "completed in " + (now() - startTimeMisReplicatedScan)
++          + " msec");
++    }
++
++    /**
+      * Check whether we have reached the threshold for 
+      * initializing replication queues.
+      */
+@@ -4225,8 +4221,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       if (needEnter()) {
+         enter();
+         // check if we are ready to initialize replication queues
+-        if (canInitializeReplQueues() && !isPopulatingReplQueues()
+-            && !haEnabled) {
++        if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
+           initializeReplQueues();
+         }
+         reportStatus("STATE* Safe mode ON.", false);
+@@ -4249,7 +4244,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       reportStatus("STATE* Safe mode extension entered.", true);
+ 
+       // check if we are ready to initialize replication queues
+-      if (canInitializeReplQueues() && !isPopulatingReplQueues() && !haEnabled) {
++      if (canInitializeReplQueues() && !isPopulatingReplQueues()) {
+         initializeReplQueues();
+       }
+     }
+@@ -4546,7 +4541,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     if (!shouldPopulateReplQueues()) {
+       return false;
+     }
+-    return initializedReplQueues;
++    // safeMode is volatile, and may be set to null at any time
++    SafeModeInfo safeMode = this.safeMode;
++    if (safeMode == null)
++      return true;
++    return safeMode.isPopulatingReplQueues();
+   }
+ 
+   private boolean shouldPopulateReplQueues() {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/NameNodeAdapter.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/NameNodeAdapter.java
+index aa9e82a..53e0377 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/NameNodeAdapter.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/NameNodeAdapter.java
+@@ -228,10 +228,15 @@ public class NameNodeAdapter {
+   }
+   
+   /**
+-   * @return Replication queue initialization status
++   * @return true if safemode is not running, or if safemode has already
++   * initialized the replication queues
+    */
+   public static boolean safeModeInitializedReplQueues(NameNode nn) {
+-    return nn.getNamesystem().isPopulatingReplQueues();
++    SafeModeInfo smi = nn.getNamesystem().getSafeModeInfoForTests();
++    if (smi == null) {
++      return true;
++    }
++    return smi.initializedReplQueues;
+   }
+   
+   public static File getInProgressEditsFile(StorageDirectory sd, long startTxId) {
+-- 
+1.7.0.4
+

@@ -1,7 +1,7 @@
 From e8f0b8d8d6da7f0ee7d41176ba8ef2ffab1a06a8 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 20 Aug 2012 23:10:29 +0000
-Subject: [PATCH 398/545] HADOOP-8686. Fix warnings in native code. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0398/1612] HADOOP-8686. Fix warnings in native code. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1375301 13f79535-47bb-0310-9956-ffa450edef68
 ---

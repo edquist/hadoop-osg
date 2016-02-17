@@ -1,7 +1,7 @@
 From b2489c0f175480f51bd63fa948d5d7dfa200a4c9 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 23 May 2012 22:22:55 +0000
-Subject: [PATCH 162/545] MAPREDUCE-4276. Allow setting yarn.nodemanager.delete.debug-delay-sec property to -1 for easier container debugging. (ahmed via tucu)
+Subject: [PATCH 0162/1612] MAPREDUCE-4276. Allow setting yarn.nodemanager.delete.debug-delay-sec property to -1 for easier container debugging. (ahmed via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1342075 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 71be391d52cfddac1d51ff735b2e03a76fddd6f6)

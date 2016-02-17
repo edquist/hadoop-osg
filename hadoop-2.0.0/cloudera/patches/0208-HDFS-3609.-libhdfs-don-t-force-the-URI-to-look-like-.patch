@@ -1,7 +1,7 @@
 From 0948b1088e7045b3877fadf0ab7c3c71445698fe Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sat, 14 Jul 2012 00:36:32 +0000
-Subject: [PATCH 208/545] HDFS-3609. libhdfs: don't force the URI to look like hdfs://hostname:port. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0208/1612] HDFS-3609. libhdfs: don't force the URI to look like hdfs://hostname:port. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1361455 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit de39c0501bd50b367fb7e623e8ea1fcc406e8622)

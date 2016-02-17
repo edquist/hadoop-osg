@@ -1,7 +1,7 @@
 From 043a3914399738ff582b272f7b9bfda249df8a1b Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Tue, 10 Jul 2012 21:15:21 +0000
-Subject: [PATCH 193/545] HDFS-3629. fix the typo in the error message about inconsistent storage layout version.
+Subject: [PATCH 0193/1612] HDFS-3629. fix the typo in the error message about inconsistent storage layout version.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1359906 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2e73ba66a2560d7ea43c825d3344d6105bac0813)

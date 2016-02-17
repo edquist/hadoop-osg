@@ -61,6 +61,7 @@ import org.mockito.Mockito;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableList;
+import com.google.common.collect.ImmutableSet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
@@ -272,15 +273,15 @@ public abstract class FSImageTestUtil {
     for (File dir : dirs) {
       FSImageTransactionalStorageInspector inspector =
         inspectStorageDirectory(dir, NameNodeDirType.IMAGE);
-      FSImageFile latestImage = inspector.getLatestImage();
-      assertNotNull("No image in " + dir, latestImage);      
-      long thisTxId = latestImage.getCheckpointTxId();
+      List<FSImageFile> latestImages = inspector.getLatestImages();
+      assert(!latestImages.isEmpty());
+      long thisTxId = latestImages.get(0).getCheckpointTxId();
       if (imageTxId != -1 && thisTxId != imageTxId) {
         fail("Storage directory " + dir + " does not have the same " +
             "last image index " + imageTxId + " as another");
       }
       imageTxId = thisTxId;
-      imageFiles.add(inspector.getLatestImage().getFile());
+      imageFiles.add(inspector.getLatestImages().get(0).getFile());
     }
     
     assertFileContentsSame(imageFiles.toArray(new File[0]));
@@ -424,7 +425,7 @@ public abstract class FSImageTestUtil {
       new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(sd);
     
-    return inspector.getLatestImage().getFile();
+    return inspector.getLatestImages().get(0).getFile();
   }
 
   /**
@@ -439,8 +440,8 @@ public abstract class FSImageTestUtil {
       new FSImageTransactionalStorageInspector();
     inspector.inspectDirectory(sd);
 
-    FSImageFile latestImage = inspector.getLatestImage();
-    return (latestImage == null) ? null : latestImage.getFile();
+    List<FSImageFile> latestImages = inspector.getLatestImages();
+    return (latestImages.isEmpty()) ? null : latestImages.get(0).getFile();
   }
 
   /**
@@ -506,7 +507,11 @@ public abstract class FSImageTestUtil {
       props.load(fis);
       IOUtils.closeStream(fis);
   
-      props.setProperty(key, value);
+      if (value == null || value.isEmpty()) {
+        props.remove(key);
+      } else {
+        props.setProperty(key, value);
+      }
       
       out = new FileOutputStream(versionFile);
       props.store(out, null);
@@ -541,5 +546,17 @@ public abstract class FSImageTestUtil {
   /** get the fsImage*/
   public static FSImage getFSImage(NameNode node) {
     return node.getFSImage();
+  }
+
+  public static void assertNNFilesMatch(MiniDFSCluster cluster) throws Exception {
+    List<File> curDirs = Lists.newArrayList();
+    curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 0));
+    curDirs.addAll(FSImageTestUtil.getNameNodeCurrentDirs(cluster, 1));
+
+    // Ignore seen_txid file, since the newly bootstrapped standby
+    // will have a higher seen_txid than the one it bootstrapped from.
+    Set<String> ignoredFiles = ImmutableSet.of("seen_txid");
+    FSImageTestUtil.assertParallelFilesAreIdentical(curDirs,
+        ignoredFiles);
   }
 }

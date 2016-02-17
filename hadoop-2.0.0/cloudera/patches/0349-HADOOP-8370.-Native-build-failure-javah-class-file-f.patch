@@ -1,7 +1,7 @@
 From 99ca77d5b85080fbab637447e1000fa033d6913f Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 31 Jul 2012 20:43:21 +0000
-Subject: [PATCH 349/545] HADOOP-8370. Native build failure: javah: class file for org.apache.hadoop.classification.InterfaceAudience not found  (Trevor Robinson via tgraves)
+Subject: [PATCH 0349/1612] HADOOP-8370. Native build failure: javah: class file for org.apache.hadoop.classification.InterfaceAudience not found  (Trevor Robinson via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367764 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 67b9e5c677515dd647c214c33726b88d40425f3d)

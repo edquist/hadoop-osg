@@ -1,7 +1,7 @@
 From 817d1aa4e1e393f4a6f5ffd98b79003374180ad9 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 12 Jun 2012 05:00:07 +0000
-Subject: [PATCH 176/545] HDFS-3520. Add transfer rate logging to TransferFsImage. Contributed by Eli Collins
+Subject: [PATCH 0176/1612] HDFS-3520. Add transfer rate logging to TransferFsImage. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349117 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 553b8c09cca8bb4f676c6a99e389d2f42c197fa5)

@@ -1,7 +1,7 @@
 From 9f743f077c72de80a84dc112f5cab250dabad640 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 11 Jun 2012 18:01:38 +0000
-Subject: [PATCH 109/545] HDFS-2797. Fix misuses of InputStream#skip in the edit log code. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0109/1612] HDFS-2797. Fix misuses of InputStream#skip in the edit log code. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1348945 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5d80662ebba51f8d6d7fb9c563043a1e17dfe5c6)

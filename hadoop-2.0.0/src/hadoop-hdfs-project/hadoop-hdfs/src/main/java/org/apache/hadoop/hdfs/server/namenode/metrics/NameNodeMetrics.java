@@ -57,6 +57,8 @@ public class NameNodeMetrics {
   @Metric MutableCounterLong createSymlinkOps;
   @Metric MutableCounterLong getLinkTargetOps;
   @Metric MutableCounterLong filesInGetListingOps;
+  @Metric("Number of blockReports from individual storages")
+  MutableCounterLong storageBlockReportOps;
 
   @Metric("Journal transactions") MutableRate transactions;
   @Metric("Journal syncs") MutableRate syncs;
@@ -68,6 +70,13 @@ public class NameNodeMetrics {
 
   @Metric("Duration in SafeMode at startup") MutableGaugeInt safeModeTime;
   @Metric("Time loading FS Image at startup") MutableGaugeInt fsImageLoadTime;
+
+  @Metric("GetImageServlet getEdit")
+  MutableRate getEdit;
+  @Metric("GetImageServlet getImage")
+  MutableRate getImage;
+  @Metric("GetImageServlet putImage")
+  MutableRate putImage;
 
   NameNodeMetrics(String processName, String sessionId, int[] intervals) {
     registry.tag(ProcessName, processName).tag(SessionId, sessionId);
@@ -159,6 +168,10 @@ public class NameNodeMetrics {
     getLinkTargetOps.incr();
   }
 
+  public void incrStorageBlockReportOps() {
+    storageBlockReportOps.incr();
+  }
+
   public void addTransaction(long latency) {
     transactions.add(latency);
   }
@@ -187,5 +200,17 @@ public class NameNodeMetrics {
 
   public void setSafeModeTime(long elapsed) {
     safeModeTime.set((int) elapsed);
+  }
+
+  public void addGetEdit(long latency) {
+    getEdit.add(latency);
+  }
+
+  public void addGetImage(long latency) {
+    getImage.add(latency);
+  }
+
+  public void addPutImage(long latency) {
+    putImage.add(latency);
   }
 }

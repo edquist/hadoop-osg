@@ -1,7 +1,7 @@
 From 953a806dd8561ee09c7f2f1c2497bf60c2cb93d3 Mon Sep 17 00:00:00 2001
 From: Aaron T. Myers <atm@cloudera.com>
 Date: Mon, 14 May 2012 10:44:43 -0700
-Subject: [PATCH 044/545] HDFS-3414. Balancer does not find NameNode if rpc-address or servicerpc-address are not set in client configs. Contributed by Aaron T. Myers.
+Subject: [PATCH 0044/1612] HDFS-3414. Balancer does not find NameNode if rpc-address or servicerpc-address are not set in client configs. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1338277 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit dc14846c837ac8c49cd42afd6255cd965dd440e6)

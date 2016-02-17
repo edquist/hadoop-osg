@@ -133,6 +133,43 @@ public class DFSUtil {
           a.isDecommissioned() ? 1 : -1;
       }
     };
+    
+      
+  /**
+   * Comparator for sorting DataNodeInfo[] based on decommissioned/stale states.
+   * Decommissioned/stale nodes are moved to the end of the array on sorting
+   * with this comparator.
+   */ 
+  @InterfaceAudience.Private 
+  public static class DecomStaleComparator implements Comparator<DatanodeInfo> {
+    private long staleInterval;
+
+    /**
+     * Constructor of DecomStaleComparator
+     * 
+     * @param interval
+     *          The time interval for marking datanodes as stale is passed from
+     *          outside, since the interval may be changed dynamically
+     */
+    public DecomStaleComparator(long interval) {
+      this.staleInterval = interval;
+    }
+
+    @Override
+    public int compare(DatanodeInfo a, DatanodeInfo b) {
+      // Decommissioned nodes will still be moved to the end of the list
+      if (a.isDecommissioned()) {
+        return b.isDecommissioned() ? 0 : 1;
+      } else if (b.isDecommissioned()) {
+        return -1;
+      }
+      // Stale nodes will be moved behind the normal nodes
+      boolean aStale = a.isStale(staleInterval);
+      boolean bStale = b.isStale(staleInterval);
+      return aStale == bStale ? 0 : (aStale ? 1 : -1);
+    }
+  }    
+    
   /**
    * Address matcher for matching an address to local address
    */
@@ -894,6 +931,11 @@ public class DFSUtil {
     return capacity <= 0 ? 0 : (remaining * 100.0f)/capacity; 
   }
 
+  /** Convert percentage to a string. */
+  public static String percent2String(double percentage) {
+    return StringUtils.format("%.2f%%", percentage);
+  }
+
   /**
    * Round bytes to GiB (gibibyte)
    * @param bytes number of bytes
@@ -1215,5 +1257,21 @@ public class DFSUtil {
         " = '" + blocksReplWorkMultiplier + "' is invalid. " +
         "It should be a positive, non-zero integer value.");
     return blocksReplWorkMultiplier;
+  }
+  
+  /**
+   * Get SPNEGO keytab Key from configuration
+   * 
+   * @param conf
+   *          Configuration
+   * @param defaultKey
+   * @return DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY if the key is not empty
+   *         else return defaultKey
+   */
+  public static String getSpnegoKeytabKey(Configuration conf, String defaultKey) {
+    String value = 
+        conf.get(DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY);
+    return (value == null || value.isEmpty()) ?
+        defaultKey : DFSConfigKeys.DFS_WEB_AUTHENTICATION_KERBEROS_KEYTAB_KEY;
   }
 }

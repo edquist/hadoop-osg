@@ -1,7 +1,7 @@
 From 4982806ba34a087f076f005951477af8b62d6ad8 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Tue, 17 Jul 2012 23:31:16 +0000
-Subject: [PATCH 436/545] MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in YarnConfiguration. (ahmed via tucu)
+Subject: [PATCH 0436/1612] MAPREDUCE-4422. YARN_APPLICATION_CLASSPATH needs a documented default value in YarnConfiguration. (ahmed via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362722 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8f5f00d6ebb5f1bbd6d76c4d5eb317edfd7400c0)

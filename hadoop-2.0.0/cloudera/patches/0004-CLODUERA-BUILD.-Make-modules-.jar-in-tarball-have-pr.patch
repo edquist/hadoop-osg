@@ -1,7 +1,7 @@
 From 66b0b0b05cc49bf0a15aa85204775d83aa99078a Mon Sep 17 00:00:00 2001
 From: Andrew Bayer <andrew@cloudera.com>
 Date: Mon, 12 Mar 2012 15:31:21 -0700
-Subject: [PATCH 004/545] CLODUERA-BUILD. Make modules/*.jar in tarball have proper versions.
+Subject: [PATCH 0004/1612] CLODUERA-BUILD. Make modules/*.jar in tarball have proper versions.
 
 This fixes the jar names in the modules directory of the dist when
 they're SNAPSHOTs, by forcing the use of project.version in their name,

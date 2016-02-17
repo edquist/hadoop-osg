@@ -46,6 +46,7 @@ message ContainerIdProto {
 
 message ResourceProto {
   optional int32 memory = 1;
+  optional int32 virtual_cores = 2;
 }
 
 message PriorityProto {
@@ -135,6 +136,7 @@ enum LocalResourceVisibilityProto {
 enum LocalResourceTypeProto {
   ARCHIVE = 1;
   FILE = 2;
+  PATTERN = 3;
 }
 
 message LocalResourceProto {
@@ -142,7 +144,8 @@ message LocalResourceProto {
   optional int64 size = 2;
   optional int64 timestamp = 3;
   optional LocalResourceTypeProto type = 4;
-  optional LocalResourceVisibilityProto visibility= 5;
+  optional LocalResourceVisibilityProto visibility = 5;
+  optional string pattern = 6;
 }
 
 message ApplicationResourceUsageReportProto {
@@ -215,16 +218,6 @@ message ResourceRequestProto {
   optional ResourceProto capability = 3;
   optional int32 num_containers = 4;
 }
-
-message AMResponseProto {
-  optional bool reboot = 1;
-  optional int32 response_id = 2;
-  repeated ContainerProto allocated_containers = 3;
-  repeated ContainerStatusProto completed_container_statuses = 4;
-  optional ResourceProto limit = 5;
-  repeated NodeReportProto updated_nodes = 6;
-}
-
 
 ////////////////////////////////////////////////////////////////////////
 ////// From client_RM_Protocol /////////////////////////////////////////
@@ -327,3 +320,15 @@ message StringBytesMapProto {
   optional bytes value = 2;
 }
 
+////////////////////////////////////////////////////////////////////////
+////// From recovery////////////////////////////////////////////////////
+////////////////////////////////////////////////////////////////////////
+message ApplicationStateDataProto {
+  optional int64 submit_time = 1;
+  optional ApplicationSubmissionContextProto application_submission_context = 2;
+}
+
+message ApplicationAttemptStateDataProto {
+  optional ApplicationAttemptIdProto attemptId = 1;
+  optional ContainerProto master_container = 2;
+}

@@ -1,7 +1,7 @@
 From ca3c3317fd20dd815f4b463aefe61a788a9569de Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Mon, 21 May 2012 19:15:41 +0000
-Subject: [PATCH 138/545] MAPREDUCE-3870. Invalid App Metrics (Bhallamudi Venkata Siva Kamesh via tgraves).
+Subject: [PATCH 0138/1612] MAPREDUCE-3870. Invalid App Metrics (Bhallamudi Venkata Siva Kamesh via tgraves).
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1341160 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 66c3be3125c3390cbe096c2cbbba8da505e89e87)

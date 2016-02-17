@@ -33,7 +33,6 @@ import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants;
-import org.apache.hadoop.hdfs.protocol.HdfsFileStatus;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion;
 import org.apache.hadoop.hdfs.protocol.LayoutVersion.Feature;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
@@ -94,7 +93,7 @@ public class FSEditLogLoader {
                                  expectedStartingTxId, recovery);
       FSImage.LOG.info("Edits file " + edits.getName() 
           + " of size " + edits.length() + " edits # " + numEdits 
-          + " loaded in " + (now()-startTime)/1000 + " seconds.");
+          + " loaded in " + (now()-startTime)/1000 + " seconds");
       return numEdits;
     } finally {
       edits.close();
@@ -126,10 +125,6 @@ public class FSEditLogLoader {
     long numTxns = (lastTxId - expectedStartingTxId) + 1;
     long lastLogTime = now();
 
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("edit log length: " + in.length() + ", start txid: "
-          + expectedStartingTxId + ", last txid: " + lastTxId);
-    }
     try {
       while (true) {
         try {
@@ -195,8 +190,9 @@ public class FSEditLogLoader {
           if (op.hasTransactionId()) {
             long now = now();
             if (now - lastLogTime > REPLAY_TRANSACTION_LOG_INTERVAL) {
-              int percent = Math.round((float)lastAppliedTxId / numTxns * 100);
-              LOG.info("replaying edit log: " + lastAppliedTxId + "/" + numTxns
+              long deltaTxId = lastAppliedTxId - expectedStartingTxId + 1;
+              int percent = Math.round((float) deltaTxId / numTxns * 100);
+              LOG.info("replaying edit log: " + deltaTxId + "/" + numTxns
                   + " transactions completed. (" + percent + "%)");
               lastLogTime = now;
             }
@@ -363,10 +359,8 @@ public class FSEditLogLoader {
     }
     case OP_RENAME_OLD: {
       RenameOldOp renameOp = (RenameOldOp)op;
-      HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
       fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                 renameOp.timestamp);
-      fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
       break;
     }
     case OP_DELETE: {
@@ -429,18 +423,15 @@ public class FSEditLogLoader {
     }
     case OP_SYMLINK: {
       SymlinkOp symlinkOp = (SymlinkOp)op;
-      fsDir.unprotectedSymlink(symlinkOp.path, symlinkOp.value,
+      fsDir.unprotectedAddSymlink(symlinkOp.path, symlinkOp.value,
                                symlinkOp.mtime, symlinkOp.atime,
                                symlinkOp.permissionStatus);
       break;
     }
     case OP_RENAME: {
       RenameOp renameOp = (RenameOp)op;
-
-      HdfsFileStatus dinfo = fsDir.getFileInfo(renameOp.dst, false);
       fsDir.unprotectedRenameTo(renameOp.src, renameOp.dst,
                                 renameOp.timestamp, renameOp.options);
-      fsNamesys.unprotectedChangeLease(renameOp.src, renameOp.dst, dinfo);
       break;
     }
     case OP_GET_DELEGATION_TOKEN: {
@@ -480,8 +471,8 @@ public class FSEditLogLoader {
       Lease lease = fsNamesys.leaseManager.getLease(
           reassignLeaseOp.leaseHolder);
       INodeFileUnderConstruction pendingFile =
-          (INodeFileUnderConstruction) fsDir.getFileINode(
-              reassignLeaseOp.path);
+          INodeFileUnderConstruction.valueOf( 
+              fsDir.getINode(reassignLeaseOp.path), reassignLeaseOp.path);
       fsNamesys.reassignLeaseInternal(lease,
           reassignLeaseOp.path, reassignLeaseOp.newHolder, pendingFile);
       break;
@@ -595,13 +586,13 @@ public class FSEditLogLoader {
           // what about an old-version fsync() where fsync isn't called
           // until several blocks in?
           newBI = new BlockInfoUnderConstruction(
-              newBlock, file.getReplication());
+              newBlock, file.getBlockReplication());
         } else {
           // OP_CLOSE should add finalized blocks. This code path
           // is only executed when loading edits written by prior
           // versions of Hadoop. Current versions always log
           // OP_ADD operations as each block is allocated.
-          newBI = new BlockInfo(newBlock, file.getReplication());
+          newBI = new BlockInfo(newBlock, file.getBlockReplication());
         }
         fsNamesys.getBlockManager().addBlockCollection(newBI, file);
         file.addBlock(newBI);

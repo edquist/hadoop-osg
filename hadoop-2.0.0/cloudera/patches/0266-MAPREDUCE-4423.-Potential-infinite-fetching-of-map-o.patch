@@ -1,7 +1,7 @@
 From b9b35b14141b8c07d9de06af41ce27d5f6b579d8 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Fri, 27 Jul 2012 01:48:09 +0000
-Subject: [PATCH 266/545]  MAPREDUCE-4423. Potential infinite fetching of map output (Robert Evans via tgraves)
+Subject: [PATCH 0266/1612]  MAPREDUCE-4423. Potential infinite fetching of map output (Robert Evans via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1366258 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 94884cdfa126557e9f2250d4cb9fe11c44dde2b8)

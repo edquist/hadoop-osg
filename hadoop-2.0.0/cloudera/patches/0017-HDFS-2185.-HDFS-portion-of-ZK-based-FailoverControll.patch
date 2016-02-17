@@ -1,7 +1,7 @@
 From 7d8d3aec41742d664c49fccb21049a9ae3fb845a Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Tue, 3 Apr 2012 00:59:02 +0000
-Subject: [PATCH 017/545] HDFS-2185. HDFS portion of ZK-based FailoverController. Contributed by Todd Lipcon.
+Subject: [PATCH 0017/1612] HDFS-2185. HDFS portion of ZK-based FailoverController. Contributed by Todd Lipcon.
 
 Modified from upstream:
 - Resolved NNHAServiceTarget as was done upstream in merge at r1309576

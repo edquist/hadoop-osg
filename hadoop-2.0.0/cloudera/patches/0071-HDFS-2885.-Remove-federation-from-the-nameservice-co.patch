@@ -1,7 +1,7 @@
 From db3fdbaa7a5aa8592553ae2f0b46863e64b8a4ef Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sun, 20 May 2012 21:13:17 +0000
-Subject: [PATCH 071/545] HDFS-2885. Remove "federation" from the nameservice config options. Contributed by Tsz Wo (Nicholas), SZE
+Subject: [PATCH 0071/1612] HDFS-2885. Remove "federation" from the nameservice config options. Contributed by Tsz Wo (Nicholas), SZE
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1340841 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7f57d56de2fb97534461ec5aa7a7149a38837c50)

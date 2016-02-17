@@ -1,7 +1,7 @@
 From 89b86f3496b6609802571007497b4b7c56a066e9 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Mon, 23 Jul 2012 19:31:33 +0000
-Subject: [PATCH 272/545] MAPREDUCE-3893. allow capacity scheduler configs max-apps and max-am-pct per queue (tgraves via bobby)
+Subject: [PATCH 0272/1612] MAPREDUCE-3893. allow capacity scheduler configs max-apps and max-am-pct per queue (tgraves via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1364764 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4d72ced76594a63fbbd970ae3ab9663f678eac96)

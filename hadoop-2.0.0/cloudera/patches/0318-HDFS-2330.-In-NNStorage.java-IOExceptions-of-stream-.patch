@@ -1,7 +1,7 @@
 From 25f1c9416254f17e996e2ae089bf2d062c7b0f7c Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 13 Aug 2012 15:09:39 -0700
-Subject: [PATCH 318/545] HDFS-2330. In NNStorage.java, IOExceptions of stream closures can mask root exceptions. Contributed by Uma Maheswara Rao G.
+Subject: [PATCH 0318/1612] HDFS-2330. In NNStorage.java, IOExceptions of stream closures can mask root exceptions. Contributed by Uma Maheswara Rao G.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1372599 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 44914117d46eefd6d585e011331dcbcc0c0bf539)

@@ -1,7 +1,7 @@
 From 28db75160e8a5653bd6764e8d8023110b1f293c4 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 25 Jul 2012 15:42:48 -0700
-Subject: [PATCH 258/545] HDFS-3626. Creating file with invalid path can corrupt edit log. Contributed by Todd Lipcon.
+Subject: [PATCH 0258/1612] HDFS-3626. Creating file with invalid path can corrupt edit log. Contributed by Todd Lipcon.
 
 Differs from upstream patch in test code: resolved conflicts because
 upstream has already converted all tests to JUnit 4, which was not

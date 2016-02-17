@@ -1,7 +1,7 @@
 From f6c18ec2389d5c0c46a6c1e889649d60b0ff38b4 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 16 May 2012 19:54:26 -0700
-Subject: [PATCH 060/545] HDFS-3432. TestDFSZKFailoverController tries to fail over too early. Contributed by Todd Lipcon.
+Subject: [PATCH 0060/1612] HDFS-3432. TestDFSZKFailoverController tries to fail over too early. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1339434 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d95a9cbfa6b5ecf2e5552e73ad605dde2c4b9859)

@@ -1,7 +1,7 @@
 From 32004e6dcb44935a5c61c1a9b3db73a78b26af58 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Tue, 12 Jun 2012 21:52:46 +0000
-Subject: [PATCH 165/545] HDFS-3428. Move DelegationTokenRenewer to common (tucu)
+Subject: [PATCH 0165/1612] HDFS-3428. Move DelegationTokenRenewer to common (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349555 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 418b50cd2a1d7fd960b31c67e03fe39642fe18cc)

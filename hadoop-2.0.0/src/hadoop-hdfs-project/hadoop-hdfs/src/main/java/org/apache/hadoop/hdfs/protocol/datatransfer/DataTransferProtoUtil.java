@@ -24,9 +24,9 @@ import org.apache.hadoop.hdfs.protocol.ExtendedBlock;
 import org.apache.hadoop.hdfs.protocol.HdfsProtoUtil;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.BaseHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto;
-import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ChecksumProto.ChecksumType;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.ClientOperationHeaderProto;
 import org.apache.hadoop.hdfs.protocol.proto.DataTransferProtos.OpWriteBlockProto;
+import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos.ChecksumTypeProto;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.DataChecksum;
@@ -47,11 +47,11 @@ public abstract class DataTransferProtoUtil {
    * Map between the internal DataChecksum identifiers and the protobuf-
    * generated identifiers on the wire.
    */
-  static BiMap<Integer, ChecksumProto.ChecksumType> checksumTypeMap =
-    ImmutableBiMap.<Integer, ChecksumProto.ChecksumType>builder()
-      .put(DataChecksum.CHECKSUM_CRC32, ChecksumProto.ChecksumType.CRC32)
-      .put(DataChecksum.CHECKSUM_CRC32C, ChecksumProto.ChecksumType.CRC32C)
-      .put(DataChecksum.CHECKSUM_NULL, ChecksumProto.ChecksumType.NULL)
+  static BiMap<Integer, ChecksumTypeProto> checksumTypeMap =
+    ImmutableBiMap.<Integer, ChecksumTypeProto>builder()
+      .put(DataChecksum.CHECKSUM_CRC32, ChecksumTypeProto.CHECKSUM_CRC32)
+      .put(DataChecksum.CHECKSUM_CRC32C, ChecksumTypeProto.CHECKSUM_CRC32C)
+      .put(DataChecksum.CHECKSUM_NULL, ChecksumTypeProto.CHECKSUM_NULL)
       .build();
 
   
@@ -68,7 +68,7 @@ public abstract class DataTransferProtoUtil {
   }
 
   public static ChecksumProto toProto(DataChecksum checksum) {
-    ChecksumType type = checksumTypeMap.get(checksum.getChecksumType());
+    ChecksumTypeProto type = checksumTypeMap.get(checksum.getChecksumType());
     if (type == null) {
       throw new IllegalArgumentException(
           "Can't convert checksum to protobuf: " + checksum);

@@ -1,7 +1,7 @@
 From 21d47399ef90f6be90044ad3922a620c82615815 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Thu, 31 May 2012 15:16:48 +0000
-Subject: [PATCH 155/545] MAPREDUCE-4297. Usersmap file in gridmix should not fail on empty lines (Ravi Prakash via bobby)
+Subject: [PATCH 0155/1612] MAPREDUCE-4297. Usersmap file in gridmix should not fail on empty lines (Ravi Prakash via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1344763 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit fc09cbe9a6c6725c2a1a4dbab7e2f493d5c4d8ab)

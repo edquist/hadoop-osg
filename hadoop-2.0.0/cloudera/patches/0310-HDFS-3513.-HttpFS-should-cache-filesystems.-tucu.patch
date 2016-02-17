@@ -1,7 +1,7 @@
 From 2e3ce861cf0f40cdb1d0cee91402a9bbec265feb Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 1 Aug 2012 23:10:26 +0000
-Subject: [PATCH 310/545] HDFS-3513. HttpFS should cache filesystems. (tucu)
+Subject: [PATCH 0310/1612] HDFS-3513. HttpFS should cache filesystems. (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1368305 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b1fba6745b19c019c16ad27f924f7c6f465bc937)

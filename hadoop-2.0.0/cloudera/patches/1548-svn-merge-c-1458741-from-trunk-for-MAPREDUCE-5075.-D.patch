@@ -1,0 +1,81 @@
+From bd27555773e8a8ebfa7c91c0db79e29f65b17774 Mon Sep 17 00:00:00 2001
+From: Tsz-wo Sze <szetszwo@apache.org>
+Date: Wed, 20 Mar 2013 10:43:21 +0000
+Subject: [PATCH 1548/1612] svn merge -c 1458741 from trunk for MAPREDUCE-5075. DistCp leaks input file handles since ThrottledInputStream does not close the wrapped InputStream.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1458747 13f79535-47bb-0310-9956-ffa450edef68
+
+Conflicts:
+	hadoop-mapreduce-project/CHANGES.txt
+---
+ .../tools/mapred/RetriableFileCopyCommand.java     |    9 ++++-----
+ .../hadoop/tools/util/ThrottledInputStream.java    |    5 +++++
+ .../org/apache/hadoop/tools/TestIntegration.java   |    2 +-
+ 3 files changed, 10 insertions(+), 6 deletions(-)
+
+diff --git a/hadoop-tools/hadoop-distcp/src/main/java/org/apache/hadoop/tools/mapred/RetriableFileCopyCommand.java b/hadoop-tools/hadoop-distcp/src/main/java/org/apache/hadoop/tools/mapred/RetriableFileCopyCommand.java
+index a7e8381..ccd2eab 100644
+--- a/hadoop-tools/hadoop-distcp/src/main/java/org/apache/hadoop/tools/mapred/RetriableFileCopyCommand.java
++++ b/hadoop-tools/hadoop-distcp/src/main/java/org/apache/hadoop/tools/mapred/RetriableFileCopyCommand.java
+@@ -124,7 +124,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
+             tmpTargetPath, true, BUFFER_SIZE,
+             getReplicationFactor(fileAttributes, sourceFileStatus, targetFS, tmpTargetPath),
+             getBlockSize(fileAttributes, sourceFileStatus, targetFS, tmpTargetPath), context));
+-    return copyBytes(sourceFileStatus, outStream, BUFFER_SIZE, true, context);
++    return copyBytes(sourceFileStatus, outStream, BUFFER_SIZE, context);
+   }
+ 
+   private void compareFileLengths(FileStatus sourceFileStatus, Path target,
+@@ -170,8 +170,8 @@ public class RetriableFileCopyCommand extends RetriableCommand {
+   }
+ 
+   private long copyBytes(FileStatus sourceFileStatus, OutputStream outStream,
+-                         int bufferSize, boolean mustCloseStream,
+-                         Mapper.Context context) throws IOException {
++                         int bufferSize, Mapper.Context context)
++      throws IOException {
+     Path source = sourceFileStatus.getPath();
+     byte buf[] = new byte[bufferSize];
+     ThrottledInputStream inStream = null;
+@@ -187,8 +187,7 @@ public class RetriableFileCopyCommand extends RetriableCommand {
+         bytesRead = inStream.read(buf);
+       }
+     } finally {
+-      if (mustCloseStream)
+-        IOUtils.cleanup(LOG, outStream, inStream);
++      IOUtils.cleanup(LOG, outStream, inStream);
+     }
+ 
+     return totalBytesRead;
+diff --git a/hadoop-tools/hadoop-distcp/src/main/java/org/apache/hadoop/tools/util/ThrottledInputStream.java b/hadoop-tools/hadoop-distcp/src/main/java/org/apache/hadoop/tools/util/ThrottledInputStream.java
+index cf442f4..75ae86a 100644
+--- a/hadoop-tools/hadoop-distcp/src/main/java/org/apache/hadoop/tools/util/ThrottledInputStream.java
++++ b/hadoop-tools/hadoop-distcp/src/main/java/org/apache/hadoop/tools/util/ThrottledInputStream.java
+@@ -52,6 +52,11 @@ public class ThrottledInputStream extends InputStream {
+     this.maxBytesPerSec = maxBytesPerSec;
+   }
+ 
++  @Override
++  public void close() throws IOException {
++    rawStream.close();
++  }
++
+   /** @inheritDoc */
+   @Override
+   public int read() throws IOException {
+diff --git a/hadoop-tools/hadoop-distcp/src/test/java/org/apache/hadoop/tools/TestIntegration.java b/hadoop-tools/hadoop-distcp/src/test/java/org/apache/hadoop/tools/TestIntegration.java
+index ca08e25..6d99477 100644
+--- a/hadoop-tools/hadoop-distcp/src/test/java/org/apache/hadoop/tools/TestIntegration.java
++++ b/hadoop-tools/hadoop-distcp/src/test/java/org/apache/hadoop/tools/TestIntegration.java
+@@ -101,7 +101,7 @@ public class TestIntegration {
+ 
+     try {
+       addEntries(listFile, "singlefile1/file1");
+-      createFiles("singlefile1/file1", target.toString());
++      createFiles("singlefile1/file1", "target");
+ 
+       runTest(listFile, target, sync);
+ 
+-- 
+1.7.0.4
+

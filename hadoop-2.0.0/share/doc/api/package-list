@@ -82,6 +82,7 @@ org.apache.hadoop.metrics2.sink.ganglia
 org.apache.hadoop.metrics2.source
 org.apache.hadoop.metrics2.util
 org.apache.hadoop.net
+org.apache.hadoop.net.unix
 org.apache.hadoop.record
 org.apache.hadoop.record.compiler
 org.apache.hadoop.record.compiler.ant
@@ -113,4 +114,8 @@ org.apache.hadoop.yarn.api
 org.apache.hadoop.yarn.api.protocolrecords
 org.apache.hadoop.yarn.api.records
 org.apache.hadoop.yarn.applications.distributedshell
+org.apache.hadoop.yarn.applications.unmanagedamlauncher
+org.apache.hadoop.yarn.client
+org.apache.hadoop.yarn.client.cli
 org.apache.hadoop.yarn.logaggregation
+org.apache.hadoop.yarn.security.admin

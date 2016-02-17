@@ -1,7 +1,7 @@
 From af8214f0756a56e9866b909dd6edfda115cc7eff Mon Sep 17 00:00:00 2001
 From: Amar Kamat <amarrk@apache.org>
 Date: Thu, 23 Feb 2012 10:41:07 +0000
-Subject: [PATCH 130/545] MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for faster job submission. (amarrk)
+Subject: [PATCH 0130/1612] MAPREDUCE-3787. [Gridmix] Optimize job monitoring and STRESS mode for faster job submission. (amarrk)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1292736 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 30ad1c4a4443d12c0534e4d341f906f8e82549b7)

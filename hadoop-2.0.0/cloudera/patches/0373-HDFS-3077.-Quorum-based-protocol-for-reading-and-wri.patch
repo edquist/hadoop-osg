@@ -1,7 +1,7 @@
 From 98c2ea6915dfd3eea34a054818e1fdcfed15a87d Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:31:43 -0700
-Subject: [PATCH 373/545] HDFS-3077. Quorum-based protocol for reading and writing edit logs. Contributed by Todd Lipcon based on initial work from Brandon Li and Hari Mankude.
+Subject: [PATCH 0373/1612] HDFS-3077. Quorum-based protocol for reading and writing edit logs. Contributed by Todd Lipcon based on initial work from Brandon Li and Hari Mankude.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1363596 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2ceb75e437eab87c6277fa0f50182d625b517c22)

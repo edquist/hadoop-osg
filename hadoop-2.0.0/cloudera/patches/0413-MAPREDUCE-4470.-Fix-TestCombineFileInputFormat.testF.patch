@@ -1,7 +1,7 @@
 From a30663f275ae98c109b5975da7576d271b34ef7f Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 23 Aug 2012 00:22:14 +0000
-Subject: [PATCH 413/545] MAPREDUCE-4470. Fix TestCombineFileInputFormat.testForEmptyFile (ikatsov via tucu)
+Subject: [PATCH 0413/1612] MAPREDUCE-4470. Fix TestCombineFileInputFormat.testForEmptyFile (ikatsov via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1376325 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 762a03257a5c38c711688b048057f747a2005bf3)

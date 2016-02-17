@@ -1,7 +1,7 @@
 From 48ae619cbab597ebfaf0a4e32b40dbd78b63368d Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 24 Jul 2012 19:27:29 +0000
-Subject: [PATCH 285/545] MAPREDUCE-4467. IndexCache failures due to missing synchronization (Kihwal Lee via tgraves)
+Subject: [PATCH 0285/1612] MAPREDUCE-4467. IndexCache failures due to missing synchronization (Kihwal Lee via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1365240 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 109ee794ed243a19a571a595f7a4fd2281ac8673)

@@ -1,0 +1,176 @@
+From 5df9375784ecf2574282e48195ca526aeaa9a0a8 Mon Sep 17 00:00:00 2001
+From: Andrew Wang <wang@apache.org>
+Date: Tue, 17 Dec 2013 00:48:04 +0000
+Subject: [PATCH 1526/1612] HDFS-5350. Name Node should report fsimage transfer time as a metric. Contributed by Jimmy Xiang.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1551427 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 5299a8116d043d2665b1b091506d6de62d969a19)
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java
+---
+ .../hdfs/server/namenode/GetImageServlet.java      |   22 ++++++++++++++++++++
+ .../server/namenode/metrics/NameNodeMetrics.java   |   19 +++++++++++++++++
+ .../hdfs/server/namenode/TestCheckpoint.java       |   14 ++++++++++++
+ 3 files changed, 55 insertions(+), 0 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/GetImageServlet.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/GetImageServlet.java
+index dcec0ef..2431f0b 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/GetImageServlet.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/GetImageServlet.java
+@@ -17,6 +17,8 @@
+  */
+ package org.apache.hadoop.hdfs.server.namenode;
+ 
++import static org.apache.hadoop.util.Time.now;
++
+ import java.security.PrivilegedExceptionAction;
+ import java.util.*;
+ import java.io.*;
+@@ -42,6 +44,7 @@ import org.apache.hadoop.hdfs.HAUtil;
+ import org.apache.hadoop.hdfs.server.common.JspHelper;
+ import org.apache.hadoop.hdfs.server.common.Storage;
+ import org.apache.hadoop.hdfs.server.common.StorageInfo;
++import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
+ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLog;
+ import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+ import org.apache.hadoop.hdfs.util.MD5FileUtils;
+@@ -89,6 +92,7 @@ public class GetImageServlet extends HttpServlet {
+       final GetImageParams parsedParams = new GetImageParams(request, response);
+       final Configuration conf = 
+         (Configuration)getServletContext().getAttribute(JspHelper.CURRENT_CONF);
++      final NameNodeMetrics metrics = NameNode.getNameNodeMetrics();
+       
+       if (UserGroupInformation.isSecurityEnabled() && 
+           !isValidRequestor(context, request.getUserPrincipal().getName(), conf)) {
+@@ -129,14 +133,26 @@ public class GetImageServlet extends HttpServlet {
+               throw new IOException(errorMessage);
+             }
+             CheckpointFaultInjector.getInstance().beforeGetImageSetsHeaders();
++            long start = now();
+             serveFile(imageFile);
++
++            if (metrics != null) { // Metrics non-null only when used inside name node
++              long elapsed = now() - start;
++              metrics.addGetImage(elapsed);
++            }
+           } else if (parsedParams.isGetEdit()) {
+             long startTxId = parsedParams.getStartTxId();
+             long endTxId = parsedParams.getEndTxId();
+             
+             File editFile = nnImage.getStorage()
+                 .findFinalizedEditsFile(startTxId, endTxId);
++            long start = now();
+             serveFile(editFile);
++
++            if (metrics != null) { // Metrics non-null only when used inside name node
++              long elapsed = now() - start;
++              metrics.addGetEdit(elapsed);
++            }
+           } else if (parsedParams.isPutImage()) {
+             final long txid = parsedParams.getTxId();
+ 
+@@ -160,12 +176,18 @@ public class GetImageServlet extends HttpServlet {
+                 UserGroupInformation.getCurrentUser().reloginFromKeytab();
+               }
+               
++              long start = now();
+               // issue a HTTP get request to download the new fsimage 
+               MD5Hash downloadImageDigest =
+                 TransferFsImage.downloadImageToStorage(
+                         parsedParams.getInfoServer(), txid,
+                         nnImage.getStorage(), true);
+               nnImage.saveDigestAndRenameCheckpointImage(txid, downloadImageDigest);
++
++              if (metrics != null) { // Metrics non-null only when used inside name node
++                long elapsed = now() - start;
++                metrics.addPutImage(elapsed);
++              }
+               
+               // Now that we have a new checkpoint, we might be able to
+               // remove some old ones.
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/metrics/NameNodeMetrics.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/metrics/NameNodeMetrics.java
+index ecfe986..3e57bf9 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/metrics/NameNodeMetrics.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/metrics/NameNodeMetrics.java
+@@ -69,6 +69,13 @@ public class NameNodeMetrics {
+   @Metric("Duration in SafeMode at startup") MutableGaugeInt safeModeTime;
+   @Metric("Time loading FS Image at startup") MutableGaugeInt fsImageLoadTime;
+ 
++  @Metric("GetImageServlet getEdit")
++  MutableRate getEdit;
++  @Metric("GetImageServlet getImage")
++  MutableRate getImage;
++  @Metric("GetImageServlet putImage")
++  MutableRate putImage;
++
+   NameNodeMetrics(String processName, String sessionId, int[] intervals) {
+     registry.tag(ProcessName, processName).tag(SessionId, sessionId);
+     
+@@ -188,4 +195,16 @@ public class NameNodeMetrics {
+   public void setSafeModeTime(long elapsed) {
+     safeModeTime.set((int) elapsed);
+   }
++
++  public void addGetEdit(long latency) {
++    getEdit.add(latency);
++  }
++
++  public void addGetImage(long latency) {
++    getImage.add(latency);
++  }
++
++  public void addPutImage(long latency) {
++    putImage.add(latency);
++  }
+ }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java
+index bb98d12..115f226 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestCheckpoint.java
+@@ -20,6 +20,9 @@ package org.apache.hadoop.hdfs.server.namenode;
+ import static org.apache.hadoop.hdfs.server.common.Util.fileAsURI;
+ import static org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil.assertNNHasCheckpoints;
+ import static org.apache.hadoop.hdfs.server.namenode.FSImageTestUtil.getNameNodeCurrentDirs;
++import static org.apache.hadoop.test.MetricsAsserts.assertCounterGt;
++import static org.apache.hadoop.test.MetricsAsserts.assertGaugeGt;
++import static org.apache.hadoop.test.MetricsAsserts.getMetrics;
+ import static org.junit.Assert.assertEquals;
+ import static org.junit.Assert.assertFalse;
+ import static org.junit.Assert.assertNotNull;
+@@ -72,6 +75,7 @@ import org.apache.hadoop.hdfs.server.protocol.RemoteEditLogManifest;
+ import org.apache.hadoop.hdfs.tools.DFSAdmin;
+ import org.apache.hadoop.io.Text;
+ import org.apache.hadoop.net.NetUtils;
++import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+ import org.apache.hadoop.test.GenericTestUtils;
+ import org.apache.hadoop.test.GenericTestUtils.DelayAnswer;
+ import org.apache.hadoop.test.GenericTestUtils.LogCapturer;
+@@ -104,6 +108,7 @@ public class TestCheckpoint {
+   }
+ 
+   static final Log LOG = LogFactory.getLog(TestCheckpoint.class); 
++  static final String NN_METRICS = "NameNodeActivity";
+   
+   static final long seed = 0xDEADBEEFL;
+   static final int blockSize = 4096;
+@@ -1027,6 +1032,15 @@ public class TestCheckpoint {
+       //
+       SecondaryNameNode secondary = startSecondaryNameNode(conf);
+       secondary.doCheckpoint();
++
++      MetricsRecordBuilder rb = getMetrics(NN_METRICS);
++      assertCounterGt("GetImageNumOps", 0, rb);
++      assertCounterGt("GetEditNumOps", 0, rb);
++      assertCounterGt("PutImageNumOps", 0, rb);
++      assertGaugeGt("GetImageAvgTime", 0.0, rb);
++      assertGaugeGt("GetEditAvgTime", 0.0, rb);
++      assertGaugeGt("PutImageAvgTime", 0.0, rb);
++
+       secondary.shutdown();
+     } finally {
+       fileSys.close();
+-- 
+1.7.0.4
+

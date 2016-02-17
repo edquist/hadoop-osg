@@ -1,7 +1,7 @@
 From 4ced3926aaea2cb0822cd8b8ca9cf585e00b2c1a Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 9 Jul 2012 17:40:31 +0000
-Subject: [PATCH 142/545] MAPREDUCE-2739. Update installation docs (remove YarnClientFactory) (bowang via tucu)
+Subject: [PATCH 0142/1612] MAPREDUCE-2739. Update installation docs (remove YarnClientFactory) (bowang via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1359303 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit acf92b37d1adbf3b845dcf9bb4700e2b383a9f49)

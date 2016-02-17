@@ -1,7 +1,7 @@
 From 4ec7277b8f1c30c67a4d923a92739ef77ad11aa9 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Fri, 29 Jun 2012 22:24:29 +0000
-Subject: [PATCH 143/545] HDFS-3446. HostsFileReader silently ignores bad includes/excludes. Contributed by Matthew Jacobs.
+Subject: [PATCH 0143/1612] HDFS-3446. HostsFileReader silently ignores bad includes/excludes. Contributed by Matthew Jacobs.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1355584 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 1510aad7ec7e858fbbd251442f1882e939bedcbf)

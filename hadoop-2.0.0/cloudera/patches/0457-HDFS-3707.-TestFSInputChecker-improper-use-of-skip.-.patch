@@ -1,7 +1,7 @@
 From 5be600333034fe14b78ace2d1318ca246163ca84 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 21 Aug 2012 00:00:33 +0000
-Subject: [PATCH 457/545] HDFS-3707. TestFSInputChecker: improper use of skip. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0457/1612] HDFS-3707. TestFSInputChecker: improper use of skip. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1375336 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4b5d175a9b355fb1265f45f0a12a44b150bf8662)

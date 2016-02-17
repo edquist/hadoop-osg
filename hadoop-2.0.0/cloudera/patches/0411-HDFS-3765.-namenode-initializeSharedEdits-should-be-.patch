@@ -1,7 +1,7 @@
 From bf0aba9b291670c33118572d63df9b708de30866 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Tue, 14 Aug 2012 20:11:40 +0000
-Subject: [PATCH 411/545] HDFS-3765. namenode -initializeSharedEdits should be able to initialize all shared storages. Contributed by Vinay and Todd Lipcon.
+Subject: [PATCH 0411/1612] HDFS-3765. namenode -initializeSharedEdits should be able to initialize all shared storages. Contributed by Vinay and Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1373061 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2db527c63db27afbf7f36d40a4bbb76efdf86e41)

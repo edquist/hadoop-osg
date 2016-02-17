@@ -1,7 +1,7 @@
 From 8b3dcf02df7121f0ddad60bc5ee4c29ad253a42a Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 13 Aug 2012 15:10:21 -0700
-Subject: [PATCH 320/545] HADOOP-7703. Improved excpetion handling of shutting down web server. (Devaraj K via Eric Yang)
+Subject: [PATCH 0320/1612] HADOOP-7703. Improved excpetion handling of shutting down web server. (Devaraj K via Eric Yang)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1372637 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d8c9e2c7c64be2bb61a5e0e3e81e1ee99356d562)

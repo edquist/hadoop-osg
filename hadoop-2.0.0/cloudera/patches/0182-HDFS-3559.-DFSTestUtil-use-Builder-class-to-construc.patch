@@ -1,7 +1,7 @@
 From 4e51f7d01482229462a1ac8bda8f2268e01b6e80 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Thu, 28 Jun 2012 20:08:08 +0000
-Subject: [PATCH 182/545] HDFS-3559. DFSTestUtil: use Builder class to construct DFSTestUtil instances. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0182/1612] HDFS-3559. DFSTestUtil: use Builder class to construct DFSTestUtil instances. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1355143 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4108252b83889b0c4d9e2baa7c5d6c29df10892f)

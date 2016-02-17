@@ -1,7 +1,7 @@
 From 897cf13223a7656626450490a0551e768644c514 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sun, 3 Jun 2012 22:14:16 +0000
-Subject: [PATCH 092/545] HADOOP-8450. Remove src/test/system. Contributed by Eli Collins
+Subject: [PATCH 0092/1612] HADOOP-8450. Remove src/test/system. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1345794 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 81d4db0fae62a631ed9295c8ad8c56534137e27e)

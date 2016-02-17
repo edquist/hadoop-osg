@@ -1,7 +1,7 @@
 From 3eb0dda346fdb59a580ff0e72cd0e53c51dc48fc Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 19 Jul 2012 18:26:04 +0000
-Subject: [PATCH 241/545] HDFS-3675. libhdfs: follow documented return codes. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0241/1612] HDFS-3675. libhdfs: follow documented return codes. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363459 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 84f7cd8bac1bc14438bd497c6449dea13ac74949)

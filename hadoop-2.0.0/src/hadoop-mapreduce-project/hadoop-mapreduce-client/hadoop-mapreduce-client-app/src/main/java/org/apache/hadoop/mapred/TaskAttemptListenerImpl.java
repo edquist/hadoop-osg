@@ -22,7 +22,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -38,7 +37,6 @@ import org.apache.hadoop.mapred.SortedRanges.Range;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.security.token.JobTokenSecretManager;
-import org.apache.hadoop.mapreduce.v2.api.records.TaskType;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.TaskAttemptListener;
 import org.apache.hadoop.mapreduce.v2.app.TaskHeartbeatHandler;
@@ -52,6 +50,7 @@ import org.apache.hadoop.mapreduce.v2.app.job.event.TaskAttemptStatusUpdateEvent
 import org.apache.hadoop.mapreduce.v2.app.security.authorize.MRAMPolicyProvider;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.authorize.PolicyProvider;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.yarn.YarnException;
 import org.apache.hadoop.yarn.service.CompositeService;
 
@@ -253,43 +252,35 @@ public class TaskAttemptListenerImpl extends CompositeService
 
   @Override
   public MapTaskCompletionEventsUpdate getMapCompletionEvents(
-      JobID jobIdentifier, int fromEventId, int maxEvents,
+      JobID jobIdentifier, int startIndex, int maxEvents,
       TaskAttemptID taskAttemptID) throws IOException {
     LOG.info("MapCompletionEvents request from " + taskAttemptID.toString()
-        + ". fromEventID " + fromEventId + " maxEvents " + maxEvents);
+        + ". startIndex " + startIndex + " maxEvents " + maxEvents);
 
     // TODO: shouldReset is never used. See TT. Ask for Removal.
     boolean shouldReset = false;
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptId attemptID =
       TypeConverter.toYarn(taskAttemptID);
     org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent[] events =
-        context.getJob(attemptID.getTaskId().getJobId()).getTaskAttemptCompletionEvents(
-            fromEventId, maxEvents);
+        context.getJob(attemptID.getTaskId().getJobId()).getMapAttemptCompletionEvents(
+            startIndex, maxEvents);
 
     taskHeartbeatHandler.progressing(attemptID);
-
-    // filter the events to return only map completion events in old format
-    List<TaskCompletionEvent> mapEvents = new ArrayList<TaskCompletionEvent>();
-    for (org.apache.hadoop.mapreduce.v2.api.records.TaskAttemptCompletionEvent event : events) {
-      if (TaskType.MAP.equals(event.getAttemptId().getTaskId().getTaskType())) {
-        mapEvents.add(TypeConverter.fromYarn(event));
-      }
-    }
     
     return new MapTaskCompletionEventsUpdate(
-        mapEvents.toArray(new TaskCompletionEvent[0]), shouldReset);
+        TypeConverter.fromYarn(events), shouldReset);
   }
 
   @Override
   public boolean ping(TaskAttemptID taskAttemptID) throws IOException {
     LOG.info("Ping from " + taskAttemptID.toString());
-    taskHeartbeatHandler.pinged(TypeConverter.toYarn(taskAttemptID));
     return true;
   }
 
   @Override
   public void reportDiagnosticInfo(TaskAttemptID taskAttemptID, String diagnosticInfo)
  throws IOException {
+    diagnosticInfo = StringInterner.weakIntern(diagnosticInfo);
     LOG.info("Diagnostics report from " + taskAttemptID.toString() + ": "
         + diagnosticInfo);
 
@@ -323,8 +314,6 @@ public class TaskAttemptListenerImpl extends CompositeService
         + taskStatus.getProgress());
     // Task sends the updated state-string to the TT.
     taskAttemptStatus.stateString = taskStatus.getStateString();
-    // Set the output-size when map-task finishes. Set by the task itself.
-    taskAttemptStatus.outputSize = taskStatus.getOutputSize();
     // Task sends the updated phase to the TT.
     taskAttemptStatus.phase = TypeConverter.toYarn(taskStatus.getPhase());
     // Counters are updated by the task. Convert counters into new format as

@@ -39,11 +39,11 @@ import org.apache.hadoop.fs.LocalDirAllocator;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.IOUtils;
-import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.RPC;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskType;
+import org.apache.hadoop.mapreduce.counters.Limits;
 import org.apache.hadoop.mapreduce.filecache.DistributedCache;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier;
@@ -55,9 +55,9 @@ import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
-import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.DiskChecker.DiskErrorException;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.log4j.LogManager;
 
@@ -71,11 +71,14 @@ class YarnChild {
   static volatile TaskAttemptID taskid = null;
 
   public static void main(String[] args) throws Throwable {
+    Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     LOG.debug("Child starting");
 
-    final JobConf defaultConf = new JobConf();
-    defaultConf.addResource(MRJobConfig.JOB_CONF_FILE);
-    UserGroupInformation.setConfiguration(defaultConf);
+    final JobConf job = new JobConf();
+    // Initing with our JobConf allows us to avoid loading confs twice
+    Limits.init(job);
+    job.addResource(MRJobConfig.JOB_CONF_FILE);
+    UserGroupInformation.setConfiguration(job);
 
     String host = args[0];
     int port = Integer.parseInt(args[1]);
@@ -90,18 +93,26 @@ class YarnChild {
     DefaultMetricsSystem.initialize(
         StringUtils.camelize(firstTaskid.getTaskType().name()) +"Task");
 
-    Token<JobTokenIdentifier> jt = loadCredentials(defaultConf, address);
+    // Security framework already loaded the tokens into current ugi
+    Credentials credentials =
+        UserGroupInformation.getCurrentUser().getCredentials();
+    LOG.info("Executing with tokens:");
+    for (Token<?> token: credentials.getAllTokens()) {
+      LOG.info(token);
+    }
 
     // Create TaskUmbilicalProtocol as actual task owner.
     UserGroupInformation taskOwner =
       UserGroupInformation.createRemoteUser(firstTaskid.getJobID().toString());
+    Token<JobTokenIdentifier> jt = TokenCache.getJobToken(credentials);
+    SecurityUtil.setTokenService(jt, address);
     taskOwner.addToken(jt);
     final TaskUmbilicalProtocol umbilical =
       taskOwner.doAs(new PrivilegedExceptionAction<TaskUmbilicalProtocol>() {
       @Override
       public TaskUmbilicalProtocol run() throws Exception {
         return (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
-            TaskUmbilicalProtocol.versionID, address, defaultConf);
+            TaskUmbilicalProtocol.versionID, address, job);
       }
     });
 
@@ -130,17 +141,14 @@ class YarnChild {
       YarnChild.taskid = task.getTaskID();
 
       // Create the job-conf and set credentials
-      final JobConf job =
-        configureTask(task, defaultConf.getCredentials(), jt);
+      configureTask(job, task, credentials, jt);
 
       // Initiate Java VM metrics
       JvmMetrics.initSingleton(jvmId.toString(), job.getSessionId());
       childUGI = UserGroupInformation.createRemoteUser(System
           .getenv(ApplicationConstants.Environment.USER.toString()));
       // Add tokens to new user so that it may execute its task correctly.
-      for(Token<?> token : UserGroupInformation.getCurrentUser().getTokens()) {
-        childUGI.addToken(token);
-      }
+      childUGI.addCredentials(credentials);
 
       // Create a final reference to the task for the doAs block
       final Task taskFinal = task;
@@ -179,10 +187,8 @@ class YarnChild {
         LOG.info("Exception cleaning up: " + StringUtils.stringifyException(e));
       }
       // Report back any failures, for diagnostic purposes
-      ByteArrayOutputStream baos = new ByteArrayOutputStream();
-      exception.printStackTrace(new PrintStream(baos));
       if (taskid != null) {
-        umbilical.fatalError(taskid, baos.toString());
+        umbilical.fatalError(taskid, StringUtils.stringifyException(exception));
       }
     } catch (Throwable throwable) {
       LOG.fatal("Error running child : "
@@ -202,30 +208,6 @@ class YarnChild {
       // there is no more logging done.
       LogManager.shutdown();
     }
-  }
-
-  private static Token<JobTokenIdentifier> loadCredentials(JobConf conf,
-      InetSocketAddress address) throws IOException {
-    //load token cache storage
-    String tokenFileLocation =
-        System.getenv(ApplicationConstants.CONTAINER_TOKEN_FILE_ENV_NAME);
-    String jobTokenFile =
-        new Path(tokenFileLocation).makeQualified(FileSystem.getLocal(conf))
-            .toUri().getPath();
-    Credentials credentials =
-      TokenCache.loadTokens(jobTokenFile, conf);
-    LOG.debug("loading token. # keys =" +credentials.numberOfSecretKeys() +
-        "; from file=" + jobTokenFile);
-    Token<JobTokenIdentifier> jt = TokenCache.getJobToken(credentials);
-    SecurityUtil.setTokenService(jt, address);
-    UserGroupInformation current = UserGroupInformation.getCurrentUser();
-    current.addToken(jt);
-    for (Token<? extends TokenIdentifier> tok : credentials.getAllTokens()) {
-      current.addToken(tok);
-    }
-    // Set the credentials
-    conf.setCredentials(credentials);
-    return jt;
   }
 
   /**
@@ -270,9 +252,8 @@ class YarnChild {
     job.set(MRJobConfig.JOB_LOCAL_DIR,workDir.toString());
   }
 
-  private static JobConf configureTask(Task task, Credentials credentials,
-      Token<JobTokenIdentifier> jt) throws IOException {
-    final JobConf job = new JobConf(MRJobConfig.JOB_CONF_FILE);
+  private static void configureTask(JobConf job, Task task,
+      Credentials credentials, Token<JobTokenIdentifier> jt) throws IOException {
     job.setCredentials(credentials);
     
     String appAttemptIdEnv = System
@@ -306,7 +287,6 @@ class YarnChild {
     writeLocalJobFile(localTaskFile, job);
     task.setJobFile(localTaskFile.toString());
     task.setConf(job);
-    return job;
   }
 
   /**

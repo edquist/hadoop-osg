@@ -1,7 +1,7 @@
 From e66715686e77645f01233e296a95e837e7d8c3b4 Mon Sep 17 00:00:00 2001
 From: Uma Maheswara Rao G <umamahesh@apache.org>
 Date: Sat, 2 Jun 2012 19:49:12 +0000
-Subject: [PATCH 224/545] Merge r:1345563 HDFS-2025. Go Back to File View link is not working in tail.jsp. Contributed by Ashish and Sravan.
+Subject: [PATCH 0224/1612] Merge r:1345563 HDFS-2025. Go Back to File View link is not working in tail.jsp. Contributed by Ashish and Sravan.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1345564 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 828b056b0ece3b615adde913a9459251509de4e7)

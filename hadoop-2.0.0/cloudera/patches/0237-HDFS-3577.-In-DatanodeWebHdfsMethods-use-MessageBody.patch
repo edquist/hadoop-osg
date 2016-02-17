@@ -1,7 +1,7 @@
 From c0ce9b0f19642b7f68b21fc86b7d803d2a790eb4 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Wed, 18 Jul 2012 15:12:47 +0000
-Subject: [PATCH 237/545] HDFS-3577. In DatanodeWebHdfsMethods, use MessageBodyWriter instead of StreamingOutput, otherwise, it will fail to transfer large files.
+Subject: [PATCH 0237/1612] HDFS-3577. In DatanodeWebHdfsMethods, use MessageBodyWriter instead of StreamingOutput, otherwise, it will fail to transfer large files.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362976 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0487d2f6518081d1fc03593aad9c101b0d517979)

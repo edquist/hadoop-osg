@@ -1,7 +1,7 @@
 From 0172753001d196ee8149336307b1525cb9b53b7f Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Sat, 7 Apr 2012 17:15:37 -0700
-Subject: [PATCH 023/545] HDFS-3223. add zkfc to hadoop-daemon.sh script. Contributed by Todd Lipcon.
+Subject: [PATCH 0023/1612] HDFS-3223. add zkfc to hadoop-daemon.sh script. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1310620 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit c5dfc47903c37c8e9c909d83fd7152749e96149c)

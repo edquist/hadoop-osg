@@ -1,7 +1,7 @@
 From 83148af5ca7ce0dc0cf03809368695441bc130bc Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Wed, 15 Aug 2012 19:10:52 +0000
-Subject: [PATCH 463/545] HADOOP-8278. Make sure components declare correct set of dependencies.
+Subject: [PATCH 0463/1612] HADOOP-8278. Make sure components declare correct set of dependencies.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1373574 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 15802f248e4a6c6e934a91d7156a2dec96313b8d)

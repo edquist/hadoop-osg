@@ -1,7 +1,7 @@
 From 90d959d363658d0629165c5af175ac63a8a1c99e Mon Sep 17 00:00:00 2001
 From: Vinod Kumar Vavilapalli <vinodkv@apache.org>
 Date: Tue, 5 Jun 2012 23:52:16 +0000
-Subject: [PATCH 244/545] MAPREDUCE-3873. Fixed NodeManagers' decommissioning at RM to accept IP addresses also. Contributed by xieguiming and vinodkv.
+Subject: [PATCH 0244/1612] MAPREDUCE-3873. Fixed NodeManagers' decommissioning at RM to accept IP addresses also. Contributed by xieguiming and vinodkv.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1346671 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f91977623cb4372c872b6747b16895058d582f6a)

@@ -1,7 +1,7 @@
 From 2c49c1543aa868c6418b06e2c4043615a7a31b52 Mon Sep 17 00:00:00 2001
 From: Daryn Sharp <daryn@apache.org>
 Date: Tue, 17 Jul 2012 19:32:14 +0000
-Subject: [PATCH 265/545] MAPREDUCE-4448. Fix NM crash during app cleanup if aggregation didn't init. (Jason Lowe via daryn)
+Subject: [PATCH 0265/1612] MAPREDUCE-4448. Fix NM crash during app cleanup if aggregation didn't init. (Jason Lowe via daryn)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362618 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 370c211bfe82095ae137cdcba537ee49fbe0d076)

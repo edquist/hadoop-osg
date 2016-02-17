@@ -1,7 +1,7 @@
 From ee421b90019cff6b006918fd4a32c7e6f1768923 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 16 May 2012 16:24:38 +0000
-Subject: [PATCH 078/545] HDFS-3413. TestFailureToReadEdits timing out. Contributed by Aaron T. Myers.
+Subject: [PATCH 0078/1612] HDFS-3413. TestFailureToReadEdits timing out. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339250 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e7dbac0502d0528d902cf75d368802b9c909828e)

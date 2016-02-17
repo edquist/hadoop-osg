@@ -1,7 +1,7 @@
 From 948693166be75a947aba0319a1359aa72d760350 Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Thu, 30 Aug 2012 17:14:07 +0000
-Subject: [PATCH 466/545] Merge -r 1379021:1379022 from trunk to branch-2. Fixes: MAPREDUCE-4610. Support deprecated mapreduce.job.counters.limit property in MR2.
+Subject: [PATCH 0466/1612] Merge -r 1379021:1379022 from trunk to branch-2. Fixes: MAPREDUCE-4610. Support deprecated mapreduce.job.counters.limit property in MR2.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1379023 13f79535-47bb-0310-9956-ffa450edef68
 ---

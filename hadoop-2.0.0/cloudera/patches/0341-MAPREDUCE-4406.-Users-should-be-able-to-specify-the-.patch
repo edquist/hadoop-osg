@@ -1,7 +1,7 @@
 From d7d4dee3360f68281d9ccbd7cf768529862c0534 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 18 Jul 2012 03:36:46 +0000
-Subject: [PATCH 341/545] MAPREDUCE-4406. Users should be able to specify the MiniCluster ResourceManager and JobHistoryServer ports. (ahmed via tucu)
+Subject: [PATCH 0341/1612] MAPREDUCE-4406. Users should be able to specify the MiniCluster ResourceManager and JobHistoryServer ports. (ahmed via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362751 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2d7e5cbe715c1841939954d9ce7e2f7a07252dba)

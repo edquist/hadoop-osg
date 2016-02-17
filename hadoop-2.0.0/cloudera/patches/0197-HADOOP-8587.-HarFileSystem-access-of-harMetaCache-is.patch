@@ -1,7 +1,7 @@
 From d8142730df3760ec2d84d6fbe7d214850606fdb4 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 11 Jul 2012 22:31:07 +0000
-Subject: [PATCH 197/545] HADOOP-8587. HarFileSystem access of harMetaCache isn't threadsafe. Contributed by Eli Collins
+Subject: [PATCH 0197/1612] HADOOP-8587. HarFileSystem access of harMetaCache isn't threadsafe. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1360450 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e0b3e49e249a538d846befecb63d0b052cce17ea)

@@ -70,7 +70,7 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
     this.lh = lh;
     this.firstTxId = metadata.getFirstTxId();
     this.lastTxId = metadata.getLastTxId();
-    this.logVersion = metadata.getVersion();
+    this.logVersion = metadata.getDataLayoutVersion();
     this.inProgress = metadata.isInProgress();
 
     if (firstBookKeeperEntry < 0
@@ -155,6 +155,16 @@ class BookKeeperEditLogInputStream extends EditLogInputStream {
       throw new IOException("Corrupt stream, expected txid "
           + (txId-1) + ", got " + op.getTransactionId());
     }
+  }
+
+  @Override
+  public String toString() {
+    return ("BookKeeperEditLogInputStream {" + this.getName() + "}");
+  }
+
+  @Override
+  public void setMaxOpSize(int maxOpSize) {
+    reader.setMaxOpSize(maxOpSize);
   }
 
   /**

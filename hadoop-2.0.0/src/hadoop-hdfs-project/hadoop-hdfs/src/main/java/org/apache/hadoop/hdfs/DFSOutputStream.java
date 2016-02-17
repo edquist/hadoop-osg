@@ -30,11 +30,13 @@ import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
 import java.nio.BufferOverflowException;
+import java.nio.channels.ClosedChannelException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.EnumSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -81,6 +83,11 @@ import org.apache.hadoop.util.Progressable;
 import org.apache.hadoop.util.Time;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
+import com.google.common.cache.RemovalListener;
+import com.google.common.cache.RemovalNotification;
 
 
 /****************************************************************
@@ -137,6 +144,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   private Progressable progress;
   private final short blockReplication; // replication factor of file
   private boolean shouldSyncBlock = false; // force blocks to disk upon close
+  private boolean failPacket = false;
   
   private class Packet {
     long    seqno;               // sequencenumber of buffer in block
@@ -254,8 +262,18 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
       System.arraycopy(header.getBytes(), 0, buf, headerStart,
           header.getSerializedSize());
       
+      // corrupt the data for testing.
+      if (DFSClientFaultInjector.get().corruptPacket()) {
+        buf[headerStart+header.getSerializedSize() + checksumLen + dataLen-1] ^= 0xff;
+      }
+
       // Write the now contiguous full packet to the output stream.
       stm.write(buf, headerStart, header.getSerializedSize() + checksumLen + dataLen);
+
+      // undo corruption.
+      if (DFSClientFaultInjector.get().uncorruptPacket()) {
+        buf[headerStart+header.getSerializedSize() + checksumLen + dataLen-1] ^= 0xff;
+      }
     }
     
     // get the packet's last byte's offset in the block
@@ -296,7 +314,25 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     private DataInputStream blockReplyStream;
     private ResponseProcessor response = null;
     private volatile DatanodeInfo[] nodes = null; // list of targets for current block
-    private ArrayList<DatanodeInfo> excludedNodes = new ArrayList<DatanodeInfo>();
+    private LoadingCache<DatanodeInfo, DatanodeInfo> excludedNodes =
+        CacheBuilder.newBuilder()
+        .expireAfterWrite(
+            dfsClient.getConf().excludedNodesCacheExpiry,
+            TimeUnit.MILLISECONDS)
+        .removalListener(new RemovalListener<DatanodeInfo, DatanodeInfo>() {
+          @Override
+          public void onRemoval(
+              RemovalNotification<DatanodeInfo, DatanodeInfo> notification) {
+            DFSClient.LOG.info("Removing node " +
+                notification.getKey() + " from the excluded nodes list");
+          }
+        })
+        .build(new CacheLoader<DatanodeInfo, DatanodeInfo>() {
+          @Override
+          public DatanodeInfo load(DatanodeInfo key) throws Exception {
+            return key;
+          }
+        });
     volatile boolean hasError = false;
     volatile int errorIndex = -1;
     private BlockConstructionStage stage;  // block construction stage
@@ -304,6 +340,9 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
 
     /** Nodes have been used in the pipeline before and have failed. */
     private final List<DatanodeInfo> failed = new ArrayList<DatanodeInfo>();
+    /** The last ack sequence number before pipeline failure. */
+    private long lastAckedSeqnoBeforeFailure = -1;
+    private int pipelineRecoveryCount = 0;
     /** Has the current block been hflushed? */
     private boolean isHflushed = false;
     /** Append on an existing block? */
@@ -702,6 +741,16 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
                                     one.seqno + " but received " + seqno);
             }
             isLastPacketInBlock = one.lastPacketInBlock;
+
+            // Fail the packet write for testing in order to force a
+            // pipeline recovery.
+            if (DFSClientFaultInjector.get().failPacket() &&
+                isLastPacketInBlock) {
+              failPacket = true;
+              throw new IOException(
+                    "Failing the last packet for testing.");
+            }
+              
             // update bytesAcked
             block.setNumBytes(one.getLastByteOffsetBlock());
 
@@ -740,7 +789,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     //
     private boolean processDatanodeError() throws IOException {
       if (response != null) {
-        DFSClient.LOG.info("Error Recovery for block " + block +
+        DFSClient.LOG.info("Error Recovery for " + block +
         " waiting for responder to exit. ");
         return true;
       }
@@ -752,6 +801,23 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         ackQueue.clear();
       }
 
+      // Record the new pipeline failure recovery.
+      if (lastAckedSeqnoBeforeFailure != lastAckedSeqno) {
+         lastAckedSeqnoBeforeFailure = lastAckedSeqno;
+         pipelineRecoveryCount = 1;
+      } else {
+        // If we had to recover the pipeline five times in a row for the
+        // same packet, this client likely has corrupt data or corrupting
+        // during transmission.
+        if (++pipelineRecoveryCount > 5) {
+          DFSClient.LOG.warn("Error recovering pipeline for writing " +
+              block + ". Already retried 5 times for the same packet.");
+          lastException = new IOException("Failing write. Tried pipeline " +
+              "recovery 5 times without success.");
+          streamerClosed = true;
+          return false;
+        }
+      }
       boolean doSleep = setupPipelineForAppendOrRecovery();
       
       if (!streamerClosed && dfsClient.clientRunning) {
@@ -766,7 +832,6 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
           // We also need to set lastAckedSeqno to the end-of-block Packet's seqno, so that
           // a client waiting on close() will be aware that the flush finished.
           synchronized (dataQueue) {
-            assert dataQueue.size() == 1;
             Packet endOfBlockPacket = dataQueue.remove();  // remove the end of block packet
             assert endOfBlockPacket.lastPacketInBlock;
             assert lastAckedSeqno == endOfBlockPacket.seqno - 1;
@@ -964,7 +1029,18 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         accessToken = lb.getBlockToken();
         
         // set up the pipeline again with the remaining nodes
-        success = createBlockOutputStream(nodes, newGS, isRecovery);
+        if (failPacket) { // for testing
+          success = createBlockOutputStream(nodes, newGS, isRecovery);
+          failPacket = false;
+          try {
+            // Give DNs time to send in bad reports. In real situations,
+            // good reports should follow bad ones, if client committed
+            // with those nodes.
+            Thread.sleep(2000);
+          } catch (InterruptedException ie) {}
+        } else {
+          success = createBlockOutputStream(nodes, newGS, isRecovery);
+        }
       }
 
       if (success) {
@@ -997,8 +1073,10 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         success = false;
 
         long startTime = Time.now();
-        DatanodeInfo[] excluded = excludedNodes.toArray(
-            new DatanodeInfo[excludedNodes.size()]);
+        DatanodeInfo[] excluded =
+            excludedNodes.getAllPresent(excludedNodes.asMap().keySet())
+            .keySet()
+            .toArray(new DatanodeInfo[0]);
         block = oldBlock;
         lb = locateFollowingBlock(startTime,
             excluded.length > 0 ? excluded : null);
@@ -1013,11 +1091,11 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         success = createBlockOutputStream(nodes, 0L, false);
 
         if (!success) {
-          DFSClient.LOG.info("Abandoning block " + block);
+          DFSClient.LOG.info("Abandoning " + block);
           dfsClient.namenode.abandonBlock(block, src, dfsClient.clientName);
           block = null;
           DFSClient.LOG.info("Excluding datanode " + nodes[errorIndex]);
-          excludedNodes.add(nodes[errorIndex]);
+          excludedNodes.put(nodes[errorIndex], nodes[errorIndex]);
         }
       } while (!success && --count >= 0);
 
@@ -1233,10 +1311,10 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     return sock;
   }
 
-  private void isClosed() throws IOException {
+  protected void checkClosed() throws IOException {
     if (closed) {
       IOException e = lastException;
-      throw e != null ? e : new IOException("DFSOutputStream is closed");
+      throw e != null ? e : new ClosedChannelException();
     }
   }
 
@@ -1394,7 +1472,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
           break;
         }
       }
-      isClosed();
+      checkClosed();
       queueCurrentPacket();
     }
   }
@@ -1404,7 +1482,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   protected synchronized void writeChunk(byte[] b, int offset, int len, byte[] checksum) 
                                                         throws IOException {
     dfsClient.checkOpen();
-    isClosed();
+    checkClosed();
 
     int cklen = checksum.length;
     int bytesPerChecksum = this.checksum.getBytesPerChecksum(); 
@@ -1515,7 +1593,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
 
   private void flushOrSync(boolean isSync) throws IOException {
     dfsClient.checkOpen();
-    isClosed();
+    checkClosed();
     try {
       long toWaitFor;
       synchronized (this) {
@@ -1593,7 +1671,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
           // If we got an error here, it might be because some other thread called
           // close before our hflush completed. In that case, we should throw an
           // exception that the stream is closed.
-          isClosed();
+          checkClosed();
           // If we aren't closed but failed to sync, we should expose that to the
           // caller.
           throw ioe;
@@ -1638,7 +1716,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
    */
   public synchronized int getCurrentBlockReplication() throws IOException {
     dfsClient.checkOpen();
-    isClosed();
+    checkClosed();
     if (streamer == null) {
       return blockReplication; // no pipeline, return repl factor of file
     }
@@ -1657,7 +1735,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     long toWaitFor;
     synchronized (this) {
       dfsClient.checkOpen();
-      isClosed();
+      checkClosed();
       //
       // If there is data in the current buffer, send it across
       //
@@ -1674,7 +1752,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
     }
     synchronized (dataQueue) {
       while (!closed) {
-        isClosed();
+        checkClosed();
         if (lastAckedSeqno >= seqno) {
           break;
         }
@@ -1686,7 +1764,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
         }
       }
     }
-    isClosed();
+    checkClosed();
   }
 
   /**
@@ -1764,7 +1842,9 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
   // be called during unit tests
   private void completeFile(ExtendedBlock last) throws IOException {
     long localstart = Time.now();
+    long localTimeout = 400;
     boolean fileComplete = false;
+    int retries = dfsClient.getConf().nBlockWriteLocateFollowingRetry;
     while (!fileComplete) {
       fileComplete = dfsClient.namenode.complete(src, dfsClient.clientName, last);
       if (!fileComplete) {
@@ -1779,9 +1859,15 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
             throw new IOException(msg);
         }
         try {
-          Thread.sleep(400);
+          Thread.sleep(localTimeout);
+          if (retries == 0) {
+            throw new IOException("Unable to close file because the last block"
+                + " does not have enough number of replicas.");
+          }
+          retries--;
+          localTimeout *= 2;
           if (Time.now() - localstart > 5000) {
-            DFSClient.LOG.info("Could not complete file " + src + " retrying...");
+            DFSClient.LOG.info("Could not complete " + src + " retrying...");
           }
         } catch (InterruptedException ie) {
         }

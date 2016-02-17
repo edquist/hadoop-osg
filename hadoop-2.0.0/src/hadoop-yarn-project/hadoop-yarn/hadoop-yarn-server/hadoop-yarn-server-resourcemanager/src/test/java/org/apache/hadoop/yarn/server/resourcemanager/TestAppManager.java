@@ -37,8 +37,6 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
-import org.apache.hadoop.yarn.security.client.ClientToAMSecretManager;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.MemStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.MockRMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMAppEvent;
@@ -49,6 +47,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAlloca
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.YarnScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
 import org.apache.hadoop.yarn.service.Service;
 import org.junit.Test;
@@ -93,9 +92,9 @@ public class TestAppManager{
         rmDispatcher);
     AMLivelinessMonitor amFinishingMonitor = new AMLivelinessMonitor(
         rmDispatcher);
-    return new RMContextImpl(new MemStore(), rmDispatcher,
+    return new RMContextImpl(rmDispatcher,
         containerAllocationExpirer, amLivelinessMonitor, amFinishingMonitor,
-        null, null) {
+        null, null, null, null) {
       @Override
       public ConcurrentMap<ApplicationId, RMApp> getRMApps() {
         return map;
@@ -135,16 +134,15 @@ public class TestAppManager{
   public class TestRMAppManager extends RMAppManager {
 
     public TestRMAppManager(RMContext context, Configuration conf) {
-      super(context, null, null, null, new ApplicationACLsManager(conf), conf);
+      super(context, null, null, new ApplicationACLsManager(conf), conf);
       setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
     public TestRMAppManager(RMContext context,
-        ClientToAMSecretManager clientToAMSecretManager,
+        ClientToAMTokenSecretManagerInRM clientToAMSecretManager,
         YarnScheduler scheduler, ApplicationMasterService masterService,
         ApplicationACLsManager applicationACLsManager, Configuration conf) {
-      super(context, clientToAMSecretManager, scheduler, masterService,
-          applicationACLsManager, conf);
+      super(context, scheduler, masterService, applicationACLsManager, conf);
       setCompletedAppsMax(YarnConfiguration.DEFAULT_RM_MAX_COMPLETED_APPLICATIONS);
     }
 
@@ -342,7 +340,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
+        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(1);
@@ -367,7 +365,6 @@ public class TestAppManager{
         YarnConfiguration.DEFAULT_QUEUE_NAME, 
         app.getQueue());
     Assert.assertEquals("app state doesn't match", RMAppState.NEW, app.getState());
-    Assert.assertNotNull("app store is null", app.getApplicationStore());
 
     // wait for event to be processed
     int timeoutSecs = 0;
@@ -390,7 +387,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
+        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(10);
@@ -414,7 +411,6 @@ public class TestAppManager{
     Assert.assertEquals("app name doesn't match", "testApp1", app.getName());
     Assert.assertEquals("app queue doesn't match", "testQueue", app.getQueue());
     Assert.assertEquals("app state doesn't match", RMAppState.NEW, app.getState());
-    Assert.assertNotNull("app store is null", app.getApplicationStore());
 
     // wait for event to be processed
     int timeoutSecs = 0;
@@ -438,7 +434,7 @@ public class TestAppManager{
     ApplicationMasterService masterService =
         new ApplicationMasterService(rmContext, scheduler);
     TestRMAppManager appMonitor = new TestRMAppManager(rmContext,
-        new ClientToAMSecretManager(), scheduler, masterService,
+        new ClientToAMTokenSecretManagerInRM(), scheduler, masterService,
         new ApplicationACLsManager(conf), conf);
 
     ApplicationId appID = MockApps.newAppID(0);

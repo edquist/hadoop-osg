@@ -1,7 +1,7 @@
 From 98d65ff51034d4479fa9b8937c4b91e592315003 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Mon, 30 Jul 2012 20:58:44 +0000
-Subject: [PATCH 420/545] HADOOP-8635. Cannot cancel paths registered deleteOnExit (daryn via bobby)
+Subject: [PATCH 0420/1612] HADOOP-8635. Cannot cancel paths registered deleteOnExit (daryn via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367296 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 6d1836901477e9db0637cc112c2ecb5ffb9c075b)

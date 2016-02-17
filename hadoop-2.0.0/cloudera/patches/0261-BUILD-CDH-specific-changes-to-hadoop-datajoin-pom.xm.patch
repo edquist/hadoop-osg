@@ -1,7 +1,7 @@
 From 25c1e95e3e1dad260e5b5b11b1c3052037a9edc5 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Fri, 13 Jul 2012 15:01:15 -0700
-Subject: [PATCH 261/545] BUILD: CDH-specific changes to hadoop-datajoin/pom.xml to support MR-4238 and MR-4270
+Subject: [PATCH 0261/1612] BUILD: CDH-specific changes to hadoop-datajoin/pom.xml to support MR-4238 and MR-4270
 
 ---
  hadoop-tools/hadoop-datajoin/pom.xml |    4 ++--

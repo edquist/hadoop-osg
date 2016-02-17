@@ -1,7 +1,7 @@
 From b40c9f35a3e949c1690b0e67c9ddc85ec5c4d59d Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Wed, 25 Jul 2012 23:43:17 +0000
-Subject: [PATCH 305/545] HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations to get around a Java library bug causing OutOfMemoryError.
+Subject: [PATCH 0305/1612] HDFS-3696. Set chunked streaming mode in WebHdfsFileSystem write operations to get around a Java library bug causing OutOfMemoryError.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1365842 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5c115ef9694059de020b68d9c3395da8c6ebb8a6)

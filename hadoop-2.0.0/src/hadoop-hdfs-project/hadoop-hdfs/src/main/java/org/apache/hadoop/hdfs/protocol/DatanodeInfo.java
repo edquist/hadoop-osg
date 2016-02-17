@@ -17,16 +17,20 @@
  */
 package org.apache.hadoop.hdfs.protocol;
 
+import static org.apache.hadoop.hdfs.DFSUtil.percent2String;
+
 import java.util.Date;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
 import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.net.Node;
 import org.apache.hadoop.net.NodeBase;
 import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.Time;
 
 /** 
  * This class extends the primary identifier of a Datanode with ephemeral
@@ -36,13 +40,13 @@ import org.apache.hadoop.util.StringUtils;
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
 public class DatanodeInfo extends DatanodeID implements Node {
-  protected long capacity;
-  protected long dfsUsed;
-  protected long remaining;
-  protected long blockPoolUsed;
-  protected long lastUpdate;
-  protected int xceiverCount;
-  protected String location = NetworkTopology.DEFAULT_RACK;
+  private long capacity;
+  private long dfsUsed;
+  private long remaining;
+  private long blockPoolUsed;
+  private long lastUpdate;
+  private int xceiverCount;
+  private String location = NetworkTopology.DEFAULT_RACK;
   
   // Datanode administrative states
   public enum AdminStates {
@@ -80,8 +84,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.lastUpdate = from.getLastUpdate();
     this.xceiverCount = from.getXceiverCount();
     this.location = from.getNetworkLocation();
-    this.adminState = from.adminState;
-    this.hostName = from.hostName;
+    this.adminState = from.getAdminState();
   }
 
   public DatanodeInfo(DatanodeID nodeID) {
@@ -201,10 +204,10 @@ public class DatanodeInfo extends DatanodeID implements Node {
     this.xceiverCount = xceiverCount; 
   }
 
-  /** rack name */
+  /** network location */
   public synchronized String getNetworkLocation() {return location;}
     
-  /** Sets the rack name */
+  /** Sets the network location */
   public synchronized void setNetworkLocation(String location) {
     this.location = NodeBase.normalize(location);
   }
@@ -242,8 +245,8 @@ public class DatanodeInfo extends DatanodeID implements Node {
     buffer.append("DFS Used: "+u+" ("+StringUtils.byteDesc(u)+")"+"\n");
     buffer.append("Non DFS Used: "+nonDFSUsed+" ("+StringUtils.byteDesc(nonDFSUsed)+")"+"\n");
     buffer.append("DFS Remaining: " +r+ " ("+StringUtils.byteDesc(r)+")"+"\n");
-    buffer.append("DFS Used%: "+StringUtils.limitDecimalTo2(usedPercent)+"%\n");
-    buffer.append("DFS Remaining%: "+StringUtils.limitDecimalTo2(remainingPercent)+"%\n");
+    buffer.append("DFS Used%: "+percent2String(usedPercent) + "\n");
+    buffer.append("DFS Remaining%: "+percent2String(remainingPercent) + "\n");
     buffer.append("Last contact: "+new Date(lastUpdate)+"\n");
     return buffer.toString();
   }
@@ -267,7 +270,7 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
     buffer.append(" " + c + "(" + StringUtils.byteDesc(c)+")");
     buffer.append(" " + u + "(" + StringUtils.byteDesc(u)+")");
-    buffer.append(" " + StringUtils.limitDecimalTo2(((1.0*u)/c)*100)+"%");
+    buffer.append(" " + percent2String(u/(double)c));
     buffer.append(" " + r + "(" + StringUtils.byteDesc(r)+")");
     buffer.append(" " + new Date(lastUpdate));
     return buffer.toString();
@@ -319,7 +322,24 @@ public class DatanodeInfo extends DatanodeID implements Node {
     }
     return adminState;
   }
-
+ 
+  /**
+   * Check if the datanode is in stale state. Here if 
+   * the namenode has not received heartbeat msg from a 
+   * datanode for more than staleInterval (default value is
+   * {@link DFSConfigKeys#DFS_NAMENODE_STALE_DATANODE_INTERVAL_MILLI_DEFAULT}),
+   * the datanode will be treated as stale node.
+   * 
+   * @param staleInterval
+   *          the time interval for marking the node as stale. If the last
+   *          update time is beyond the given time interval, the node will be
+   *          marked as stale.
+   * @return true if the node is stale
+   */
+  public boolean isStale(long staleInterval) {
+    return (Time.now() - lastUpdate) >= staleInterval;
+  }
+  
   /**
    * Sets the admin state of this node.
    */

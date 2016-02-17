@@ -1,7 +1,7 @@
 From 3b0964bb39217f62ffbfa96249186d4d5ea3764d Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 25 Jun 2012 15:58:55 +0000
-Subject: [PATCH 334/545]  MAPREDUCE-4336. Distributed Shell fails when used with the CapacityScheduler (ahmed via tucu)
+Subject: [PATCH 0334/1612]  MAPREDUCE-4336. Distributed Shell fails when used with the CapacityScheduler (ahmed via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1353625 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit c7f872543efa6711b7ec8ef5285afe3094b0dbba)

@@ -30,9 +30,12 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.Options;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.protocol.ClientProtocol;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.apache.hadoop.hdfs.server.protocol.NamenodeProtocols;
 import org.apache.hadoop.ipc.RemoteException;
@@ -49,6 +52,10 @@ public class TestLease {
         ).getLeaseByPath(src.toString()) != null;
   }
 
+  static int leaseCount(MiniDFSCluster cluster) {
+    return NameNodeAdapter.getLeaseManager(cluster.getNamesystem()).countLease();
+  }
+  
   static final String dirString = "/test/lease";
   final Path dir = new Path(dirString);
   static final Log LOG = LogFactory.getLog(TestLease.class);
@@ -79,9 +86,26 @@ public class TestLease {
 
       // We don't need to wait the lease renewer thread to act.
       // call renewLease() manually.
-      // make it look like lease has already expired.
+      // make it look like the soft limit has been exceeded.
       LeaseRenewer originalRenewer = dfs.getLeaseRenewer();
-      dfs.lastLeaseRenewal = Time.now() - 300000;
+      dfs.lastLeaseRenewal = Time.now()
+      - HdfsConstants.LEASE_SOFTLIMIT_PERIOD - 1000;
+      try {
+        dfs.renewLease();
+      } catch (IOException e) {}
+
+      // Things should continue to work it passes hard limit without
+      // renewing.
+      try {
+        d_out.write(buf, 0, 1024);
+        LOG.info("Write worked beyond the soft limit as expected.");
+      } catch (IOException e) {
+        Assert.fail("Write failed.");
+      }
+
+      // make it look like the hard limit has been exceeded.
+      dfs.lastLeaseRenewal = Time.now()
+      - HdfsConstants.LEASE_HARDLIMIT_PERIOD - 1000;
       dfs.renewLease();
 
       // this should not work.
@@ -126,6 +150,96 @@ public class TestLease {
     }
   }
 
+  @Test
+  public void testLeaseAfterRename() throws Exception {
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();
+    try {
+      Path p = new Path("/test-file");
+      Path d = new Path("/test-d");
+      Path d2 = new Path("/test-d-other");
+
+      // open a file to get a lease
+      FileSystem fs = cluster.getFileSystem();
+      FSDataOutputStream out = fs.create(p);
+      out.writeBytes("something");
+      //out.hsync();
+      Assert.assertTrue(hasLease(cluster, p));
+      Assert.assertEquals(1, leaseCount(cluster));
+      
+      // just to ensure first fs doesn't have any logic to twiddle leases
+      DistributedFileSystem fs2 = (DistributedFileSystem) FileSystem.newInstance(fs.getUri(), fs.getConf());
+
+      // rename the file into an existing dir
+      LOG.info("DMS: rename file into dir");
+      Path pRenamed = new Path(d, p.getName());
+      fs2.mkdirs(d);
+      fs2.rename(p, pRenamed);
+      Assert.assertFalse(p+" exists", fs2.exists(p));
+      Assert.assertTrue(pRenamed+" not found", fs2.exists(pRenamed));
+      Assert.assertFalse("has lease for "+p, hasLease(cluster, p));
+      Assert.assertTrue("no lease for "+pRenamed, hasLease(cluster, pRenamed));
+      Assert.assertEquals(1, leaseCount(cluster));
+    
+      // rename the parent dir to a new non-existent dir
+      LOG.info("DMS: rename parent dir");
+      Path pRenamedAgain = new Path(d2, pRenamed.getName());
+      fs2.rename(d, d2);
+      // src gone
+      Assert.assertFalse(d+" exists", fs2.exists(d));
+      Assert.assertFalse("has lease for "+pRenamed, hasLease(cluster, pRenamed));
+      // dst checks
+      Assert.assertTrue(d2+" not found", fs2.exists(d2));
+      Assert.assertTrue(pRenamedAgain+" not found", fs2.exists(pRenamedAgain));
+      Assert.assertTrue("no lease for "+pRenamedAgain, hasLease(cluster, pRenamedAgain));
+      Assert.assertEquals(1, leaseCount(cluster));
+
+      // rename the parent dir to existing dir
+      // NOTE: rename w/o options moves paths into existing dir
+      LOG.info("DMS: rename parent again");
+      pRenamed = pRenamedAgain;
+      pRenamedAgain = new Path(new Path(d, d2.getName()), p.getName());      
+      fs2.mkdirs(d);
+      fs2.rename(d2, d);
+      // src gone
+      Assert.assertFalse(d2+" exists", fs2.exists(d2));
+      Assert.assertFalse("no lease for "+pRenamed, hasLease(cluster, pRenamed));
+      // dst checks
+      Assert.assertTrue(d+" not found", fs2.exists(d));
+      Assert.assertTrue(pRenamedAgain +" not found", fs2.exists(pRenamedAgain));
+      Assert.assertTrue("no lease for "+pRenamedAgain, hasLease(cluster, pRenamedAgain));
+      Assert.assertEquals(1, leaseCount(cluster));
+      
+      // rename with opts to non-existent dir
+      pRenamed = pRenamedAgain;
+      pRenamedAgain = new Path(d2, p.getName());
+      fs2.rename(pRenamed.getParent(), d2, Options.Rename.OVERWRITE);
+      // src gone
+      Assert.assertFalse(pRenamed.getParent() +" not found", fs2.exists(pRenamed.getParent()));
+      Assert.assertFalse("has lease for "+pRenamed, hasLease(cluster, pRenamed));
+      // dst checks
+      Assert.assertTrue(d2+" not found", fs2.exists(d2));
+      Assert.assertTrue(pRenamedAgain+" not found", fs2.exists(pRenamedAgain));
+      Assert.assertTrue("no lease for "+pRenamedAgain, hasLease(cluster, pRenamedAgain));
+      Assert.assertEquals(1, leaseCount(cluster));
+
+      // rename with opts to existing dir
+      // NOTE: rename with options will not move paths into the existing dir
+      pRenamed = pRenamedAgain;
+      pRenamedAgain = new Path(d, p.getName());
+      fs2.rename(pRenamed.getParent(), d, Options.Rename.OVERWRITE);
+      // src gone
+      Assert.assertFalse(pRenamed.getParent() +" not found", fs2.exists(pRenamed.getParent()));
+      Assert.assertFalse("has lease for "+pRenamed, hasLease(cluster, pRenamed));
+      // dst checks
+      Assert.assertTrue(d+" not found", fs2.exists(d));
+      Assert.assertTrue(pRenamedAgain+" not found", fs2.exists(pRenamedAgain));
+      Assert.assertTrue("no lease for "+pRenamedAgain, hasLease(cluster, pRenamedAgain));
+      Assert.assertEquals(1, leaseCount(cluster));
+    } finally {
+      cluster.shutdown();
+    }
+  }
+  
   @Test
   public void testLease() throws Exception {
     MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).numDataNodes(2).build();

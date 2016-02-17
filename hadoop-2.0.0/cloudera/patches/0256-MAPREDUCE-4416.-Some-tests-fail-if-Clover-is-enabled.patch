@@ -1,7 +1,7 @@
 From ea0f99e53f57dd8b5b10b4fb9669147a25842302 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Thu, 12 Jul 2012 15:52:12 +0000
-Subject: [PATCH 256/545] MAPREDUCE-4416. Some tests fail if Clover is enabled (Kihwal Lee via bobby)
+Subject: [PATCH 0256/1612] MAPREDUCE-4416. Some tests fail if Clover is enabled (Kihwal Lee via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1360735 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b3732e79bc770848e20697cf73e9fe6e1de52f11)

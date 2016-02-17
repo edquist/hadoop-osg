@@ -1,7 +1,7 @@
 From cf496e3e41a837b7987ec2572b481b37c9c35518 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Mon, 16 Jul 2012 22:41:56 +0000
-Subject: [PATCH 359/545] HADOOP-8599. Non empty response from FileSystem.getFileBlockLocations when asking for data beyond the end of file. Contributed by Andrey Klochkov.
+Subject: [PATCH 0359/1612] HADOOP-8599. Non empty response from FileSystem.getFileBlockLocations when asking for data beyond the end of file. Contributed by Andrey Klochkov.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362295 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 003bb07070cc117c27b00d2a6b36e94316d497fb)

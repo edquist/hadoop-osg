@@ -428,30 +428,32 @@
 <FONT color="green">425</FONT>              }<a name="line.425"></a>
 <FONT color="green">426</FONT>              break;<a name="line.426"></a>
 <FONT color="green">427</FONT>            }<a name="line.427"></a>
-<FONT color="green">428</FONT>          }<a name="line.428"></a>
-<FONT color="green">429</FONT>        }<a name="line.429"></a>
-<FONT color="green">430</FONT>        pathStrings.add(commaSeparatedPaths.substring(pathStart, length));<a name="line.430"></a>
-<FONT color="green">431</FONT>        <a name="line.431"></a>
-<FONT color="green">432</FONT>        return pathStrings.toArray(new String[0]);<a name="line.432"></a>
-<FONT color="green">433</FONT>      }<a name="line.433"></a>
-<FONT color="green">434</FONT>      <a name="line.434"></a>
-<FONT color="green">435</FONT>      /**<a name="line.435"></a>
-<FONT color="green">436</FONT>       * Get the list of input {@link Path}s for the map-reduce job.<a name="line.436"></a>
-<FONT color="green">437</FONT>       * <a name="line.437"></a>
-<FONT color="green">438</FONT>       * @param context The job<a name="line.438"></a>
-<FONT color="green">439</FONT>       * @return the list of input {@link Path}s for the map-reduce job.<a name="line.439"></a>
-<FONT color="green">440</FONT>       */<a name="line.440"></a>
-<FONT color="green">441</FONT>      public static Path[] getInputPaths(JobContext context) {<a name="line.441"></a>
-<FONT color="green">442</FONT>        String dirs = context.getConfiguration().get(INPUT_DIR, "");<a name="line.442"></a>
-<FONT color="green">443</FONT>        String [] list = StringUtils.split(dirs);<a name="line.443"></a>
-<FONT color="green">444</FONT>        Path[] result = new Path[list.length];<a name="line.444"></a>
-<FONT color="green">445</FONT>        for (int i = 0; i &lt; list.length; i++) {<a name="line.445"></a>
-<FONT color="green">446</FONT>          result[i] = new Path(StringUtils.unEscapeString(list[i]));<a name="line.446"></a>
-<FONT color="green">447</FONT>        }<a name="line.447"></a>
-<FONT color="green">448</FONT>        return result;<a name="line.448"></a>
-<FONT color="green">449</FONT>      }<a name="line.449"></a>
-<FONT color="green">450</FONT>    <a name="line.450"></a>
-<FONT color="green">451</FONT>    }<a name="line.451"></a>
+<FONT color="green">428</FONT>            default:<a name="line.428"></a>
+<FONT color="green">429</FONT>              continue; // nothing special to do for this character<a name="line.429"></a>
+<FONT color="green">430</FONT>          }<a name="line.430"></a>
+<FONT color="green">431</FONT>        }<a name="line.431"></a>
+<FONT color="green">432</FONT>        pathStrings.add(commaSeparatedPaths.substring(pathStart, length));<a name="line.432"></a>
+<FONT color="green">433</FONT>        <a name="line.433"></a>
+<FONT color="green">434</FONT>        return pathStrings.toArray(new String[0]);<a name="line.434"></a>
+<FONT color="green">435</FONT>      }<a name="line.435"></a>
+<FONT color="green">436</FONT>      <a name="line.436"></a>
+<FONT color="green">437</FONT>      /**<a name="line.437"></a>
+<FONT color="green">438</FONT>       * Get the list of input {@link Path}s for the map-reduce job.<a name="line.438"></a>
+<FONT color="green">439</FONT>       * <a name="line.439"></a>
+<FONT color="green">440</FONT>       * @param context The job<a name="line.440"></a>
+<FONT color="green">441</FONT>       * @return the list of input {@link Path}s for the map-reduce job.<a name="line.441"></a>
+<FONT color="green">442</FONT>       */<a name="line.442"></a>
+<FONT color="green">443</FONT>      public static Path[] getInputPaths(JobContext context) {<a name="line.443"></a>
+<FONT color="green">444</FONT>        String dirs = context.getConfiguration().get(INPUT_DIR, "");<a name="line.444"></a>
+<FONT color="green">445</FONT>        String [] list = StringUtils.split(dirs);<a name="line.445"></a>
+<FONT color="green">446</FONT>        Path[] result = new Path[list.length];<a name="line.446"></a>
+<FONT color="green">447</FONT>        for (int i = 0; i &lt; list.length; i++) {<a name="line.447"></a>
+<FONT color="green">448</FONT>          result[i] = new Path(StringUtils.unEscapeString(list[i]));<a name="line.448"></a>
+<FONT color="green">449</FONT>        }<a name="line.449"></a>
+<FONT color="green">450</FONT>        return result;<a name="line.450"></a>
+<FONT color="green">451</FONT>      }<a name="line.451"></a>
+<FONT color="green">452</FONT>    <a name="line.452"></a>
+<FONT color="green">453</FONT>    }<a name="line.453"></a>
 
 
 

@@ -25,11 +25,14 @@ import java.io.IOException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.ArrayList;
 import java.util.List;
+
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 import static org.junit.Assume.*;
 import static org.junit.Assert.*;
 
+import org.apache.commons.io.FileUtils;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
@@ -61,7 +64,7 @@ public class TestNativeIO {
   public void testFstat() throws Exception {
     FileOutputStream fos = new FileOutputStream(
       new File(TEST_DIR, "testfstat"));
-    NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
+    NativeIO.Stat stat = NativeIO.getFstat(fos.getFD());
     fos.close();
     LOG.info("Stat: " + String.valueOf(stat));
 
@@ -92,7 +95,7 @@ public class TestNativeIO {
           long et = Time.now() + 5000;
           while (Time.now() < et) {
             try {
-              NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
+              NativeIO.Stat stat = NativeIO.getFstat(fos.getFD());
               assertEquals(System.getProperty("user.name"), stat.getOwner());
               assertNotNull(stat.getGroup());
               assertTrue(!"".equals(stat.getGroup()));
@@ -124,7 +127,7 @@ public class TestNativeIO {
       new File(TEST_DIR, "testfstat2"));
     fos.close();
     try {
-      NativeIO.Stat stat = NativeIO.fstat(fos.getFD());
+      NativeIO.Stat stat = NativeIO.getFstat(fos.getFD());
     } catch (NativeIOException nioe) {
       LOG.info("Got expected exception", nioe);
       assertEquals(Errno.EBADF, nioe.getErrno());
@@ -279,4 +282,50 @@ public class TestNativeIO {
     assertEquals(expected, perms.toShort());
   }
 
+  @Test
+  public void testGetUserName() throws IOException {
+    assertFalse(NativeIO.getUserName(0).isEmpty());
+  }
+
+  @Test
+  public void testGetGroupName() throws IOException {
+    assertFalse(NativeIO.getGroupName(0).isEmpty());
+  }
+
+  @Test
+  public void testRenameTo() throws Exception {
+    final File TEST_DIR = new File(new File(
+        System.getProperty("test.build.data","build/test/data")), "renameTest");
+    assumeTrue(TEST_DIR.mkdirs());
+    File nonExistentFile = new File(TEST_DIR, "nonexistent");
+    File targetFile = new File(TEST_DIR, "target");
+    // Test attempting to rename a nonexistent file.
+    try {
+      NativeIO.renameTo(nonExistentFile, targetFile);
+      Assert.fail();
+    } catch (NativeIOException e) {
+      Assert.assertEquals(e.getErrno(), Errno.ENOENT);
+    }
+    
+    // Test renaming a file to itself.  It should succeed and do nothing.
+    File sourceFile = new File(TEST_DIR, "source");
+    Assert.assertTrue(sourceFile.createNewFile());
+    NativeIO.renameTo(sourceFile, sourceFile);
+
+    // Test renaming a source to a destination.
+    NativeIO.renameTo(sourceFile, targetFile);
+
+    // Test renaming a source to a path which uses a file as a directory.
+    sourceFile = new File(TEST_DIR, "source");
+    Assert.assertTrue(sourceFile.createNewFile());
+    File badTarget = new File(targetFile, "subdir");
+    try {
+      NativeIO.renameTo(sourceFile, badTarget);
+      Assert.fail();
+    } catch (NativeIOException e) {
+      Assert.assertEquals(e.getErrno(), Errno.ENOTDIR);
+    }
+
+    FileUtils.deleteQuietly(TEST_DIR);
+  }
 }

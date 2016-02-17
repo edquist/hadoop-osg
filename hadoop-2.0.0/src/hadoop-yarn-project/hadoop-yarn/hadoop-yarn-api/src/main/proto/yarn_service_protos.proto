@@ -58,11 +58,37 @@ message AllocateRequestProto {
 }
 
 message AllocateResponseProto {
-  optional AMResponseProto AM_response = 1;
-  optional int32 num_cluster_nodes = 2;
+  optional bool reboot = 1;
+  optional int32 response_id = 2;
+  repeated ContainerProto allocated_containers = 3;
+  repeated ContainerStatusProto completed_container_statuses = 4;
+  optional ResourceProto limit = 5;
+  repeated NodeReportProto updated_nodes = 6;
+  optional int32 num_cluster_nodes = 7;
+  optional PreemptionMessageProto preempt = 8;
 }
 
+message PreemptionMessageProto {
+  optional StrictPreemptionContractProto strictContract = 1;
+  optional PreemptionContractProto contract = 2;
+}
 
+message StrictPreemptionContractProto {
+  repeated PreemptionContainerProto container = 1;
+}
+
+message PreemptionContractProto {
+  repeated PreemptionResourceRequestProto resource = 1;
+  repeated PreemptionContainerProto container = 2;
+}
+
+message PreemptionContainerProto {
+  optional ContainerIdProto id = 1;
+}
+
+message PreemptionResourceRequestProto {
+  optional ResourceRequestProto resource = 1;
+}
 
 //////////////////////////////////////////////////////
 /////// client_RM_Protocol ///////////////////////////

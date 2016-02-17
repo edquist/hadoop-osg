@@ -1,7 +1,7 @@
 From 704b7472d2265984d9ab7a5ade602a724e95f031 Mon Sep 17 00:00:00 2001
 From: Aaron T. Myers <atm@cloudera.com>
 Date: Sat, 12 May 2012 23:06:16 -0400
-Subject: [PATCH 043/545] HDFS-3404. Make putImage in GetImageServlet infer remote address to fetch from request. Contributed by Aaron T. Myers.
+Subject: [PATCH 0043/1612] HDFS-3404. Make putImage in GetImageServlet infer remote address to fetch from request. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1337756 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit df22c19124db4bc7c963936cbc300e59a5eea01e)

@@ -66,6 +66,7 @@ import org.apache.hadoop.yarn.SystemClock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.factories.RecordFactory;
@@ -440,6 +441,12 @@ public class TestRuntimeEstimators {
     }
 
     @Override
+    public TaskAttemptCompletionEvent[]
+            getMapAttemptCompletionEvents(int startIndex, int maxEvents) {
+      throw new UnsupportedOperationException("Not supported yet.");
+    }
+
+    @Override
     public String getName() {
       throw new UnsupportedOperationException("Not supported yet.");
     }
@@ -528,6 +535,11 @@ public class TestRuntimeEstimators {
       dispatcher.getEventHandler().handle(event);
     }
 
+    @Override
+    public NodeId getNodeId() throws UnsupportedOperationException{
+      throw new UnsupportedOperationException();
+    }
+    
     @Override
     public TaskAttemptId getID() {
       return myAttemptID;

@@ -1,7 +1,7 @@
 From 380dfc82fbf6b28d30fa8b6372b9128d925f2705 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Mon, 21 May 2012 01:55:44 +0000
-Subject: [PATCH 131/545] MAPREDUCE-4269. documentation: Gridmix has javadoc warnings in StressJobFactory (Jonathon Eagles via tgraves).
+Subject: [PATCH 0131/1612] MAPREDUCE-4269. documentation: Gridmix has javadoc warnings in StressJobFactory (Jonathon Eagles via tgraves).
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1340880 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e8c8b92c76ebca950f9a88d4d2d6d1121fc791af)

@@ -64,6 +64,7 @@ import org.apache.hadoop.yarn.MockApps;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ContainerId;
+import org.apache.hadoop.yarn.api.records.NodeId;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.Records;
 
@@ -231,6 +232,11 @@ public class MockJobs extends MockApps {
     final List<String> diags = Lists.newArrayList();
     diags.add(DIAGS.next());
     return new TaskAttempt() {
+      @Override
+      public NodeId getNodeId() throws UnsupportedOperationException{
+        throw new UnsupportedOperationException();
+      }
+      
       @Override
       public TaskAttemptId getID() {
         return taid;
@@ -546,6 +552,12 @@ public class MockJobs extends MockApps {
       @Override
       public TaskAttemptCompletionEvent[] getTaskAttemptCompletionEvents(
           int fromEventId, int maxEvents) {
+        return null;
+      }
+
+      @Override
+      public TaskAttemptCompletionEvent[] getMapAttemptCompletionEvents(
+          int startIndex, int maxEvents) {
         return null;
       }
 

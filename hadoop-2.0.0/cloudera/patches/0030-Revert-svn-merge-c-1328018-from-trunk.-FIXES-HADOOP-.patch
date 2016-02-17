@@ -1,7 +1,7 @@
 From aa83687e2ec82365aaf2dd859cb43b48bccab4c4 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Mon, 7 May 2012 15:41:43 -0700
-Subject: [PATCH 030/545] Revert "svn merge -c 1328018 from trunk. FIXES: HADOOP-8288. Remove references of mapred.child.ulimit etc. since they are not being used any more (Ravi Prakash via bobby)"
+Subject: [PATCH 0030/1612] Revert "svn merge -c 1328018 from trunk. FIXES: HADOOP-8288. Remove references of mapred.child.ulimit etc. since they are not being used any more (Ravi Prakash via bobby)"
 
 This reverts commit f0351b62a72aa361df887531d606999308415e70.
 

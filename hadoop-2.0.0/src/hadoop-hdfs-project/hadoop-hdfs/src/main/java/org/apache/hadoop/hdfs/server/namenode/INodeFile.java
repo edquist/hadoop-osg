@@ -17,6 +17,7 @@
  */
 package org.apache.hadoop.hdfs.server.namenode;
 
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
@@ -25,13 +26,24 @@ import org.apache.hadoop.fs.permission.FsAction;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.permission.PermissionStatus;
 import org.apache.hadoop.hdfs.protocol.Block;
+import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfo;
 import org.apache.hadoop.hdfs.server.blockmanagement.BlockInfoUnderConstruction;
-import org.apache.hadoop.hdfs.server.blockmanagement.BlockCollection;
 
 /** I-node for closed file. */
 @InterfaceAudience.Private
-public class INodeFile extends INode implements BlockCollection {
+class INodeFile extends INode implements BlockCollection {
+  /** Cast INode to INodeFile. */
+  public static INodeFile valueOf(INode inode, String path) throws IOException {
+    if (inode == null) {
+      throw new FileNotFoundException("File does not exist: " + path);
+    }
+    if (!(inode instanceof INodeFile)) {
+      throw new FileNotFoundException("Path is not a file: " + path);
+    }
+    return (INodeFile)inode;
+  }
+
   static final FsPermission UMASK = FsPermission.createImmutable((short)0111);
 
   //Number of bits for Block size
@@ -44,13 +56,6 @@ public class INodeFile extends INode implements BlockCollection {
   private long header;
 
   BlockInfo blocks[] = null;
-
-  INodeFile(PermissionStatus permissions,
-            int nrBlocks, short replication, long modificationTime,
-            long atime, long preferredBlockSize) {
-    this(permissions, new BlockInfo[nrBlocks], replication,
-        modificationTime, atime, preferredBlockSize);
-  }
 
   INodeFile(PermissionStatus permissions, BlockInfo[] blklist,
                       short replication, long modificationTime,
@@ -78,7 +83,7 @@ public class INodeFile extends INode implements BlockCollection {
 
   /** @return the replication factor of the file. */
   @Override
-  public short getReplication() {
+  public short getBlockReplication() {
     return (short) ((header & HEADERMASK) >> BLOCKBITS);
   }
 
@@ -207,8 +212,9 @@ public class INodeFile extends INode implements BlockCollection {
   
   private long diskspaceConsumed(Block[] blkArr) {
     long size = 0;
-    if(blkArr == null) 
+    if(blkArr == null || blocks.length == 0) { 
       return 0;
+    }
     
     for (Block blk : blkArr) {
       if (blk != null) {
@@ -218,11 +224,12 @@ public class INodeFile extends INode implements BlockCollection {
     /* If the last block is being written to, use prefferedBlockSize
      * rather than the actual block size.
      */
-    if (blkArr.length > 0 && blkArr[blkArr.length-1] != null && 
-        isUnderConstruction()) {
-      size += getPreferredBlockSize() - blkArr[blkArr.length-1].getNumBytes();
+    final int last = blkArr.length - 1;
+    if (blkArr.length > 0 && blkArr[last] != null && 
+        blkArr[last] instanceof BlockInfoUnderConstruction) {
+      size += getPreferredBlockSize() - blkArr[last].getNumBytes();
     }
-    return size * getReplication();
+    return size * getBlockReplication();
   }
   
   /**
@@ -236,7 +243,7 @@ public class INodeFile extends INode implements BlockCollection {
   }
 
   @Override
-  public BlockInfo getLastBlock() throws IOException {
+  public BlockInfo getLastBlock() {
     return blocks == null || blocks.length == 0? null: blocks[blocks.length-1];
   }
 

@@ -1,7 +1,7 @@
 From 592c8000fc64f4d84c61d85b61c8e56cc5ed8c1b Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 27 Jun 2012 16:13:35 +0000
-Subject: [PATCH 179/545] HDFS-3481. Refactor HttpFS handling of JAX-RS query string parameters.
+Subject: [PATCH 0179/1612] HDFS-3481. Refactor HttpFS handling of JAX-RS query string parameters.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1354603 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b8ac543acf0a7e9a7f99465832afe08d54915c99)

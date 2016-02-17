@@ -18,11 +18,17 @@
 
 package org.apache.hadoop.fs;
 
+import static org.junit.Assert.fail;
+
+import java.io.FileNotFoundException;
 import java.io.IOException;
+import java.util.EnumSet;
 import java.util.List;
 import java.util.Set;
 
+import org.apache.commons.lang.RandomStringUtils;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.hdfs.DFSClient;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
@@ -31,6 +37,7 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;
+import org.apache.hadoop.test.GenericTestUtils;
 import org.junit.AfterClass;
 import org.junit.Assert;
 import org.junit.BeforeClass;
@@ -43,6 +50,10 @@ import org.junit.Test;
  */
 public class TestResolveHdfsSymlink {
   private static MiniDFSCluster cluster = null;
+
+  private final static String TEST_ROOT =
+      System.getProperty("test.build.data", "target/test/data") +
+      RandomStringUtils.randomAlphanumeric(10);
 
   @BeforeClass
   public static void setUp() throws IOException {
@@ -74,19 +85,19 @@ public class TestResolveHdfsSymlink {
         .getUri());
 
     Path alphaLocalPath = new Path(fcLocal.getDefaultFileSystem().getUri()
-        .toString(), "/tmp/alpha");
+        .toString(), TEST_ROOT + "/tmp/alpha");
     DFSTestUtil.createFile(FileSystem.getLocal(conf), alphaLocalPath, 16,
         (short) 1, 2);
 
     Path linkTarget = new Path(fcLocal.getDefaultFileSystem().getUri()
-        .toString(), "/tmp");
+        .toString(), TEST_ROOT + "/tmp");
     Path hdfsLink = new Path(fcHdfs.getDefaultFileSystem().getUri().toString(),
-        "/tmp/link");
+        TEST_ROOT + "/tmp/link");
     fcHdfs.createSymlink(linkTarget, hdfsLink, true);
 
     Path alphaHdfsPathViaLink = new Path(fcHdfs.getDefaultFileSystem().getUri()
         .toString()
-        + "/tmp/link/alpha");
+        + TEST_ROOT + "/tmp/link/alpha");
 
     Set<AbstractFileSystem> afsList = fcHdfs
         .resolveAbstractFileSystems(alphaHdfsPathViaLink);
@@ -121,5 +132,49 @@ public class TestResolveHdfsSymlink {
         .get(0));
     ((Hdfs) afs).cancelDelegationToken(
         (Token<? extends AbstractDelegationTokenIdentifier>) tokenList.get(0));
+  }
+
+  /**
+   * Verifies that attempting to resolve a non-symlink results in client
+   * exception
+   */
+  @Test
+  public void testLinkTargetNonSymlink() throws UnsupportedFileSystemException,
+      IOException {
+    FileContext fc = null;
+    Path notSymlink = new Path("/notasymlink");
+    try {
+      fc = FileContext.getFileContext(cluster.getFileSystem().getUri());
+      fc.create(notSymlink, EnumSet.of(CreateFlag.CREATE));
+      DFSClient client = new DFSClient(cluster.getFileSystem().getUri(),
+          cluster.getConfiguration(0));
+      try {
+        client.getLinkTarget(notSymlink.toString());
+        fail("Expected exception for resolving non-symlink");
+      } catch (IOException e) {
+        GenericTestUtils.assertExceptionContains("is not a symbolic link", e);
+      }
+    } finally {
+      if (fc != null) {
+        fc.delete(notSymlink, false);
+      }
+    }
+  }
+
+  /**
+   * Tests that attempting to resolve a non-existent-file
+   */
+  @Test
+  public void testLinkTargetNonExistent() throws IOException {
+    Path doesNotExist = new Path("/filethatdoesnotexist");
+    DFSClient client = new DFSClient(cluster.getFileSystem().getUri(),
+        cluster.getConfiguration(0));
+    try {
+      client.getLinkTarget(doesNotExist.toString());
+      fail("Expected exception for resolving non-existent file");
+    } catch (FileNotFoundException e) {
+      GenericTestUtils.assertExceptionContains("File does not exist: "
+          + doesNotExist.toString(), e);
+    }
   }
 }

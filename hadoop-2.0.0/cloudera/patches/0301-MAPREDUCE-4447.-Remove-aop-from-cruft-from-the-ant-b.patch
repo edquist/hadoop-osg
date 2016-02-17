@@ -1,7 +1,7 @@
 From 43fa8d4659a14d17fd1499d6f13f90002a0cfdfd Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 16 Jul 2012 19:09:33 +0000
-Subject: [PATCH 301/545] MAPREDUCE-4447. Remove aop from cruft from the ant build. Contributed by Eli Collins
+Subject: [PATCH 0301/1612] MAPREDUCE-4447. Remove aop from cruft from the ant build. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362204 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit dda4f2ede56ccba2ef22e268ffcbda6e5876e000)

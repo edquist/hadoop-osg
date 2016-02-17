@@ -1,7 +1,7 @@
 From 06574bbad424993b8626411588e88a17a4a74f8c Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:27:08 -0700
-Subject: [PATCH 366/545] Merge r:1343913 HDFS-3452. BKJM:Switch from standby to active fails and NN gets shut down due to delay in clearing of lock. Contributed by Uma Maheswara Rao G.
+Subject: [PATCH 0366/1612] Merge r:1343913 HDFS-3452. BKJM:Switch from standby to active fails and NN gets shut down due to delay in clearing of lock. Contributed by Uma Maheswara Rao G.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1343929 13f79535-47bb-0310-9956-ffa450edef68
 

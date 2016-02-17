@@ -1,0 +1,512 @@
+From 1ea9a1b42552b083a89ba9f3b65c2f08b875473e Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Wed, 6 Nov 2013 08:02:55 +0000
+Subject: [PATCH 1518/1612] HADOOP-9623. Update jet3t dependency to 0.9.0 (Amandeep Khurana via Colin Patrick McCabe)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1539256 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit a28352e8160e63bdffc184013e5fc718b2c71f85)
+
+CLOUDERA-BUILD: Reference renamed package names due to shading.
+---
+ .../apache/hadoop/fs/s3/Jets3tFileSystemStore.java |   44 +++++--
+ .../org/apache/hadoop/fs/s3/MigrationTool.java     |   21 ++--
+ .../fs/s3native/Jets3tNativeFileSystemStore.java   |  138 +++++++++++++++-----
+ .../hadoop/fs/s3native/NativeS3FileSystem.java     |    6 +-
+ 4 files changed, 152 insertions(+), 57 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/Jets3tFileSystemStore.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/Jets3tFileSystemStore.java
+index 6667d62..81fe2d1 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/Jets3tFileSystemStore.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/Jets3tFileSystemStore.java
+@@ -40,12 +40,13 @@ import org.apache.hadoop.classification.InterfaceStability;
+ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.fs.Path;
+ import org.apache.hadoop.fs.s3.INode.FileType;
+-import org.jets3t.service.S3Service;
+-import org.jets3t.service.S3ServiceException;
+-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+-import org.jets3t.service.model.S3Bucket;
+-import org.jets3t.service.model.S3Object;
+-import org.jets3t.service.security.AWSCredentials;
++import com.cloudera.org.jets3t.service.S3Service;
++import com.cloudera.org.jets3t.service.S3ServiceException;
++import com.cloudera.org.jets3t.service.ServiceException;
++import com.cloudera.org.jets3t.service.impl.rest.httpclient.RestS3Service;
++import com.cloudera.org.jets3t.service.model.S3Bucket;
++import com.cloudera.org.jets3t.service.model.S3Object;
++import com.cloudera.org.jets3t.service.security.AWSCredentials;
+ 
+ @InterfaceAudience.Private
+ @InterfaceStability.Unstable
+@@ -60,8 +61,8 @@ class Jets3tFileSystemStore implements FileSystemStore {
+   private static final String FILE_SYSTEM_VERSION_NAME = "fs-version";
+   private static final String FILE_SYSTEM_VERSION_VALUE = "1";
+   
+-  private static final Map<String, String> METADATA =
+-    new HashMap<String, String>();
++  private static final Map<String, Object> METADATA =
++    new HashMap<String, Object>();
+   
+   static {
+     METADATA.put(FILE_SYSTEM_NAME, FILE_SYSTEM_VALUE);
+@@ -153,7 +154,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
+       throws IOException {
+     
+     try {
+-      S3Object object = s3Service.getObject(bucket, key);
++      S3Object object = s3Service.getObject(bucket.getName(), key);
+       if (checkMetadata) {
+         checkMetadata(object);
+       }
+@@ -166,6 +167,9 @@ class Jets3tFileSystemStore implements FileSystemStore {
+         throw (IOException) e.getCause();
+       }
+       throw new S3Exception(e);
++    } catch (ServiceException e) {
++      handleServiceException(e);
++      return null;
+     }
+   }
+ 
+@@ -182,6 +186,9 @@ class Jets3tFileSystemStore implements FileSystemStore {
+         throw (IOException) e.getCause();
+       }
+       throw new S3Exception(e);
++    } catch (ServiceException e) {
++      handleServiceException(e);
++      return null;
+     }
+   }
+ 
+@@ -255,7 +262,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
+       if (!prefix.endsWith(PATH_DELIMITER)) {
+         prefix += PATH_DELIMITER;
+       }
+-      S3Object[] objects = s3Service.listObjects(bucket, prefix, PATH_DELIMITER);
++      S3Object[] objects = s3Service.listObjects(bucket.getName(), prefix, PATH_DELIMITER);
+       Set<Path> prefixes = new TreeSet<Path>();
+       for (int i = 0; i < objects.length; i++) {
+         prefixes.add(keyToPath(objects[i].getKey()));
+@@ -276,7 +283,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
+       if (!prefix.endsWith(PATH_DELIMITER)) {
+         prefix += PATH_DELIMITER;
+       }
+-      S3Object[] objects = s3Service.listObjects(bucket, prefix, null);
++      S3Object[] objects = s3Service.listObjects(bucket.getName(), prefix, null);
+       Set<Path> prefixes = new TreeSet<Path>();
+       for (int i = 0; i < objects.length; i++) {
+         prefixes.add(keyToPath(objects[i].getKey()));
+@@ -356,7 +363,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
+ 
+   public void purge() throws IOException {
+     try {
+-      S3Object[] objects = s3Service.listObjects(bucket);
++      S3Object[] objects = s3Service.listObjects(bucket.getName());
+       for (int i = 0; i < objects.length; i++) {
+         s3Service.deleteObject(bucket, objects[i].getKey());
+       }
+@@ -372,7 +379,7 @@ class Jets3tFileSystemStore implements FileSystemStore {
+     StringBuilder sb = new StringBuilder("S3 Filesystem, ");
+     sb.append(bucket.getName()).append("\n");
+     try {
+-      S3Object[] objects = s3Service.listObjects(bucket, PATH_DELIMITER, null);
++      S3Object[] objects = s3Service.listObjects(bucket.getName(), PATH_DELIMITER, null);
+       for (int i = 0; i < objects.length; i++) {
+         Path path = keyToPath(objects[i].getKey());
+         sb.append(path).append("\n");
+@@ -394,4 +401,15 @@ class Jets3tFileSystemStore implements FileSystemStore {
+     System.out.println(sb);
+   }
+ 
++  private void handleServiceException(ServiceException e) throws IOException {
++      if (e.getCause() instanceof IOException) {
++        throw (IOException) e.getCause();
++      }
++      else {
++        if(LOG.isDebugEnabled()) {
++          LOG.debug("Got ServiceException with Error code: " + e.getErrorCode() + ";and Error message: " + e.getErrorMessage());
++        }
++      }
++    }
++
+ }
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/MigrationTool.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/MigrationTool.java
+index f827557..7a6a632 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/MigrationTool.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/MigrationTool.java
+@@ -32,12 +32,13 @@ import org.apache.hadoop.conf.Configured;
+ import org.apache.hadoop.fs.Path;
+ import org.apache.hadoop.util.Tool;
+ import org.apache.hadoop.util.ToolRunner;
+-import org.jets3t.service.S3Service;
+-import org.jets3t.service.S3ServiceException;
+-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+-import org.jets3t.service.model.S3Bucket;
+-import org.jets3t.service.model.S3Object;
+-import org.jets3t.service.security.AWSCredentials;
++import com.cloudera.org.jets3t.service.S3Service;
++import com.cloudera.org.jets3t.service.S3ServiceException;
++import com.cloudera.org.jets3t.service.ServiceException;
++import com.cloudera.org.jets3t.service.impl.rest.httpclient.RestS3Service;
++import com.cloudera.org.jets3t.service.model.S3Bucket;
++import com.cloudera.org.jets3t.service.model.S3Object;
++import com.cloudera.org.jets3t.service.security.AWSCredentials;
+ 
+ /**
+  * <p>
+@@ -176,7 +177,7 @@ public class MigrationTool extends Configured implements Tool {
+   
+   private S3Object get(String key) {
+     try {
+-      return s3Service.getObject(bucket, key);
++      return s3Service.getObject(bucket.getName(), key);
+     } catch (S3ServiceException e) {
+       if ("NoSuchKey".equals(e.getS3ErrorCode())) {
+         return null;
+@@ -198,7 +199,7 @@ public class MigrationTool extends Configured implements Tool {
+     public Set<Path> listAllPaths() throws IOException {
+       try {
+         String prefix = urlEncode(Path.SEPARATOR);
+-        S3Object[] objects = s3Service.listObjects(bucket, prefix, null);
++        S3Object[] objects = s3Service.listObjects(bucket.getName(), prefix, null);
+         Set<Path> prefixes = new TreeSet<Path>();
+         for (int i = 0; i < objects.length; i++) {
+           prefixes.add(keyToPath(objects[i].getKey()));
+@@ -233,7 +234,7 @@ public class MigrationTool extends Configured implements Tool {
+ 
+     private InputStream get(String key) throws IOException {
+       try {
+-        S3Object object = s3Service.getObject(bucket, key);
++        S3Object object = s3Service.getObject(bucket.getName(), key);
+         return object.getDataInputStream();
+       } catch (S3ServiceException e) {
+         if ("NoSuchKey".equals(e.getS3ErrorCode())) {
+@@ -243,6 +244,8 @@ public class MigrationTool extends Configured implements Tool {
+           throw (IOException) e.getCause();
+         }
+         throw new S3Exception(e);
++      } catch (ServiceException e) {
++        return null;
+       }
+     }
+     
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/Jets3tNativeFileSystemStore.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/Jets3tNativeFileSystemStore.java
+index c2293ba..00b75d3 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/Jets3tNativeFileSystemStore.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/Jets3tNativeFileSystemStore.java
+@@ -29,18 +29,22 @@ import java.io.IOException;
+ import java.io.InputStream;
+ import java.net.URI;
+ 
++import org.apache.commons.logging.Log;
++import org.apache.commons.logging.LogFactory;
+ import org.apache.hadoop.classification.InterfaceAudience;
+ import org.apache.hadoop.classification.InterfaceStability;
+ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.fs.s3.S3Credentials;
+ import org.apache.hadoop.fs.s3.S3Exception;
+-import org.jets3t.service.S3ObjectsChunk;
+-import org.jets3t.service.S3Service;
+-import org.jets3t.service.S3ServiceException;
+-import org.jets3t.service.impl.rest.httpclient.RestS3Service;
+-import org.jets3t.service.model.S3Bucket;
+-import org.jets3t.service.model.S3Object;
+-import org.jets3t.service.security.AWSCredentials;
++import com.cloudera.org.jets3t.service.S3Service;
++import com.cloudera.org.jets3t.service.S3ServiceException;
++import com.cloudera.org.jets3t.service.ServiceException;
++import com.cloudera.org.jets3t.service.StorageObjectsChunk;
++import com.cloudera.org.jets3t.service.impl.rest.httpclient.RestS3Service;
++import com.cloudera.org.jets3t.service.model.S3Bucket;
++import com.cloudera.org.jets3t.service.model.S3Object;
++import com.cloudera.org.jets3t.service.model.StorageObject;
++import com.cloudera.org.jets3t.service.security.AWSCredentials;
+ 
+ @InterfaceAudience.Private
+ @InterfaceStability.Unstable
+@@ -49,6 +53,10 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
+   private S3Service s3Service;
+   private S3Bucket bucket;
+   
++  public static final Log LOG =
++      LogFactory.getLog(Jets3tNativeFileSystemStore.class);
++
++  @Override
+   public void initialize(URI uri, Configuration conf) throws IOException {
+     S3Credentials s3Credentials = new S3Credentials();
+     s3Credentials.initialize(uri, conf);
+@@ -58,7 +66,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
+             s3Credentials.getSecretAccessKey());
+       this.s3Service = new RestS3Service(awsCredentials);
+     } catch (S3ServiceException e) {
+-      handleServiceException(e);
++      handleS3ServiceException(e);
+     }
+     bucket = new S3Bucket(uri.getHost());
+   }
+@@ -78,7 +86,7 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
+       }
+       s3Service.putObject(bucket, object);
+     } catch (S3ServiceException e) {
+-      handleServiceException(e);
++      handleS3ServiceException(e);
+     } finally {
+       if (in != null) {
+         try {
+@@ -98,49 +106,83 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
+       object.setContentLength(0);
+       s3Service.putObject(bucket, object);
+     } catch (S3ServiceException e) {
+-      handleServiceException(e);
++      handleS3ServiceException(e);
+     }
+   }
+   
+   public FileMetadata retrieveMetadata(String key) throws IOException {
+     try {
+-      S3Object object = s3Service.getObjectDetails(bucket, key);
++      if(LOG.isDebugEnabled()) {
++        LOG.debug("Getting metadata for key: " + key + " from bucket:" + bucket.getName());
++      }
++      S3Object object = s3Service.getObject(bucket.getName(), key);
+       return new FileMetadata(key, object.getContentLength(),
+           object.getLastModifiedDate().getTime());
+     } catch (S3ServiceException e) {
+       // Following is brittle. Is there a better way?
+-      if (e.getMessage().contains("ResponseCode=404")) {
+-        return null;
++      if (e.getS3ErrorCode().matches("NoSuchKey")) {
++        return null; //return null if key not found
+       }
+-      handleServiceException(e);
++      handleS3ServiceException(e);
+       return null; //never returned - keep compiler happy
+     }
+   }
+   
++  /**
++   * @param key
++   * The key is the object name that is being retrieved from the S3 bucket
++   * @return
++   * This method returns null if the key is not found
++   * @throws IOException
++   */
++
++  @Override
+   public InputStream retrieve(String key) throws IOException {
+     try {
+-      S3Object object = s3Service.getObject(bucket, key);
++      if(LOG.isDebugEnabled()) {
++        LOG.debug("Getting key: " + key + " from bucket:" + bucket.getName());
++      }
++      S3Object object = s3Service.getObject(bucket.getName(), key);
+       return object.getDataInputStream();
+     } catch (S3ServiceException e) {
+-      handleServiceException(key, e);
++      handleS3ServiceException(key, e);
+       return null; //never returned - keep compiler happy
++    } catch (ServiceException e) {
++      handleServiceException(e);
++      return null; //return null if key not found
+     }
+   }
+-  
++
++  /**
++   *
++   * @param key
++   * The key is the object name that is being retrieved from the S3 bucket
++   * @return
++   * This method returns null if the key is not found
++   * @throws IOException
++   */
++
++  @Override
+   public InputStream retrieve(String key, long byteRangeStart)
+-    throws IOException {
++          throws IOException {
+     try {
++      if(LOG.isDebugEnabled()) {
++        LOG.debug("Getting key: " + key + " from bucket:" + bucket.getName() + " with byteRangeStart: " + byteRangeStart);
++      }
+       S3Object object = s3Service.getObject(bucket, key, null, null, null,
+                                             null, byteRangeStart, null);
+       return object.getDataInputStream();
+     } catch (S3ServiceException e) {
+-      handleServiceException(key, e);
++      handleS3ServiceException(key, e);
+       return null; //never returned - keep compiler happy
++    } catch (ServiceException e) {
++      handleServiceException(e);
++      return null; //return null if key not found
+     }
+   }
+ 
+   public PartialListing list(String prefix, int maxListingLength)
+-    throws IOException {
++          throws IOException {
+     return list(prefix, maxListingLength, null, false);
+   }
+   
+@@ -150,6 +192,13 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
+     return list(prefix, recurse ? null : PATH_DELIMITER, maxListingLength, priorLastKey);
+   }
+ 
++  /**
++   *
++   * @return
++   * This method returns null if the list could not be populated
++   * due to S3 giving ServiceException
++   * @throws IOException
++   */
+ 
+   private PartialListing list(String prefix, String delimiter,
+       int maxListingLength, String priorLastKey) throws IOException {
+@@ -157,49 +206,60 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
+       if (prefix.length() > 0 && !prefix.endsWith(PATH_DELIMITER)) {
+         prefix += PATH_DELIMITER;
+       }
+-      S3ObjectsChunk chunk = s3Service.listObjectsChunked(bucket.getName(),
++      StorageObjectsChunk chunk = s3Service.listObjectsChunked(bucket.getName(),
+           prefix, delimiter, maxListingLength, priorLastKey);
+       
+       FileMetadata[] fileMetadata =
+         new FileMetadata[chunk.getObjects().length];
+       for (int i = 0; i < fileMetadata.length; i++) {
+-        S3Object object = chunk.getObjects()[i];
++        StorageObject object = chunk.getObjects()[i];
+         fileMetadata[i] = new FileMetadata(object.getKey(),
+             object.getContentLength(), object.getLastModifiedDate().getTime());
+       }
+       return new PartialListing(chunk.getPriorLastKey(), fileMetadata,
+           chunk.getCommonPrefixes());
+     } catch (S3ServiceException e) {
+-      handleServiceException(e);
++      handleS3ServiceException(e);
+       return null; //never returned - keep compiler happy
++    } catch (ServiceException e) {
++      handleServiceException(e);
++      return null; //return null if list could not be populated
+     }
+   }
+ 
+   public void delete(String key) throws IOException {
+     try {
++      if(LOG.isDebugEnabled()) {
++        LOG.debug("Deleting key:" + key + "from bucket" + bucket.getName());
++      }
+       s3Service.deleteObject(bucket, key);
+     } catch (S3ServiceException e) {
+-      handleServiceException(key, e);
++      handleS3ServiceException(key, e);
+     }
+   }
+   
+   public void copy(String srcKey, String dstKey) throws IOException {
+     try {
++      if(LOG.isDebugEnabled()) {
++        LOG.debug("Copying srcKey: " + srcKey + "to dstKey: " + dstKey + "in bucket: " + bucket.getName());
++      }
+       s3Service.copyObject(bucket.getName(), srcKey, bucket.getName(),
+           new S3Object(dstKey), false);
+     } catch (S3ServiceException e) {
+-      handleServiceException(srcKey, e);
++      handleS3ServiceException(srcKey, e);
++    } catch (ServiceException e) {
++      handleServiceException(e);
+     }
+   }
+ 
+   public void purge(String prefix) throws IOException {
+     try {
+-      S3Object[] objects = s3Service.listObjects(bucket, prefix, null);
++      S3Object[] objects = s3Service.listObjects(bucket.getName(), prefix, null);
+       for (S3Object object : objects) {
+         s3Service.deleteObject(bucket, object.getKey());
+       }
+     } catch (S3ServiceException e) {
+-      handleServiceException(e);
++      handleS3ServiceException(e);
+     }
+   }
+ 
+@@ -207,30 +267,44 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
+     StringBuilder sb = new StringBuilder("S3 Native Filesystem, ");
+     sb.append(bucket.getName()).append("\n");
+     try {
+-      S3Object[] objects = s3Service.listObjects(bucket);
++      S3Object[] objects = s3Service.listObjects(bucket.getName());
+       for (S3Object object : objects) {
+         sb.append(object.getKey()).append("\n");
+       }
+     } catch (S3ServiceException e) {
+-      handleServiceException(e);
++      handleS3ServiceException(e);
+     }
+     System.out.println(sb);
+   }
+ 
+-  private void handleServiceException(String key, S3ServiceException e) throws IOException {
++  private void handleS3ServiceException(String key, S3ServiceException e) throws IOException {
+     if ("NoSuchKey".equals(e.getS3ErrorCode())) {
+       throw new FileNotFoundException("Key '" + key + "' does not exist in S3");
+     } else {
+-      handleServiceException(e);
++      handleS3ServiceException(e);
+     }
+   }
+ 
+-  private void handleServiceException(S3ServiceException e) throws IOException {
++  private void handleS3ServiceException(S3ServiceException e) throws IOException {
+     if (e.getCause() instanceof IOException) {
+       throw (IOException) e.getCause();
+     }
+     else {
++      if(LOG.isDebugEnabled()) {
++        LOG.debug("S3 Error code: " + e.getS3ErrorCode() + "; S3 Error message: " + e.getS3ErrorMessage());
++      }
+       throw new S3Exception(e);
+     }
+   }
++
++  private void handleServiceException(ServiceException e) throws IOException {
++    if (e.getCause() instanceof IOException) {
++      throw (IOException) e.getCause();
++    }
++    else {
++      if(LOG.isDebugEnabled()) {
++        LOG.debug("Got ServiceException with Error code: " + e.getErrorCode() + ";and Error message: " + e.getErrorMessage());
++      }
++    }
++  }
+ }
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/NativeS3FileSystem.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/NativeS3FileSystem.java
+index af1c7a9..2422eb7 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/NativeS3FileSystem.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/NativeS3FileSystem.java
+@@ -273,7 +273,7 @@ public class NativeS3FileSystem extends FileSystem {
+     setConf(conf);
+     this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());
+     this.workingDir =
+-      new Path("/user", System.getProperty("user.name")).makeQualified(this);
++      new Path("/user", System.getProperty("user.name")).makeQualified(this.uri, this.getWorkingDirectory());
+   }
+   
+   private static NativeFileSystemStore createDefaultStore(Configuration conf) {
+@@ -511,11 +511,11 @@ public class NativeS3FileSystem extends FileSystem {
+   
+   private FileStatus newFile(FileMetadata meta, Path path) {
+     return new FileStatus(meta.getLength(), false, 1, getDefaultBlockSize(),
+-        meta.getLastModified(), path.makeQualified(this));
++        meta.getLastModified(), path.makeQualified(this.getUri(), this.getWorkingDirectory()));
+   }
+   
+   private FileStatus newDirectory(Path path) {
+-    return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this));
++    return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this.getUri(), this.getWorkingDirectory()));
+   }
+ 
+   @Override
+-- 
+1.7.0.4
+

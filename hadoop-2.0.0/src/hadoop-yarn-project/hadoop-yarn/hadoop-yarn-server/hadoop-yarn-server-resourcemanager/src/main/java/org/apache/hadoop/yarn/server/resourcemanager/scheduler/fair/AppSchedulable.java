@@ -18,6 +18,9 @@
 
 package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
+import java.util.Arrays;
+import java.util.Collection;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.classification.InterfaceAudience.Private;
@@ -32,17 +35,21 @@ import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.ResourceRequest;
 import org.apache.hadoop.yarn.factories.RecordFactory;
 import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.RMContainer;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 
 @Private
 @Unstable
 public class AppSchedulable extends Schedulable {
+  private static final DefaultResourceCalculator RESOURCE_CALCULATOR
+    = new DefaultResourceCalculator();
+  
   private FairScheduler scheduler;
   private FSSchedulerApp app;
   private Resource demand = Resources.createResource(0);
@@ -50,10 +57,10 @@ public class AppSchedulable extends Schedulable {
   private long startTime;
   private static RecordFactory recordFactory = RecordFactoryProvider.getRecordFactory(null);
   private static final Log LOG = LogFactory.getLog(AppSchedulable.class);
-  private FSQueue queue;
-  private ContainerTokenSecretManager containerTokenSecretManager;
+  private FSLeafQueue queue;
+  private RMContainerTokenSecretManager containerTokenSecretManager;
 
-  public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSQueue queue) {
+  public AppSchedulable(FairScheduler scheduler, FSSchedulerApp app, FSLeafQueue queue) {
     this.scheduler = scheduler;
     this.app = app;
     this.startTime = System.currentTimeMillis();
@@ -97,28 +104,30 @@ public class AppSchedulable extends Schedulable {
   }
 
   @Override
-  public void redistributeShare() {}
-
-  @Override
   public Resource getResourceUsage() {
-    return this.app.getCurrentConsumption();
+    return app.getCurrentConsumption();
   }
 
 
   @Override
   public Resource getMinShare() {
-    return Resources.createResource(0);
+    return Resources.none();
+  }
+  
+  @Override
+  public Resource getMaxShare() {
+    return Resources.unbounded();
   }
 
   /**
    * Get metrics reference from containing queue.
    */
   public QueueMetrics getMetrics() {
-    return this.queue.getQueueSchedulable().getMetrics();
+    return queue.getMetrics();
   }
 
   @Override
-  public double getWeight() {
+  public ResourceWeights getWeights() {
     return scheduler.getAppWeight(this);
   }
 
@@ -161,7 +170,7 @@ public class AppSchedulable extends Schedulable {
     if (UserGroupInformation.isSecurityEnabled()) {
       containerToken =
           containerTokenSecretManager.createContainerToken(containerId, nodeId,
-            capability);
+            application.getUser(), capability);
       if (containerToken == null) {
         return null; // Try again later.
       }
@@ -181,42 +190,35 @@ public class AppSchedulable extends Schedulable {
    * update relevant bookeeping. This dispatches ro relevant handlers
    * in the {@link FSSchedulerNode} and {@link SchedulerApp} classes.
    */
-  private void reserve(FSSchedulerApp application, Priority priority,
-      FSSchedulerNode node, Container container, boolean alreadyReserved) {
+  private void reserve(Priority priority, FSSchedulerNode node,
+      Container container, boolean alreadyReserved) {
     LOG.info("Making reservation: node=" + node.getHostName() +
                                  " app_id=" + app.getApplicationId());
     if (!alreadyReserved) {
-      getMetrics().reserveResource(application.getUser(), container.getResource());
-      RMContainer rmContainer = application.reserve(node, priority, null,
+      getMetrics().reserveResource(app.getUser(), container.getResource());
+      RMContainer rmContainer = app.reserve(node, priority, null,
           container);
-      node.reserveResource(application, priority, rmContainer);
-      getMetrics().reserveResource(this.app.getUser(),
-          container.getResource());
-      scheduler.getRootQueueMetrics().reserveResource(this.app.getUser(),
-          container.getResource());
+      node.reserveResource(app, priority, rmContainer);
     }
 
     else {
       RMContainer rmContainer = node.getReservedContainer();
-      application.reserve(node, priority, rmContainer, container);
-      node.reserveResource(application, priority, rmContainer);
+      app.reserve(node, priority, rmContainer, container);
+      node.reserveResource(app, priority, rmContainer);
     }
   }
 
   /**
-   * Remove the reservation on {@code node} for {@ application} at the given
+   * Remove the reservation on {@code node} at the given
    * {@link Priority}. This dispatches to the SchedulerApp and SchedulerNode
    * handlers for an unreservation.
    */
-  private void unreserve(FSSchedulerApp application, Priority priority,
-      FSSchedulerNode node) {
+  public void unreserve(Priority priority, FSSchedulerNode node) {
     RMContainer rmContainer = node.getReservedContainer();
-    application.unreserve(node, priority);
-    node.unreserveResource(application);
+    app.unreserve(node, priority);
+    node.unreserveResource(app);
     getMetrics().unreserveResource(
-        application.getUser(), rmContainer.getContainer().getResource());
-    scheduler.getRootQueueMetrics().unreserveResource(
-        application.getUser(), rmContainer.getContainer().getResource());
+        app.getUser(), rmContainer.getContainer().getResource());
   }
 
   /**
@@ -225,8 +227,8 @@ public class AppSchedulable extends Schedulable {
    * sure the particular request should be facilitated by this node.
    */
   private Resource assignContainer(FSSchedulerNode node,
-      FSSchedulerApp application, Priority priority,
-      ResourceRequest request, NodeType type, boolean reserved) {
+      Priority priority, ResourceRequest request, NodeType type,
+      boolean reserved) {
 
     // How much does this request need?
     Resource capability = request.getCapability();
@@ -238,50 +240,41 @@ public class AppSchedulable extends Schedulable {
     if (reserved) {
       container = node.getReservedContainer().getContainer();
     } else {
-      container = createContainer(application, node, capability, priority);
+      container = createContainer(app, node, capability, priority);
     }
 
     // Can we allocate a container on this node?
-    int availableContainers =
-        available.getMemory() / capability.getMemory();
-
-    if (availableContainers > 0) {
+    if (Resources.fitsIn(capability, available)) {
       // Inform the application of the new container for this request
       RMContainer allocatedContainer =
-          application.allocate(type, node, priority, request, container);
+          app.allocate(type, node, priority, request, container);
       if (allocatedContainer == null) {
         // Did the application need this resource?
+        if (reserved) {
+          unreserve(priority, node);
+        }
         return Resources.none();
       }
-      else {
-        // TODO this should subtract resource just assigned
-        // TEMPROARY
-        getMetrics().setAvailableResourcesToQueue(
-            this.scheduler.getClusterCapacity());
-      }
-
 
       // If we had previously made a reservation, delete it
       if (reserved) {
-        this.unreserve(application, priority, node);
+        unreserve(priority, node);
       }
 
       // Inform the node
-      node.allocateContainer(application.getApplicationId(),
+      node.allocateContainer(app.getApplicationId(),
           allocatedContainer);
 
       return container.getResource();
     } else {
       // The desired container won't fit here, so reserve
-      reserve(application, priority, node, container, reserved);
+      reserve(priority, node, container, reserved);
 
-      return Resources.none();
+      return FairScheduler.CONTAINER_RESERVED;
     }
   }
 
-
-  @Override
-  public Resource assignContainer(FSSchedulerNode node, boolean reserved) {
+  private Resource assignContainer(FSSchedulerNode node, boolean reserved) {
     LOG.info("Node offered to app: " + getName() + " reserved: " + reserved);
 
     if (reserved) {
@@ -290,47 +283,91 @@ public class AppSchedulable extends Schedulable {
 
       // Make sure the application still needs requests at this priority
       if (app.getTotalRequiredResources(priority) == 0) {
-        this.unreserve(app, priority, node);
+        unreserve(priority, node);
         return Resources.none();
       }
     } else {
       // If this app is over quota, don't schedule anything
       if (!(getRunnable())) { return Resources.none(); }
-
     }
+
+    Collection<Priority> prioritiesToTry = (reserved) ? 
+        Arrays.asList(node.getReservedContainer().getReservedPriority()) : 
+        app.getPriorities();
+    
     // For each priority, see if we can schedule a node local, rack local
     // or off-switch request. Rack of off-switch requests may be delayed
     // (not scheduled) in order to promote better locality.
-    for (Priority priority : app.getPriorities()) {
-      app.addSchedulingOpportunity(priority);
-      NodeType allowedLocality = app.getAllowedLocalityLevel(priority,
-          scheduler.getNumClusterNodes(), scheduler.getNodeLocalityThreshold(),
-          scheduler.getRackLocalityThreshold());
+    synchronized (app) {
+      for (Priority priority : prioritiesToTry) {
+        if (app.getTotalRequiredResources(priority) <= 0 ||
+            !hasContainerForNode(priority, node)) {
+          continue;
+        }
+        
+        app.addSchedulingOpportunity(priority);
 
-      ResourceRequest localRequest = app.getResourceRequest(priority,
-          node.getHostName());
-      if (localRequest != null && localRequest.getNumContainers() != 0) {
-        return assignContainer(node, app, priority,
-            localRequest, NodeType.NODE_LOCAL, reserved);
-      }
+        ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
+            node.getRackName());
+        ResourceRequest localRequest = app.getResourceRequest(priority,
+            node.getHostName());
+        
+        NodeType allowedLocality;
+        if (scheduler.isContinuousSchedulingEnabled()) {
+          allowedLocality = app.getAllowedLocalityLevelByTime(priority,
+                  scheduler.getNodeLocalityDelayMs(),
+                  scheduler.getRackLocalityDelayMs(),
+                  scheduler.getClock().getTime());
+        } else {
+          allowedLocality = app.getAllowedLocalityLevel(priority,
+                  scheduler.getNumClusterNodes(),
+                  scheduler.getNodeLocalityThreshold(),
+                  scheduler.getRackLocalityThreshold());
+        }
 
-      ResourceRequest rackLocalRequest = app.getResourceRequest(priority,
-          node.getRackName());
-      if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
-          && (allowedLocality.equals(NodeType.RACK_LOCAL) ||
-              allowedLocality.equals(NodeType.OFF_SWITCH))) {
-        return assignContainer(node, app, priority, rackLocalRequest,
-            NodeType.RACK_LOCAL, reserved);
-      }
+        if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
+            && localRequest != null && localRequest.getNumContainers() != 0) {
+          return assignContainer(node, priority,
+              localRequest, NodeType.NODE_LOCAL, reserved);
+        }
 
-      ResourceRequest offSwitchRequest = app.getResourceRequest(priority,
-          RMNode.ANY);
-      if (offSwitchRequest != null && offSwitchRequest.getNumContainers() != 0
-          && allowedLocality.equals(NodeType.OFF_SWITCH)) {
-        return assignContainer(node, app, priority, offSwitchRequest,
-            NodeType.OFF_SWITCH, reserved);
+        if (rackLocalRequest != null && rackLocalRequest.getNumContainers() != 0
+            && (allowedLocality.equals(NodeType.RACK_LOCAL) ||
+                allowedLocality.equals(NodeType.OFF_SWITCH))) {
+          return assignContainer(node, priority, rackLocalRequest,
+              NodeType.RACK_LOCAL, reserved);
+        }
+
+        ResourceRequest offSwitchRequest = app.getResourceRequest(priority,
+            ResourceRequest.ANY);
+        if (offSwitchRequest != null && offSwitchRequest.getNumContainers() != 0
+            && allowedLocality.equals(NodeType.OFF_SWITCH)) {
+          return assignContainer(node, priority, offSwitchRequest,
+              NodeType.OFF_SWITCH, reserved);
+        }
       }
     }
     return Resources.none();
+  }
+
+  public Resource assignReservedContainer(FSSchedulerNode node) {
+    return assignContainer(node, true);
+  }
+
+  @Override
+  public Resource assignContainer(FSSchedulerNode node) {
+    return assignContainer(node, false);
+  }
+  
+  /**
+   * Whether this app has containers requests that could be satisfied on the
+   * given node, if the node had full space.
+   */
+  public boolean hasContainerForNode(Priority prio, FSSchedulerNode node) {
+    // TODO: add checks stuff about node specific scheduling here
+    ResourceRequest request = app.getResourceRequest(prio, ResourceRequest.ANY);
+    return request.getNumContainers() > 0 && 
+        Resources.lessThanOrEqual(RESOURCE_CALCULATOR, null,
+            request.getCapability(), node.getRMNode().getTotalCapability());
   }
 }

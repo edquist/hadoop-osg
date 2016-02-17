@@ -43,6 +43,8 @@ public class TestHftpDelegationToken {
 
   @Test
   public void testHdfsDelegationToken() throws Exception {
+    SecurityUtilTestHelper.setTokenServiceUseIp(true);
+
     final Configuration conf = new Configuration();
     conf.set(HADOOP_SECURITY_AUTHENTICATION, "kerberos");
     UserGroupInformation.setConfiguration(conf);
@@ -55,7 +57,7 @@ public class TestHftpDelegationToken {
        new Text("127.0.0.1:8020"));
     user.addToken(token);
     Token<?> token2 = new Token<TokenIdentifier>
-      (null, null, new Text("other token"), new Text("127.0.0.1:8020"));
+      (null, null, new Text("other token"), new Text("127.0.0.1:8021"));
     user.addToken(token2);
     assertEquals("wrong tokens in user", 2, user.getTokens().size());
     FileSystem fs = 
@@ -88,19 +90,21 @@ public class TestHftpDelegationToken {
     URI fsUri = URI.create("hftp://localhost");
     MyHftpFileSystem fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
     assertEquals(httpPort, fs.getCanonicalUri().getPort());
-    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
+    checkTokenSelection(fs, httpPort, conf);
 
     // test with explicit default port
+    // Make sure it uses the port from the hftp URI.
     fsUri = URI.create("hftp://localhost:"+httpPort);
     fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
     assertEquals(httpPort, fs.getCanonicalUri().getPort());
-    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
+    checkTokenSelection(fs, httpPort, conf);
     
     // test with non-default port
+    // Make sure it uses the port from the hftp URI.
     fsUri = URI.create("hftp://localhost:"+(httpPort+1));
     fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
     assertEquals(httpPort+1, fs.getCanonicalUri().getPort());
-    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
+    checkTokenSelection(fs, httpPort + 1, conf);
     
     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 5);
   }

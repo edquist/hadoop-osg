@@ -1,7 +1,7 @@
 From 535b1e28117230673c67ac5b64e1c691f8a8ba65 Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Sat, 18 Aug 2012 19:57:36 +0000
-Subject: [PATCH 470/545] HDFS-3816. Invalidate work percentage default value should be 0.32f. Contributed by Jing Zhao
+Subject: [PATCH 0470/1612] HDFS-3816. Invalidate work percentage default value should be 0.32f. Contributed by Jing Zhao
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1374648 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ac1325a5258b67f3a2e3970bed47bb5d6a524d67)

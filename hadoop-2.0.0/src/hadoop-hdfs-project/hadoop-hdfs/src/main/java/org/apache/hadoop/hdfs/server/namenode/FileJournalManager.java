@@ -164,24 +164,28 @@ public class FileJournalManager implements JournalManager {
   /**
    * Find all editlog segments starting at or above the given txid.
    * @param fromTxId the txnid which to start looking
+   * @param inProgressOk whether or not to include the in-progress edit log 
+   *        segment       
    * @return a list of remote edit logs
    * @throws IOException if edit logs cannot be listed.
    */
-  public List<RemoteEditLog> getRemoteEditLogs(long firstTxId) throws IOException {
+  public List<RemoteEditLog> getRemoteEditLogs(long firstTxId,
+      boolean inProgressOk) throws IOException {
     File currentDir = sd.getCurrentDir();
     List<EditLogFile> allLogFiles = matchEditLogs(currentDir);
     List<RemoteEditLog> ret = Lists.newArrayListWithCapacity(
         allLogFiles.size());
 
     for (EditLogFile elf : allLogFiles) {
-      if (elf.hasCorruptHeader() || elf.isInProgress()) continue;
+      if (elf.hasCorruptHeader() || (!inProgressOk && elf.isInProgress())) {
+        continue;
+      }
       if (elf.getFirstTxId() >= firstTxId) {
         ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId));
-      } else if ((firstTxId > elf.getFirstTxId()) &&
-                 (firstTxId <= elf.getLastTxId())) {
-        // Note that this behavior is different from getLogFiles below.
-        throw new IllegalStateException("Asked for firstTxId " + firstTxId
-            + " which is in the middle of file " + elf.file);
+      } else if (elf.getFirstTxId() < firstTxId && firstTxId <= elf.getLastTxId()) {
+        // If the firstTxId is in the middle of an edit log segment. Return this
+        // anyway and let the caller figure out whether it wants to use it.
+        ret.add(new RemoteEditLog(elf.firstTxId, elf.lastTxId));
       }
     }
     
@@ -247,6 +251,11 @@ public class FileJournalManager implements JournalManager {
     LOG.debug(this + ": selecting input streams starting at " + fromTxId + 
         (inProgressOk ? " (inProgress ok) " : " (excluding inProgress) ") +
         "from among " + elfs.size() + " candidate file(s)");
+    addStreamsToCollectionFromFiles(elfs, streams, fromTxId, inProgressOk);
+  }
+  
+  static void addStreamsToCollectionFromFiles(Collection<EditLogFile> elfs,
+      Collection<EditLogInputStream> streams, long fromTxId, boolean inProgressOk) {
     for (EditLogFile elf : elfs) {
       if (elf.isInProgress()) {
         if (!inProgressOk) {

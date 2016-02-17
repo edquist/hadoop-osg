@@ -91,7 +91,7 @@ public class TestNMWebServicesApps extends JerseyTest {
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
-      nmContext = new NodeManager.NMContext();
+      nmContext = new NodeManager.NMContext(null);
       nmContext.getNodeId().setHost("testhost.foo.com");
       nmContext.getNodeId().setPort(9999);
       resourceView = new ResourceView() {
@@ -105,6 +105,16 @@ public class TestNMWebServicesApps extends JerseyTest {
         public long getPmemAllocatedForContainers() {
           // 16G in bytes
           return new Long("17179869184");
+        }
+
+        @Override
+        public boolean isVmemCheckEnabled() {
+          return true;
+        }
+
+        @Override
+        public boolean isPmemCheckEnabled() {
+          return true;
         }
       };
       conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());
@@ -382,7 +392,7 @@ public class TestNMWebServicesApps extends JerseyTest {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      verifyStatInvalidException(message, type, classname);
+      verifyStateInvalidException(message, type, classname);
     }
   }
 
@@ -412,7 +422,7 @@ public class TestNMWebServicesApps extends JerseyTest {
       String message = exception.getString("message");
       String type = exception.getString("exception");
       String classname = exception.getString("javaClassName");
-      verifyStatInvalidException(message, type, classname);
+      verifyStateInvalidException(message, type, classname);
     }
   }
 
@@ -450,16 +460,16 @@ public class TestNMWebServicesApps extends JerseyTest {
       String type = WebServicesTestUtils.getXmlString(element, "exception");
       String classname = WebServicesTestUtils.getXmlString(element,
           "javaClassName");
-      verifyStatInvalidException(message, type, classname);
+      verifyStateInvalidException(message, type, classname);
     }
   }
 
-  private void verifyStatInvalidException(String message, String type,
+  private void verifyStateInvalidException(String message, String type,
       String classname) {
     WebServicesTestUtils
-        .checkStringMatch(
+        .checkStringContains(
             "exception message",
-            "No enum const class org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState.FOO_STATE",
+            "org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationState.FOO_STATE",
             message);
     WebServicesTestUtils.checkStringMatch("exception type",
         "IllegalArgumentException", type);

@@ -1,7 +1,7 @@
 From 26bdc6dfddf7ffe6d7dd9c9f028dd42fe63d10e3 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 15 Aug 2012 00:48:11 +0000
-Subject: [PATCH 380/545] HDFS-3793. Implement genericized format() in QJM. Contributed by Todd Lipcon.
+Subject: [PATCH 0380/1612] HDFS-3793. Implement genericized format() in QJM. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1373177 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d4dbe42ab6fa930cf8defc70e80f2c41ec7a31b8)

@@ -23,6 +23,8 @@ import java.net.InetAddress;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.UnknownHostException;
+import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
@@ -51,10 +53,13 @@ import org.apache.hadoop.mapreduce.split.JobSplitWriter;
 import org.apache.hadoop.security.Credentials;
 import org.apache.hadoop.security.authorize.AccessControlList;
 import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.security.token.TokenIdentifier;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.codehaus.jackson.JsonParseException;
 import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
+
+import com.google.common.base.Charsets;
 
 @InterfaceAudience.Private
 @InterfaceStability.Unstable
@@ -248,9 +253,8 @@ class JobSubmitter {
     }
 
     //  set the timestamps of the archives and files
-    ClientDistributedCacheManager.determineTimestamps(conf);
     //  set the public/private visibility of the archives and files
-    ClientDistributedCacheManager.determineCacheVisibilities(conf);
+    ClientDistributedCacheManager.determineTimestampsAndCacheVisibilities(conf);
     // get DelegationToken for each cached file
     ClientDistributedCacheManager.getDelegationTokens(conf, job
         .getCredentials());
@@ -380,6 +384,19 @@ class JobSubmitter {
       // different job.
       TokenCache.cleanUpTokenReferral(conf);
 
+      if (conf.getBoolean(
+          MRJobConfig.JOB_TOKEN_TRACKING_IDS_ENABLED,
+          MRJobConfig.DEFAULT_JOB_TOKEN_TRACKING_IDS_ENABLED)) {
+        // Add HDFS tracking ids
+        ArrayList<String> trackingIds = new ArrayList<String>();
+        for (Token<? extends TokenIdentifier> t :
+            job.getCredentials().getAllTokens()) {
+          trackingIds.add(t.decodeIdentifier().getTrackingId());
+        }
+        conf.setStrings(MRJobConfig.JOB_TOKEN_TRACKING_IDS,
+            trackingIds.toArray(new String[trackingIds.size()]));
+      }
+
       // Write job file to submit dir
       writeConf(conf, submitJobFile);
       
@@ -434,13 +451,9 @@ class JobSubmitter {
   
   private void printTokens(JobID jobId,
       Credentials credentials) throws IOException {
-    if (LOG.isDebugEnabled()) {
-      LOG.debug("Printing tokens for job: " + jobId);
-      for(Token<?> token: credentials.getAllTokens()) {
-        if (token.getKind().toString().equals("HDFS_DELEGATION_TOKEN")) {
-          LOG.debug("Submitting with " + token);
-        }
-      }
+    LOG.info("Submitting tokens for job: " + jobId);
+    for (Token<?> token: credentials.getAllTokens()) {
+      LOG.info(token);
     }
   }
 
@@ -553,7 +566,7 @@ class JobSubmitter {
 
         for(Map.Entry<String, String> ent: nm.entrySet()) {
           credentials.addSecretKey(new Text(ent.getKey()), ent.getValue()
-              .getBytes());
+              .getBytes(Charsets.UTF_8));
         }
       } catch (JsonMappingException e) {
         json_error = true;

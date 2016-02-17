@@ -1,7 +1,7 @@
 From 6a4e3827e5c9c4f15b5c961f63a2dd44875b215c Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 10 Jul 2012 16:49:24 +0000
-Subject: [PATCH 408/545] HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
+Subject: [PATCH 0408/1612] HADOOP-8525. Provide Improved Traceability for Configuration (bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1359775 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ac689c1bd5e8b8ad4e60ab8c2fc3e2fab9f2ed54)

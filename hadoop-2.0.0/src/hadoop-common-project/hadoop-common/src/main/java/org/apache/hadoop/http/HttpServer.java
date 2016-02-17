@@ -25,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.net.URL;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -102,6 +103,7 @@ public class HttpServer implements FilterContainer {
   public static final String CONF_CONTEXT_ATTRIBUTE = "hadoop.conf";
   public static final String ADMINS_ACL = "admins.acl";
   public static final String SPNEGO_FILTER = "SpnegoFilter";
+  public static final String NO_CACHE_FILTER = "NoCacheFilter";
 
   public static final String BIND_ADDRESS = "bind.address";
 
@@ -230,6 +232,7 @@ public class HttpServer implements FilterContainer {
       }
       listener.setHost(bindAddress);
       listener.setPort(port);
+      LOG.info("SSL is enabled on " + toString());
     } else {
       listenerStartedExternally = true;
       listener = connector;
@@ -254,6 +257,7 @@ public class HttpServer implements FilterContainer {
     webAppContext.setWar(appDir + "/" + name);
     webAppContext.getServletContext().setAttribute(CONF_CONTEXT_ATTRIBUTE, conf);
     webAppContext.getServletContext().setAttribute(ADMINS_ACL, adminsAcl);
+    addNoCacheFilter(webAppContext);
     webServer.addHandler(webAppContext);
 
     addDefaultApps(contexts, appDir, conf);
@@ -278,6 +282,12 @@ public class HttpServer implements FilterContainer {
     }
   }
 
+  @SuppressWarnings("unchecked")
+  private void addNoCacheFilter(WebAppContext ctxt) {
+    defineFilter(ctxt, NO_CACHE_FILTER,
+      NoCacheFilter.class.getName(), Collections.EMPTY_MAP, new String[] { "/*"});
+  }
+
   /**
    * Create a required listener for the Jetty instance listening on the port
    * provided. This wrapper and all subclasses must create at least one
@@ -294,6 +304,7 @@ public class HttpServer implements FilterContainer {
     ret.setAcceptQueueSize(128);
     ret.setResolveNames(false);
     ret.setUseDirectBuffers(false);
+    ret.setHeaderBufferSize(1024*64);
     return ret;
   }
 
@@ -337,6 +348,7 @@ public class HttpServer implements FilterContainer {
       }
       logContext.setDisplayName("logs");
       setContextAttributes(logContext, conf);
+      addNoCacheFilter(webAppContext);
       defaultContexts.put(logContext, true);
     }
     // set up the context for "/static/*"
@@ -368,6 +380,7 @@ public class HttpServer implements FilterContainer {
   public void addContext(Context ctxt, boolean isFiltered)
       throws IOException {
     webServer.addHandler(ctxt);
+    addNoCacheFilter(webAppContext);
     defaultContexts.put(ctxt, isFiltered);
   }
 
@@ -461,7 +474,7 @@ public class HttpServer implements FilterContainer {
       holder.setName(name);
     }
     webAppContext.addServlet(holder, pathSpec);
-    
+
     if(requireAuth && UserGroupInformation.isSecurityEnabled()) {
        LOG.info("Adding Kerberos (SPNEGO) filter to " + name);
        ServletHandler handler = webAppContext.getServletHandler();
@@ -950,7 +963,7 @@ public class HttpServer implements FilterContainer {
       @Override
       public Enumeration<String> getParameterNames() {
         return new Enumeration<String>() {
-          private Enumeration<String> rawIterator = 
+          private Enumeration<String> rawIterator =
             rawRequest.getParameterNames();
           @Override
           public boolean hasMoreElements() {

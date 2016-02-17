@@ -1,7 +1,7 @@
 From afa475115795242e901dd986206be0bc7e94dc72 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Fri, 18 May 2012 05:28:18 +0000
-Subject: [PATCH 076/545] HDFS-3440. More effectively limit stream memory consumption when reading corrupt edit logs. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0076/1612] HDFS-3440. More effectively limit stream memory consumption when reading corrupt edit logs. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339978 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit abcf6c2544f0b8a63b963cd7f00e541f8b7fc037)

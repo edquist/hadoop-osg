@@ -1,7 +1,7 @@
 From 46e6f5ffe9ad9f60e8e3e82bd0059a160bf158fa Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Sat, 30 Jun 2012 16:49:24 +0000
-Subject: [PATCH 283/545] MAPREDUCE-4253. Tests for mapreduce-client-core are lying under mapreduce-client-jobclient. Contributed by Tsuyoshi Ozawa. (harsh)
+Subject: [PATCH 0283/1612] MAPREDUCE-4253. Tests for mapreduce-client-core are lying under mapreduce-client-jobclient. Contributed by Tsuyoshi Ozawa. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1355766 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 57915e47f35ba70ff5acf09d5d9adf0e1e50217f)

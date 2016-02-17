@@ -1,7 +1,7 @@
 From 3da2ca93fccacbd6c2cc054e537891cd38c2bff8 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 21 Mar 2012 17:30:37 +0000
-Subject: [PATCH 098/545] HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream. Contributed by Henry Robinson.
+Subject: [PATCH 0098/1612] HDFS-2834. Add a ByteBuffer-based read API to DFSInputStream. Contributed by Henry Robinson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1303474 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit c66f9824ce7e306859a6157bb0f54435caba83a7)

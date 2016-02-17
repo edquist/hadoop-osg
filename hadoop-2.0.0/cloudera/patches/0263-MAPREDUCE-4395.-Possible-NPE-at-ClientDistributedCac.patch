@@ -1,7 +1,7 @@
 From eb1d5ade19a94df46511d51a85e7a369ba2b4b8c Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Mon, 16 Jul 2012 14:19:36 +0000
-Subject: [PATCH 263/545] MAPREDUCE-4395. Possible NPE at ClientDistributedCacheManager#determineTimestamps (Bhallamudi via bobby)
+Subject: [PATCH 0263/1612] MAPREDUCE-4395. Possible NPE at ClientDistributedCacheManager#determineTimestamps (Bhallamudi via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362052 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5eb5803c3158502e02096a9aa42fa8520eb413f6)

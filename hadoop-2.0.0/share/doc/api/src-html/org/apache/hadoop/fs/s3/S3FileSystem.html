@@ -351,40 +351,46 @@
 <FONT color="green">348</FONT>        return getConf().getLong("fs.s3.block.size", 64 * 1024 * 1024);<a name="line.348"></a>
 <FONT color="green">349</FONT>      }<a name="line.349"></a>
 <FONT color="green">350</FONT>    <a name="line.350"></a>
-<FONT color="green">351</FONT>      // diagnostic methods<a name="line.351"></a>
-<FONT color="green">352</FONT>    <a name="line.352"></a>
-<FONT color="green">353</FONT>      void dump() throws IOException {<a name="line.353"></a>
-<FONT color="green">354</FONT>        store.dump();<a name="line.354"></a>
+<FONT color="green">351</FONT>      @Override<a name="line.351"></a>
+<FONT color="green">352</FONT>      public String getCanonicalServiceName() {<a name="line.352"></a>
+<FONT color="green">353</FONT>        // Does not support Token<a name="line.353"></a>
+<FONT color="green">354</FONT>        return null;<a name="line.354"></a>
 <FONT color="green">355</FONT>      }<a name="line.355"></a>
 <FONT color="green">356</FONT>    <a name="line.356"></a>
-<FONT color="green">357</FONT>      void purge() throws IOException {<a name="line.357"></a>
-<FONT color="green">358</FONT>        store.purge();<a name="line.358"></a>
-<FONT color="green">359</FONT>      }<a name="line.359"></a>
-<FONT color="green">360</FONT>    <a name="line.360"></a>
-<FONT color="green">361</FONT>      private static class S3FileStatus extends FileStatus {<a name="line.361"></a>
+<FONT color="green">357</FONT>      // diagnostic methods<a name="line.357"></a>
+<FONT color="green">358</FONT>    <a name="line.358"></a>
+<FONT color="green">359</FONT>      void dump() throws IOException {<a name="line.359"></a>
+<FONT color="green">360</FONT>        store.dump();<a name="line.360"></a>
+<FONT color="green">361</FONT>      }<a name="line.361"></a>
 <FONT color="green">362</FONT>    <a name="line.362"></a>
-<FONT color="green">363</FONT>        S3FileStatus(Path f, INode inode) throws IOException {<a name="line.363"></a>
-<FONT color="green">364</FONT>          super(findLength(inode), inode.isDirectory(), 1,<a name="line.364"></a>
-<FONT color="green">365</FONT>                findBlocksize(inode), 0, f);<a name="line.365"></a>
-<FONT color="green">366</FONT>        }<a name="line.366"></a>
-<FONT color="green">367</FONT>    <a name="line.367"></a>
-<FONT color="green">368</FONT>        private static long findLength(INode inode) {<a name="line.368"></a>
-<FONT color="green">369</FONT>          if (!inode.isDirectory()) {<a name="line.369"></a>
-<FONT color="green">370</FONT>            long length = 0L;<a name="line.370"></a>
-<FONT color="green">371</FONT>            for (Block block : inode.getBlocks()) {<a name="line.371"></a>
-<FONT color="green">372</FONT>              length += block.getLength();<a name="line.372"></a>
-<FONT color="green">373</FONT>            }<a name="line.373"></a>
-<FONT color="green">374</FONT>            return length;<a name="line.374"></a>
-<FONT color="green">375</FONT>          }<a name="line.375"></a>
-<FONT color="green">376</FONT>          return 0;<a name="line.376"></a>
-<FONT color="green">377</FONT>        }<a name="line.377"></a>
-<FONT color="green">378</FONT>    <a name="line.378"></a>
-<FONT color="green">379</FONT>        private static long findBlocksize(INode inode) {<a name="line.379"></a>
-<FONT color="green">380</FONT>          final Block[] ret = inode.getBlocks();<a name="line.380"></a>
-<FONT color="green">381</FONT>          return ret == null ? 0L : ret[0].getLength();<a name="line.381"></a>
-<FONT color="green">382</FONT>        }<a name="line.382"></a>
-<FONT color="green">383</FONT>      }<a name="line.383"></a>
-<FONT color="green">384</FONT>    }<a name="line.384"></a>
+<FONT color="green">363</FONT>      void purge() throws IOException {<a name="line.363"></a>
+<FONT color="green">364</FONT>        store.purge();<a name="line.364"></a>
+<FONT color="green">365</FONT>      }<a name="line.365"></a>
+<FONT color="green">366</FONT>    <a name="line.366"></a>
+<FONT color="green">367</FONT>      private static class S3FileStatus extends FileStatus {<a name="line.367"></a>
+<FONT color="green">368</FONT>    <a name="line.368"></a>
+<FONT color="green">369</FONT>        S3FileStatus(Path f, INode inode) throws IOException {<a name="line.369"></a>
+<FONT color="green">370</FONT>          super(findLength(inode), inode.isDirectory(), 1,<a name="line.370"></a>
+<FONT color="green">371</FONT>                findBlocksize(inode), 0, f);<a name="line.371"></a>
+<FONT color="green">372</FONT>        }<a name="line.372"></a>
+<FONT color="green">373</FONT>    <a name="line.373"></a>
+<FONT color="green">374</FONT>        private static long findLength(INode inode) {<a name="line.374"></a>
+<FONT color="green">375</FONT>          if (!inode.isDirectory()) {<a name="line.375"></a>
+<FONT color="green">376</FONT>            long length = 0L;<a name="line.376"></a>
+<FONT color="green">377</FONT>            for (Block block : inode.getBlocks()) {<a name="line.377"></a>
+<FONT color="green">378</FONT>              length += block.getLength();<a name="line.378"></a>
+<FONT color="green">379</FONT>            }<a name="line.379"></a>
+<FONT color="green">380</FONT>            return length;<a name="line.380"></a>
+<FONT color="green">381</FONT>          }<a name="line.381"></a>
+<FONT color="green">382</FONT>          return 0;<a name="line.382"></a>
+<FONT color="green">383</FONT>        }<a name="line.383"></a>
+<FONT color="green">384</FONT>    <a name="line.384"></a>
+<FONT color="green">385</FONT>        private static long findBlocksize(INode inode) {<a name="line.385"></a>
+<FONT color="green">386</FONT>          final Block[] ret = inode.getBlocks();<a name="line.386"></a>
+<FONT color="green">387</FONT>          return ret == null ? 0L : ret[0].getLength();<a name="line.387"></a>
+<FONT color="green">388</FONT>        }<a name="line.388"></a>
+<FONT color="green">389</FONT>      }<a name="line.389"></a>
+<FONT color="green">390</FONT>    }<a name="line.390"></a>
 
 
 

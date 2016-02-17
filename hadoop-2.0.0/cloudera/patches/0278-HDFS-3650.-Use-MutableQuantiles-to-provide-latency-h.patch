@@ -1,7 +1,7 @@
 From 166e91baca85f6844e494bf7fe9fbe2d276b3f2e Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 27 Jul 2012 00:26:21 +0000
-Subject: [PATCH 278/545] HDFS-3650. Use MutableQuantiles to provide latency histograms for various operations. Contributed by Andrew Wang.
+Subject: [PATCH 0278/1612] HDFS-3650. Use MutableQuantiles to provide latency histograms for various operations. Contributed by Andrew Wang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1366246 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit dd1fc880a29496f7076d9df4e692c67bea7e4d06)

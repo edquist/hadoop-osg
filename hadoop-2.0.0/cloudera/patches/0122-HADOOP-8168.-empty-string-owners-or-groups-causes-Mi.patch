@@ -1,7 +1,7 @@
 From 682ab33e92b95285b42525ab049a029cd50cceed Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 28 Jun 2012 17:42:44 +0000
-Subject: [PATCH 122/545] HADOOP-8168. empty-string owners or groups causes {{MissingFormatWidthException}} in o.a.h.fs.shell.Ls.ProcessPath() (ekoontz via tucu)
+Subject: [PATCH 0122/1612] HADOOP-8168. empty-string owners or groups causes {{MissingFormatWidthException}} in o.a.h.fs.shell.Ls.ProcessPath() (ekoontz via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1355085 13f79535-47bb-0310-9956-ffa450edef68
 ---

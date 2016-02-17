@@ -1,7 +1,7 @@
 From 25b2b0778c2606b508e5d6db384b70c310d027f4 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:31:15 -0700
-Subject: [PATCH 372/545] HDFS-3049. During the normal NN startup process, fall back on a different edit log if we see one that is corrupt. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0372/1612] HDFS-3049. During the normal NN startup process, fall back on a different edit log if we see one that is corrupt. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349114 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2fe437e65ed0a39132ffcf0282058c09d4d2a1d6)

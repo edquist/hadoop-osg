@@ -1,7 +1,7 @@
 From 6368e810fe67e25e8564f55d87b756168efd8a3f Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:28:49 -0700
-Subject: [PATCH 368/545] Merge r:1344423 HDFS-3468. Make BKJM-ZK session timeout configurable. Contributed by Uma Maheswara Rao G.
+Subject: [PATCH 0368/1612] Merge r:1344423 HDFS-3468. Make BKJM-ZK session timeout configurable. Contributed by Uma Maheswara Rao G.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1344424 13f79535-47bb-0310-9956-ffa450edef68
 

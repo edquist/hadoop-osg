@@ -1,0 +1,70 @@
+From 0aa1a9b3f89bcdf426e8cf2166d77a20dda9f8e1 Mon Sep 17 00:00:00 2001
+From: Tsz-wo Sze <szetszwo@apache.org>
+Date: Tue, 2 Jul 2013 14:59:55 +0000
+Subject: [PATCH 1568/1612] svn merge -c 1498962 from trunk for HDFS-4943. WebHdfsFileSystem does not work when original file path has encoded chars.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1498963 13f79535-47bb-0310-9956-ffa450edef68
+---
+ .../apache/hadoop/hdfs/web/WebHdfsFileSystem.java  |    2 +-
+ .../org/apache/hadoop/hdfs/web/TestWebHdfsUrl.java |   20 +++++++++++++++++++-
+ 2 files changed, 20 insertions(+), 2 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/WebHdfsFileSystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/WebHdfsFileSystem.java
+index ff0fe42..73014a8 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/WebHdfsFileSystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/WebHdfsFileSystem.java
+@@ -380,7 +380,7 @@ public class WebHdfsFileSystem extends FileSystem
+       final Param<?,?>... parameters) throws IOException {
+     //initialize URI path and query
+     final String path = PATH_PREFIX
+-        + (fspath == null? "/": makeQualified(fspath).toUri().getPath());
++        + (fspath == null? "/": makeQualified(fspath).toUri().getRawPath());
+     final String query = op.toQueryString()
+         + '&' + new UserParam(ugi)
+         + Param.toSortedString("&", parameters);
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/TestWebHdfsUrl.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/TestWebHdfsUrl.java
+index aef467a..f9ff9ba 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/TestWebHdfsUrl.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/TestWebHdfsUrl.java
+@@ -25,6 +25,7 @@ import static org.mockito.Mockito.mock;
+ 
+ import java.io.IOException;
+ import java.net.URI;
++import java.net.URISyntaxException;
+ import java.net.URL;
+ 
+ import org.apache.hadoop.conf.Configuration;
+@@ -48,6 +49,23 @@ import org.junit.Test;
+ 
+ public class TestWebHdfsUrl {
+ 
++  @Test(timeout=60000)
++  public void testEncodedPathUrl() throws IOException, URISyntaxException {
++    Configuration conf = new Configuration();
++    final URI uri = URI.create(WebHdfsFileSystem.SCHEME + "://" + "127.0.0.1:0");
++    final WebHdfsFileSystem webhdfs = (WebHdfsFileSystem) FileSystem.get(
++        uri, conf);
++
++    // Construct a file path that contains percentage-encoded string
++
++    String pathName = "/hdtest010%2C60020%2C1371000602151.1371058984668";
++    Path fsPath = new Path(pathName);
++    URL encodedPathUrl = webhdfs.toUrl(PutOpParam.Op.CREATE, fsPath);
++    // We should get back the original file path after cycling back and decoding
++    Assert.assertEquals(WebHdfsFileSystem.PATH_PREFIX + pathName,
++        encodedPathUrl.toURI().getPath());
++  }
++
+   @Test
+   public void testDelegationTokenInUrl() throws IOException {
+     Configuration conf = new Configuration();
+@@ -190,4 +208,4 @@ public class TestWebHdfsUrl {
+     @Override
+     protected void initDelegationToken() throws IOException {}
+   }
+-}
+\ No newline at end of file
++}
+-- 
+1.7.0.4
+

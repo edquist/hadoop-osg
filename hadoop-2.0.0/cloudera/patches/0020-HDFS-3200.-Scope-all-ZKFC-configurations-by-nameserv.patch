@@ -1,7 +1,7 @@
 From ad7d0d593a4e2d15d48bf89345a6c139e4ca7961 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Thu, 5 Apr 2012 22:10:13 -0700
-Subject: [PATCH 020/545] HDFS-3200. Scope all ZKFC configurations by nameservice. Contributed by Todd Lipcon.
+Subject: [PATCH 0020/1612] HDFS-3200. Scope all ZKFC configurations by nameservice. Contributed by Todd Lipcon.
 
 Modified from upstream:
 - addressed merge conflicts same as upstream merge r1310174 in order to linearize

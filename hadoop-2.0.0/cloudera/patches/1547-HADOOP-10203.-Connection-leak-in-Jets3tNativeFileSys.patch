@@ -1,0 +1,54 @@
+From 0999bc9d1698bcc87826b8d2415df2c2ca6e7371 Mon Sep 17 00:00:00 2001
+From: Andrei Savu <asavu@cloudera.com>
+Date: Tue, 28 Jan 2014 13:39:06 -0800
+Subject: [PATCH 1547/1612] HADOOP-10203. Connection leak in Jets3tNativeFileSystemStore#retrieveMetadata. Contributed by Andrei Savu.
+
+---
+ .../fs/s3native/Jets3tNativeFileSystemStore.java   |   18 ++++++++++++------
+ 1 files changed, 12 insertions(+), 6 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/Jets3tNativeFileSystemStore.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/Jets3tNativeFileSystemStore.java
+index 00b75d3..1438e65 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/Jets3tNativeFileSystemStore.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/Jets3tNativeFileSystemStore.java
+@@ -109,25 +109,31 @@ class Jets3tNativeFileSystemStore implements NativeFileSystemStore {
+       handleS3ServiceException(e);
+     }
+   }
+-  
++
+   public FileMetadata retrieveMetadata(String key) throws IOException {
++    StorageObject object = null;
+     try {
+       if(LOG.isDebugEnabled()) {
+         LOG.debug("Getting metadata for key: " + key + " from bucket:" + bucket.getName());
+       }
+-      S3Object object = s3Service.getObject(bucket.getName(), key);
++      object = s3Service.getObjectDetails(bucket.getName(), key);
+       return new FileMetadata(key, object.getContentLength(),
+           object.getLastModifiedDate().getTime());
+-    } catch (S3ServiceException e) {
++
++    } catch (ServiceException e) {
+       // Following is brittle. Is there a better way?
+-      if (e.getS3ErrorCode().matches("NoSuchKey")) {
++      if ("NoSuchKey".equals(e.getErrorCode())) {
+         return null; //return null if key not found
+       }
+-      handleS3ServiceException(e);
++      handleServiceException(e);
+       return null; //never returned - keep compiler happy
++    } finally {
++      if (object != null) {
++        object.closeDataInputStream();
++      }
+     }
+   }
+-  
++
+   /**
+    * @param key
+    * The key is the object name that is being retrieved from the S3 bucket
+-- 
+1.7.0.4
+

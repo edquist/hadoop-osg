@@ -1,7 +1,7 @@
 From 46a65e0ad3f75b54af8cdb220b02a79a4768ee34 Mon Sep 17 00:00:00 2001
 From: Aaron T. Myers <atm@cloudera.com>
 Date: Thu, 23 Aug 2012 15:01:30 -0700
-Subject: [PATCH 412/545] CLOUDERA-BUILD. Change default value for dfs.datanode.hdfs-blocks-metadata.enabled to true.
+Subject: [PATCH 0412/1612] CLOUDERA-BUILD. Change default value for dfs.datanode.hdfs-blocks-metadata.enabled to true.
 
 ---
  .../java/org/apache/hadoop/hdfs/DFSConfigKeys.java |    2 +-

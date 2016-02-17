@@ -1,7 +1,7 @@
 From a95a681a20d1ec4565e611af57a3e6b42ab83e55 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 15 May 2012 16:23:52 +0000
-Subject: [PATCH 172/545] HDFS-3416. Cleanup DatanodeID and DatanodeRegistration constructors used by testing. Contributed by Eli Collins
+Subject: [PATCH 0172/1612] HDFS-3416. Cleanup DatanodeID and DatanodeRegistration constructors used by testing. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1338784 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 68aab040955acd483794dbf1def0b12ac5ff59e8)

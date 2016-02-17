@@ -1,7 +1,7 @@
 From c717b6bb40c31c474c23e2be62dbc720d4f81945 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Thu, 14 Jun 2012 20:17:54 +0000
-Subject: [PATCH 120/545] HDFS-3524. Update TestFileLengthOnClusterRestart for HDFS-3522.  Contributed by Brandon Li
+Subject: [PATCH 0120/1612] HDFS-3524. Update TestFileLengthOnClusterRestart for HDFS-3522.  Contributed by Brandon Li
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1350384 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b2a8cf3759646524426ca9f9c11974f14986a0a0)

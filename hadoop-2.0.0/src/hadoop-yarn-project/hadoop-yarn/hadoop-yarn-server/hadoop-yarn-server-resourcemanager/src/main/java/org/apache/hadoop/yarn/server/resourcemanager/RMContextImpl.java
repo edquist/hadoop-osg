@@ -23,21 +23,24 @@ import java.util.concurrent.ConcurrentMap;
 
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.NodeId;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.NodeStore;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.NullRMStateStore;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.AMLivelinessMonitor;
 import org.apache.hadoop.yarn.server.resourcemanager.rmcontainer.ContainerAllocationExpirer;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
 import org.apache.hadoop.yarn.server.resourcemanager.security.DelegationTokenRenewer;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
+
+import com.google.common.annotations.VisibleForTesting;
 
 public class RMContextImpl implements RMContext {
 
   private final Dispatcher rmDispatcher;
-  private final Store store;
 
   private final ConcurrentMap<ApplicationId, RMApp> applications
     = new ConcurrentHashMap<ApplicationId, RMApp>();
@@ -50,38 +53,64 @@ public class RMContextImpl implements RMContext {
 
   private AMLivelinessMonitor amLivelinessMonitor;
   private AMLivelinessMonitor amFinishingMonitor;
+  private RMStateStore stateStore = null;
   private ContainerAllocationExpirer containerAllocationExpirer;
   private final DelegationTokenRenewer tokenRenewer;
   private final ApplicationTokenSecretManager appTokenSecretManager;
+  private final RMContainerTokenSecretManager containerTokenSecretManager;
+  private final ClientToAMTokenSecretManagerInRM clientToAMTokenSecretManager;
 
-  public RMContextImpl(Store store, Dispatcher rmDispatcher,
+  public RMContextImpl(Dispatcher rmDispatcher,
+      RMStateStore store,
       ContainerAllocationExpirer containerAllocationExpirer,
       AMLivelinessMonitor amLivelinessMonitor,
       AMLivelinessMonitor amFinishingMonitor,
       DelegationTokenRenewer tokenRenewer,
-      ApplicationTokenSecretManager appTokenSecretManager) {
-    this.store = store;
+      ApplicationTokenSecretManager appTokenSecretManager,
+      RMContainerTokenSecretManager containerTokenSecretManager,
+      ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
     this.rmDispatcher = rmDispatcher;
+    this.stateStore = store;
     this.containerAllocationExpirer = containerAllocationExpirer;
     this.amLivelinessMonitor = amLivelinessMonitor;
     this.amFinishingMonitor = amFinishingMonitor;
     this.tokenRenewer = tokenRenewer;
     this.appTokenSecretManager = appTokenSecretManager;
+    this.containerTokenSecretManager = containerTokenSecretManager;
+    this.clientToAMTokenSecretManager = clientTokenSecretManager;
+  }
+
+  @VisibleForTesting
+  // helper constructor for tests
+  public RMContextImpl(Dispatcher rmDispatcher,
+      ContainerAllocationExpirer containerAllocationExpirer,
+      AMLivelinessMonitor amLivelinessMonitor,
+      AMLivelinessMonitor amFinishingMonitor,
+      DelegationTokenRenewer tokenRenewer,
+      ApplicationTokenSecretManager appTokenSecretManager,
+      RMContainerTokenSecretManager containerTokenSecretManager,
+      ClientToAMTokenSecretManagerInRM clientTokenSecretManager) {
+    this(rmDispatcher, null, containerAllocationExpirer, amLivelinessMonitor, 
+          amFinishingMonitor, tokenRenewer, appTokenSecretManager, 
+          containerTokenSecretManager, clientTokenSecretManager);
+    RMStateStore nullStore = new NullRMStateStore();
+    nullStore.setDispatcher(rmDispatcher);
+    try {
+      nullStore.init(new YarnConfiguration());
+      setStateStore(nullStore);
+    } catch (Exception e) {
+      assert false;
+    }
   }
   
   @Override
   public Dispatcher getDispatcher() {
     return this.rmDispatcher;
   }
-
-  @Override
-  public NodeStore getNodeStore() {
-   return store;
-  }
-
-  @Override
-  public ApplicationsStore getApplicationsStore() {
-    return store;
+  
+  @Override 
+  public RMStateStore getStateStore() {
+    return stateStore;
   }
 
   @Override
@@ -122,5 +151,20 @@ public class RMContextImpl implements RMContext {
   @Override
   public ApplicationTokenSecretManager getApplicationTokenSecretManager() {
     return this.appTokenSecretManager;
+  }
+
+  @Override
+  public RMContainerTokenSecretManager getContainerTokenSecretManager() {
+    return this.containerTokenSecretManager;
+  }
+
+  @Override
+  public ClientToAMTokenSecretManagerInRM getClientToAMTokenSecretManager() {
+    return this.clientToAMTokenSecretManager;
+  }
+  
+  @VisibleForTesting
+  public void setStateStore(RMStateStore store) {
+    stateStore = store;
   }
 }

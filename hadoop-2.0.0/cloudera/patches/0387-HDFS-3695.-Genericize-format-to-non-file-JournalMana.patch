@@ -1,7 +1,7 @@
 From d5d0d868a21872407df4e342ebd508c4c0516aa1 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:34:09 -0700
-Subject: [PATCH 387/545] HDFS-3695. Genericize format() to non-file JournalManagers. Contributed by Todd Lipcon.
+Subject: [PATCH 0387/1612] HDFS-3695. Genericize format() to non-file JournalManagers. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1371513 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ad77008c6b833dd539cf579da90b4f4dfe2a3e2e)

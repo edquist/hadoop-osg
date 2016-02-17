@@ -1,7 +1,7 @@
 From e89aef3f8e02397e5e090d0f474b74dcd1881b74 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 13 Jun 2012 20:47:51 +0000
-Subject: [PATCH 105/545] HADOOP-8509. JarFinder duplicate entry: META-INF/MANIFEST.MF exception (tucu)
+Subject: [PATCH 0105/1612] HADOOP-8509. JarFinder duplicate entry: META-INF/MANIFEST.MF exception (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1350008 13f79535-47bb-0310-9956-ffa450edef68
 ---

@@ -1,7 +1,7 @@
 From f3275a8642ed58abba0e9fe74cb79e8cc8b055c2 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 15 Aug 2012 19:18:57 +0000
-Subject: [PATCH 385/545] HDFS-3800. improvements to QJM fault testing. Contributed by Todd Lipcon.
+Subject: [PATCH 0385/1612] HDFS-3800. improvements to QJM fault testing. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1373587 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 880f478f02512bf00e9d9db6cc4e4fffc001752d)

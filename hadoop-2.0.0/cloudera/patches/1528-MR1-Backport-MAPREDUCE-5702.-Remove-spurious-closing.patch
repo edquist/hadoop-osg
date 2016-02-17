@@ -1,0 +1,25 @@
+From ee68b5ba9bddac3a89c4163a328051e3542d407b Mon Sep 17 00:00:00 2001
+From: Karthik Kambatla <kasha@cloudera.com>
+Date: Tue, 31 Dec 2013 13:08:26 -0800
+Subject: [PATCH 1528/1612] MR1: Backport MAPREDUCE-5702. Remove spurious closing HTML tags from TaskLogServlet. (rkanter via kasha)
+
+---
+ .../org/apache/hadoop/mapred/TaskLogServlet.java   |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/TaskLogServlet.java b/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/TaskLogServlet.java
+index 6bddb7d..09650c7 100644
+--- a/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/TaskLogServlet.java
++++ b/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/mapred/TaskLogServlet.java
+@@ -108,7 +108,7 @@ public class TaskLogServlet extends HttpServlet {
+       }
+       taskLogReader.close();
+       if( !plainText ) {
+-        out.write("</pre></td></tr></table><hr><br>\n".getBytes());
++        out.write("</pre><hr><br>\n".getBytes());
+       }
+     } catch (IOException ioe) {
+       if (filter == TaskLog.LogName.DEBUGOUT) {
+-- 
+1.7.0.4
+

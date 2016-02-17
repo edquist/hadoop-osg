@@ -1,7 +1,7 @@
 From e4df9d4fe9b7eece47e43947282e4c090c1d969f Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Fri, 6 Apr 2012 15:25:55 -0700
-Subject: [PATCH 021/545] HADOOP-8257. TestZKFailoverControllerStress occasionally fails with Mockito error. Contributed by Todd Lipcon.
+Subject: [PATCH 0021/1612] HADOOP-8257. TestZKFailoverControllerStress occasionally fails with Mockito error. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1310616 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d979e6e0edcaa98840e11bceae4b759076e7ee08)

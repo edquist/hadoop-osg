@@ -1,7 +1,7 @@
 From 44404d5b802d4b214cc56b6507856ab984f8c386 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 16 May 2012 19:49:06 -0700
-Subject: [PATCH 059/545] HDFS-3422. TestStandbyIsHot timeouts too aggressive. Contributed by Todd Lipcon.
+Subject: [PATCH 0059/1612] HDFS-3422. TestStandbyIsHot timeouts too aggressive. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339452 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0f74e697aa85d66acc6938bd6c11d8de25fc44d2)

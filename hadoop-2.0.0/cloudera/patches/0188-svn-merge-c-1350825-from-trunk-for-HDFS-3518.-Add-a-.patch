@@ -1,7 +1,7 @@
 From 2c01640d5af5b9a14e5c44437f7b2d0f279130a9 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Fri, 15 Jun 2012 23:02:46 +0000
-Subject: [PATCH 188/545] svn merge -c 1350825 from trunk for HDFS-3518. Add a utility method HdfsUtils.isHealthy(uri) for checking if he given HDFS is healthy.
+Subject: [PATCH 0188/1612] svn merge -c 1350825 from trunk for HDFS-3518. Add a utility method HdfsUtils.isHealthy(uri) for checking if he given HDFS is healthy.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1350826 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4326efc19ad292030c8c956a1f238d87bb574a5a)

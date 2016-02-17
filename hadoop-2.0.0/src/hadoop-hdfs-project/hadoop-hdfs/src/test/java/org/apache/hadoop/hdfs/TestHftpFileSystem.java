@@ -35,6 +35,7 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
+import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.server.datanode.DataNode;
@@ -42,18 +43,17 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.util.ServletUtil;
 import org.apache.log4j.Level;
-import org.junit.AfterClass;
-import org.junit.BeforeClass;
-import org.junit.Test;
+import org.junit.*;
 
 public class TestHftpFileSystem {
   private static final Random RAN = new Random();
   
   private static Configuration config = null;
   private static MiniDFSCluster cluster = null;
-  private static FileSystem hdfs = null;
-  private static HftpFileSystem hftpFs = null;
   private static String blockPoolId = null;
+  private static String hftpUri = null;
+  private FileSystem hdfs = null;
+  private HftpFileSystem hftpFs = null;
 
   private static Path[] TEST_PATHS = new Path[] {
       // URI does not encode, Request#getPathInfo returns /foo
@@ -93,20 +93,33 @@ public class TestHftpFileSystem {
 
     config = new Configuration();
     cluster = new MiniDFSCluster.Builder(config).numDataNodes(2).build();
-    hdfs = cluster.getFileSystem();
     blockPoolId = cluster.getNamesystem().getBlockPoolId();
-    final String hftpUri = 
+    hftpUri = 
       "hftp://" + config.get(DFSConfigKeys.DFS_NAMENODE_HTTP_ADDRESS_KEY);
-    hftpFs = (HftpFileSystem) new Path(hftpUri).getFileSystem(config);
   }
   
   @AfterClass
   public static void tearDown() throws IOException {
-    hdfs.close();
-    hftpFs.close();
-    cluster.shutdown();
+    if (cluster != null) {
+      cluster.shutdown();
+    }
+  }
+  
+  @Before
+  public void initFileSystems() throws IOException {
+    hdfs = cluster.getFileSystem();
+    hftpFs = (HftpFileSystem) new Path(hftpUri).getFileSystem(config);
+    // clear out the namespace
+    for (FileStatus stat : hdfs.listStatus(new Path("/"))) {
+      hdfs.delete(stat.getPath(), true);
+    }
   }
 
+  @After
+  public void resetFileSystems() throws IOException {
+    FileSystem.closeAll();
+  }
+  
   /**
    * Test file creation and access with file names that need encoding. 
    */
@@ -274,86 +287,72 @@ public class TestHftpFileSystem {
     assertEquals("Stream closed", ioe.getMessage());
   }
   
-  public void resetFileSystem() throws IOException {
-    // filesystem caching has a quirk/bug that it caches based on the user's
-    // given uri.  the result is if a filesystem is instantiated with no port,
-    // it gets the default port.  then if the default port is changed,
-    // and another filesystem is instantiated with no port, the prior fs
-    // is returned, not a new one using the changed port.  so let's flush
-    // the cache between tests...
-    FileSystem.closeAll();
-  }
-  
   @Test
   public void testHftpDefaultPorts() throws IOException {
-    resetFileSystem();
     Configuration conf = new Configuration();
     URI uri = URI.create("hftp://localhost");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fs.getDefaultPort());
-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
 
     assertEquals(uri, fs.getUri());
+
+    // HFTP uses http to get the token so canonical service name should
+    // return the http port.
     assertEquals(
-        "127.0.0.1:"+DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
+        "127.0.0.1:" + DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT,
         fs.getCanonicalServiceName()
     );
   }
   
   @Test
   public void testHftpCustomDefaultPorts() throws IOException {
-    resetFileSystem();
     Configuration conf = new Configuration();
     conf.setInt("dfs.http.port", 123);
-    conf.setInt("dfs.https.port", 456);
 
     URI uri = URI.create("hftp://localhost");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(123, fs.getDefaultPort());
-    assertEquals(456, fs.getDefaultSecurePort());
     
     assertEquals(uri, fs.getUri());
+
+    // HFTP uses http to get the token so canonical service name should
+    // return the http port.
     assertEquals(
-        "127.0.0.1:456",
+        "127.0.0.1:123",
         fs.getCanonicalServiceName()
     );
   }
 
   @Test
   public void testHftpCustomUriPortWithDefaultPorts() throws IOException {
-    resetFileSystem();
     Configuration conf = new Configuration();
     URI uri = URI.create("hftp://localhost:123");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fs.getDefaultPort());
-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
 
     assertEquals(uri, fs.getUri());
     assertEquals(
-        "127.0.0.1:"+DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
+        "127.0.0.1:123",
         fs.getCanonicalServiceName()
     );
   }
 
   @Test
   public void testHftpCustomUriPortWithCustomDefaultPorts() throws IOException {
-    resetFileSystem();
     Configuration conf = new Configuration();
     conf.setInt("dfs.http.port", 123);
-    conf.setInt("dfs.https.port", 456);
 
     URI uri = URI.create("hftp://localhost:789");
     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(123, fs.getDefaultPort());
-    assertEquals(456, fs.getDefaultSecurePort());
    
     assertEquals(uri, fs.getUri()); 
     assertEquals(
-        "127.0.0.1:456",
+        "127.0.0.1:789",
         fs.getCanonicalServiceName()
     );
   }
@@ -362,13 +361,11 @@ public class TestHftpFileSystem {
 
   @Test
   public void testHsftpDefaultPorts() throws IOException {
-    resetFileSystem();
     Configuration conf = new Configuration();
     URI uri = URI.create("hsftp://localhost");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultPort());
-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
 
     assertEquals(uri, fs.getUri());
     assertEquals(
@@ -379,7 +376,6 @@ public class TestHftpFileSystem {
 
   @Test
   public void testHsftpCustomDefaultPorts() throws IOException {
-    resetFileSystem();
     Configuration conf = new Configuration();
     conf.setInt("dfs.http.port", 123);
     conf.setInt("dfs.https.port", 456);
@@ -388,7 +384,6 @@ public class TestHftpFileSystem {
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(456, fs.getDefaultPort());
-    assertEquals(456, fs.getDefaultSecurePort());
     
     assertEquals(uri, fs.getUri());
     assertEquals(
@@ -399,13 +394,11 @@ public class TestHftpFileSystem {
 
   @Test
   public void testHsftpCustomUriPortWithDefaultPorts() throws IOException {
-    resetFileSystem();
     Configuration conf = new Configuration();
     URI uri = URI.create("hsftp://localhost:123");
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultPort());
-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
 
     assertEquals(uri, fs.getUri());
     assertEquals(
@@ -416,7 +409,6 @@ public class TestHftpFileSystem {
 
   @Test
   public void testHsftpCustomUriPortWithCustomDefaultPorts() throws IOException {
-    resetFileSystem();
     Configuration conf = new Configuration();
     conf.setInt("dfs.http.port", 123);
     conf.setInt("dfs.https.port", 456);
@@ -425,7 +417,6 @@ public class TestHftpFileSystem {
     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
 
     assertEquals(456, fs.getDefaultPort());
-    assertEquals(456, fs.getDefaultSecurePort());
 
     assertEquals(uri, fs.getUri());
     assertEquals(

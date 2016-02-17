@@ -1,0 +1,343 @@
+From f40d40e4088e3a4f1a1967be3c6ded3fdbfe381d Mon Sep 17 00:00:00 2001
+From: Andrew Wang <wang@apache.org>
+Date: Fri, 1 Nov 2013 20:58:23 +0000
+Subject: [PATCH 1503/1612] HDFS-5037. Active NN should trigger its own edit log rolls. Contributed by Andrew Wang.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1538061 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 7b89171708ada642598e98ccef084e19bf6abe8c)
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+	hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml
+---
+ .../java/org/apache/hadoop/hdfs/DFSConfigKeys.java |    5 +
+ .../hadoop/hdfs/server/namenode/FSNamesystem.java  |   84 +++++++++++++++-
+ .../hdfs/server/namenode/ha/ActiveState.java       |    2 +-
+ .../src/main/resources/hdfs-default.xml            |   25 +++++
+ .../hdfs/server/namenode/TestEditLogAutoroll.java  |  106 ++++++++++++++++++++
+ 5 files changed, 219 insertions(+), 3 deletions(-)
+ create mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestEditLogAutoroll.java
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+index 5626c67..da57982 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+@@ -173,6 +173,11 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
+ 
+   public static final String  DFS_NAMENODE_EDITS_DIR_MINIMUM_KEY = "dfs.namenode.edits.dir.minimum";
+   public static final int     DFS_NAMENODE_EDITS_DIR_MINIMUM_DEFAULT = 1;
++
++  public static final String  DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD = "dfs.namenode.edit.log.autoroll.multiplier.threshold";
++  public static final float   DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT = 2.0f;
++  public static final String  DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS = "dfs.namenode.edit.log.autoroll.check.interval.ms";
++  public static final int     DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT = 5*60*1000;
+   
+   public static final String  DFS_LIST_LIMIT = "dfs.ls.limit";
+   public static final int     DFS_LIST_LIMIT_DEFAULT = 1000;
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+index 36c14c4..64e7bf4 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+@@ -38,6 +38,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECI
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
+@@ -49,6 +51,10 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_DEFAULT;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_MAX_OBJECTS_KEY;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_NAME_DIR_KEY;
+@@ -359,6 +365,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+   
+   Daemon nnrmthread = null; // NamenodeResourceMonitor thread
+ 
++  Daemon nnEditLogRoller = null; // NameNodeEditLogRoller thread
++  /**
++   * When an active namenode will roll its own edit log, in # edits
++   */
++  private final long editLogRollerThreshold;
++  /**
++   * Check interval of an active namenode's edit log roller thread 
++   */
++  private final int editLogRollerInterval;
++
+   private volatile boolean hasResourcesAvailable = false;
+   private volatile boolean fsRunning = true;
+   
+@@ -597,6 +613,18 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       
+       this.standbyShouldCheckpoint = conf.getBoolean(
+           DFS_HA_STANDBY_CHECKPOINTS_KEY, DFS_HA_STANDBY_CHECKPOINTS_DEFAULT);
++
++      // # edit autoroll threshold is a multiple of the checkpoint threshold 
++      this.editLogRollerThreshold = (long)
++          (conf.getFloat(
++              DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD,
++              DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD_DEFAULT) *
++          conf.getLong(
++              DFS_NAMENODE_CHECKPOINT_TXNS_KEY,
++              DFS_NAMENODE_CHECKPOINT_TXNS_DEFAULT));
++      this.editLogRollerInterval = conf.getInt(
++          DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS,
++          DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS_DEFAULT);
+       
+       // For testing purposes, allow the DT secret manager to be started regardless
+       // of whether security is enabled.
+@@ -837,6 +865,11 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       //ResourceMonitor required only at ActiveNN. See HDFS-2914
+       this.nnrmthread = new Daemon(new NameNodeResourceMonitor());
+       nnrmthread.start();
++
++      nnEditLogRoller = new Daemon(new NameNodeEditLogRoller(
++          editLogRollerThreshold, editLogRollerInterval));
++      nnEditLogRoller.start();
++
+     } finally {
+       writeUnlock();
+     }
+@@ -863,6 +896,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+         ((NameNodeResourceMonitor) nnrmthread.getRunnable()).stopMonitor();
+         nnrmthread.interrupt();
+       }
++      if (nnEditLogRoller != null) {
++        ((NameNodeEditLogRoller)nnEditLogRoller.getRunnable()).stop();
++        nnEditLogRoller.interrupt();
++      }
+       if (dir != null && dir.fsImage != null) {
+         if (dir.fsImage.editLog != null) {
+           dir.fsImage.editLog.close();
+@@ -3668,7 +3705,48 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       shouldNNRmRun = false;
+     }
+  }
+-  
++
++  class NameNodeEditLogRoller implements Runnable {
++
++    private boolean shouldRun = true;
++    private final long rollThreshold;
++    private final long sleepIntervalMs;
++
++    public NameNodeEditLogRoller(long rollThreshold, int sleepIntervalMs) {
++        this.rollThreshold = rollThreshold;
++        this.sleepIntervalMs = sleepIntervalMs;
++    }
++
++    @Override
++    public void run() {
++      while (fsRunning && shouldRun) {
++        try {
++          FSEditLog editLog = getFSImage().getEditLog();
++          long numEdits =
++              editLog.getLastWrittenTxId() - editLog.getCurSegmentTxId();
++          if (numEdits > rollThreshold) {
++            FSNamesystem.LOG.info("NameNode rolling its own edit log because"
++                + " number of edits in open segment exceeds threshold of "
++                + rollThreshold);
++            rollEditLog();
++          }
++          Thread.sleep(sleepIntervalMs);
++        } catch (InterruptedException e) {
++          FSNamesystem.LOG.info(NameNodeEditLogRoller.class.getSimpleName()
++              + " was interrupted, exiting");
++          break;
++        } catch (Exception e) {
++          FSNamesystem.LOG.error("Swallowing exception in "
++              + NameNodeEditLogRoller.class.getSimpleName() + ":", e);
++        }
++      }
++    }
++
++    public void stop() {
++      shouldRun = false;
++    }
++  }
++
+   public FSImage getFSImage() {
+     return dir.fsImage;
+   }
+@@ -4638,7 +4716,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       if (isInSafeMode()) {
+         throw new SafeModeException("Log not rolled", safeMode);
+       }
+-      LOG.info("Roll Edit Log from " + Server.getRemoteAddress());
++      if (Server.isRpcInvocation()) {
++        LOG.info("Roll Edit Log from " + Server.getRemoteAddress());
++      }
+       return getFSImage().rollEditLog();
+     } finally {
+       writeUnlock();
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/ha/ActiveState.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/ha/ActiveState.java
+index a61e134..f05bf8e 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/ha/ActiveState.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/ha/ActiveState.java
+@@ -38,7 +38,7 @@ public class ActiveState extends HAState {
+ 
+   @Override
+   public void checkOperation(HAContext context, OperationCategory op) {
+-    return; // Other than journal all operations are allowed in active state
++    return; // All operations are allowed in active state
+   }
+   
+   @Override
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml b/hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml
+index 56e6811..ab06247 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml
+@@ -1271,4 +1271,29 @@
+   </description>
+ </property>
+ 
++<property>
++  <name>dfs.namenode.edit.log.autoroll.multiplier.threshold</name>
++  <value>2.0</value>
++  <description>
++    Determines when an active namenode will roll its own edit log.
++    The actual threshold (in number of edits) is determined by multiplying
++    this value by dfs.namenode.checkpoint.txns.
++
++    This prevents extremely large edit files from accumulating on the active
++    namenode, which can cause timeouts during namenode startup and pose an
++    administrative hassle. This behavior is intended as a failsafe for when
++    the standby or secondary namenode fail to roll the edit log by the normal
++    checkpoint threshold.
++  </description>
++</property>
++
++<property>
++  <name>dfs.namenode.edit.log.autoroll.check.interval.ms</name>
++  <value>300000</value>
++  <description>
++    How often an active namenode will check if it needs to roll its edit log,
++    in milliseconds.
++  </description>
++</property>
++
+ </configuration>
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestEditLogAutoroll.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestEditLogAutoroll.java
+new file mode 100644
+index 0000000..bea5ee4
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestEditLogAutoroll.java
+@@ -0,0 +1,106 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hdfs.server.namenode;
++
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_PERIOD_KEY;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD;
++
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.fs.FileSystem;
++import org.apache.hadoop.fs.Path;
++import org.apache.hadoop.hdfs.MiniDFSCluster;
++import org.apache.hadoop.hdfs.MiniDFSNNTopology;
++import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.NameNodeEditLogRoller;
++import org.apache.hadoop.hdfs.server.namenode.ha.HATestUtil;
++import org.apache.hadoop.test.GenericTestUtils;
++import org.junit.After;
++import org.junit.Before;
++import org.junit.Test;
++
++import com.google.common.base.Supplier;
++
++public class TestEditLogAutoroll {
++
++  private Configuration conf;
++  private MiniDFSCluster cluster;
++  private NameNode nn0;
++  private FileSystem fs;
++  private FSEditLog editLog;
++
++  @Before
++  public void setUp() throws Exception {
++    conf = new Configuration();
++    // Stall the standby checkpointer in two ways
++    conf.setLong(DFS_NAMENODE_CHECKPOINT_PERIOD_KEY, Long.MAX_VALUE);
++    conf.setLong(DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 20);
++    // Make it autoroll after 10 edits
++    conf.setFloat(DFS_NAMENODE_EDIT_LOG_AUTOROLL_MULTIPLIER_THRESHOLD, 0.5f);
++    conf.setInt(DFS_NAMENODE_EDIT_LOG_AUTOROLL_CHECK_INTERVAL_MS, 100);
++
++    MiniDFSNNTopology topology = new MiniDFSNNTopology()
++    .addNameservice(new MiniDFSNNTopology.NSConf("ns1")
++      .addNN(new MiniDFSNNTopology.NNConf("nn1").setHttpPort(10061))
++      .addNN(new MiniDFSNNTopology.NNConf("nn2").setHttpPort(10062)));
++
++    cluster = new MiniDFSCluster.Builder(conf)
++      .nnTopology(topology)
++      .numDataNodes(0)
++      .build();
++    cluster.waitActive();
++
++    nn0 = cluster.getNameNode(0);
++    fs = HATestUtil.configureFailoverFs(cluster, conf);
++
++    cluster.transitionToActive(0);
++
++    fs = cluster.getFileSystem(0);
++    editLog = nn0.getNamesystem().getEditLog();
++  }
++
++  @After
++  public void tearDown() throws Exception {
++    if (fs != null) {
++      fs.close();
++    }
++    if (cluster != null) {
++      cluster.shutdown();
++    }
++  }
++
++  @Test(timeout=60000)
++  public void testEditLogAutoroll() throws Exception {
++    // Make some edits
++    final long startTxId = editLog.getCurSegmentTxId();
++    for (int i=0; i<11; i++) {
++      fs.mkdirs(new Path("testEditLogAutoroll-" + i));
++    }
++    // Wait for the NN to autoroll
++    GenericTestUtils.waitFor(new Supplier<Boolean>() {
++      @Override
++      public Boolean get() {
++        return editLog.getCurSegmentTxId() > startTxId;
++      }
++    }, 1000, 5000);
++    // Transition to standby and make sure the roller stopped
++    nn0.transitionToStandby();
++    GenericTestUtils.assertNoThreadsMatching(
++        ".*" + NameNodeEditLogRoller.class.getSimpleName() + ".*");
++  }
++}
+-- 
+1.7.0.4
+

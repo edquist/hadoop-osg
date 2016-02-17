@@ -1,7 +1,7 @@
 From d249a6b24ddaa87569b4b781f3102f2b1b13baca Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 15 May 2012 16:01:44 +0000
-Subject: [PATCH 171/545] HDFS-3417. Rename BalancerDatanode#getName to getDisplayName to be consistent with Datanode. Contributed by Eli Collins
+Subject: [PATCH 0171/1612] HDFS-3417. Rename BalancerDatanode#getName to getDisplayName to be consistent with Datanode. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1338767 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 92d196b9bfeb8b7c4de54dc20af4f8bb267b55b3)

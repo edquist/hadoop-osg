@@ -1,7 +1,7 @@
 From 472583545b5b61c8ab0e08016568e2356cd2cb53 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Tue, 12 Jun 2012 01:59:24 +0000
-Subject: [PATCH 117/545] svn merge -c 1349088 from trunk for HDFS-3522. If a namenode is in safemode, it should throw SafeModeException when getBlockLocations has zero locations.
+Subject: [PATCH 0117/1612] svn merge -c 1349088 from trunk for HDFS-3522. If a namenode is in safemode, it should throw SafeModeException when getBlockLocations has zero locations.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1349090 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e7611c500190d887e4b6912507efe8a161d9984a)

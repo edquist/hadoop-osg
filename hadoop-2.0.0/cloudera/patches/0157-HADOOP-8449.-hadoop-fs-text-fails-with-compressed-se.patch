@@ -1,7 +1,7 @@
 From 0950af73a4f5f143dc57903c971020801682858f Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Sat, 30 Jun 2012 05:04:23 +0000
-Subject: [PATCH 157/545] HADOOP-8449. hadoop fs -text fails with compressed sequence files with the codec file extension. (harsh)
+Subject: [PATCH 0157/1612] HADOOP-8449. hadoop fs -text fails with compressed sequence files with the codec file extension. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1355636 13f79535-47bb-0310-9956-ffa450edef68
 ---

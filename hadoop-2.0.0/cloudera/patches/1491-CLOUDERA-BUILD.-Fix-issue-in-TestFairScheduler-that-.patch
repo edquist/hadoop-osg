@@ -1,0 +1,36 @@
+From 2aaf45760debff2248864603377a7453440641b5 Mon Sep 17 00:00:00 2001
+From: Sandy Ryza <sandy@cloudera.com>
+Date: Mon, 30 Sep 2013 16:01:38 -0700
+Subject: [PATCH 1491/1612] CLOUDERA-BUILD.  Fix issue in TestFairScheduler that broke compilation after YARN-1221
+
+---
+ .../scheduler/fair/TestFairScheduler.java          |    6 ++++--
+ 1 files changed, 4 insertions(+), 2 deletions(-)
+
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java
+index 2023930..724626f 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java
+@@ -357,7 +357,8 @@ public class TestFairScheduler {
+     // Queue 1 requests full capacity of node
+     createSchedulingRequest(1024, "queue1", "user1", 1);
+     scheduler.update();
+-    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
++    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1,
++        new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+     scheduler.handle(updateEvent);
+ 
+     // Now queue 2 requests likewise
+@@ -371,7 +372,8 @@ public class TestFairScheduler {
+     // Now another node checks in with capacity
+     RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
+     NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
+-    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
++    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2,
++        new ArrayList<ContainerStatus>(), new ArrayList<ContainerStatus>());
+     scheduler.handle(nodeEvent2);
+     scheduler.handle(updateEvent2);
+ 
+-- 
+1.7.0.4
+

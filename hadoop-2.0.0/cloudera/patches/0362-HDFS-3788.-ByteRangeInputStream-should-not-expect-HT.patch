@@ -1,7 +1,7 @@
 From 6b14d421ece657f617b292ef5f287c3a0b462cad Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Fri, 17 Aug 2012 01:42:35 +0000
-Subject: [PATCH 362/545] HDFS-3788. ByteRangeInputStream should not expect HTTP Content-Length header when chunked transfer-encoding is used.
+Subject: [PATCH 0362/1612] HDFS-3788. ByteRangeInputStream should not expect HTTP Content-Length header when chunked transfer-encoding is used.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1374122 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f5b961b1bd236d0a4393c106ada928827dfb8ebe)

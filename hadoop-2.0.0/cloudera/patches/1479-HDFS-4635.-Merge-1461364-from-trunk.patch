@@ -1,0 +1,239 @@
+From d992c166730ddab3eaaebf0b1dc1deb690f9af80 Mon Sep 17 00:00:00 2001
+From: Suresh Srinivas <suresh@apache.org>
+Date: Tue, 26 Mar 2013 23:04:52 +0000
+Subject: [PATCH 1479/1612] HDFS-4635. Merge 1461364 from trunk
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1461365 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 51cd4845e40b2f15c5f693aa2448318ae0d86351)
+---
+ .../hdfs/server/blockmanagement/BlockManager.java  |    1 +
+ .../hdfs/server/blockmanagement/BlocksMap.java     |   31 +-------
+ .../apache/hadoop/hdfs/util/LightWeightGSet.java   |   53 +++++++++++++
+ .../java/org/apache/hadoop/hdfs/util/TestGSet.java |   78 ++++++++++++++++++++
+ 4 files changed, 134 insertions(+), 29 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+index 959c0e6..b122ce3 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+@@ -234,6 +234,7 @@ public class BlockManager {
+     heartbeatManager = datanodeManager.getHeartbeatManager();
+     invalidateBlocks = new InvalidateBlocks(datanodeManager);
+ 
++    // Compute the map capacity by allocating 2% of total memory
+     blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
+     blockplacement = BlockPlacementPolicy.getInstance(
+         conf, stats, datanodeManager.getNetworkTopology());
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
+index 32342ba..40361e9 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
+@@ -60,38 +60,11 @@ class BlocksMap {
+   private volatile GSet<Block, BlockInfo> blocks;
+ 
+   BlocksMap(final float loadFactor) {
+-    this.capacity = computeCapacity();
++    // Use 2% of total memory to size the GSet capacity
++    this.capacity = LightWeightGSet.computeCapacity(2.0, "BlocksMap");
+     this.blocks = new LightWeightGSet<Block, BlockInfo>(capacity);
+   }
+ 
+-  /**
+-   * Let t = 2% of max memory.
+-   * Let e = round(log_2 t).
+-   * Then, we choose capacity = 2^e/(size of reference),
+-   * unless it is outside the close interval [1, 2^30].
+-   */
+-  private static int computeCapacity() {
+-    //VM detection
+-    //See http://java.sun.com/docs/hotspot/HotSpotFAQ.html#64bit_detection
+-    final String vmBit = System.getProperty("sun.arch.data.model");
+-
+-    //2% of max memory
+-    final double twoPC = Runtime.getRuntime().maxMemory()/50.0;
+-
+-    //compute capacity
+-    final int e1 = (int)(Math.log(twoPC)/Math.log(2.0) + 0.5);
+-    final int e2 = e1 - ("32".equals(vmBit)? 2: 3);
+-    final int exponent = e2 < 0? 0: e2 > 30? 30: e2;
+-    final int c = 1 << exponent;
+-
+-    if (LightWeightGSet.LOG.isDebugEnabled()) {
+-      LightWeightGSet.LOG.debug("VM type       = " + vmBit + "-bit");
+-      LightWeightGSet.LOG.debug("2% max memory = " + twoPC/(1 << 20) + " MB");
+-      LightWeightGSet.LOG.debug("capacity      = 2^" + exponent
+-          + " = " + c + " entries");
+-    }
+-    return c;
+-  }
+ 
+   void close() {
+     // Empty blocks once GSet#clear is implemented (HDFS-3940)
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/LightWeightGSet.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/LightWeightGSet.java
+index cb0412d..5ab9a8c 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/LightWeightGSet.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/LightWeightGSet.java
+@@ -24,8 +24,11 @@ import java.util.Iterator;
+ import org.apache.commons.logging.Log;
+ import org.apache.commons.logging.LogFactory;
+ import org.apache.hadoop.classification.InterfaceAudience;
++import org.apache.hadoop.util.StringUtils;
+ import org.apache.hadoop.HadoopIllegalArgumentException;
+ 
++import com.google.common.annotations.VisibleForTesting;
++
+ /**
+  * A low memory footprint {@link GSet} implementation,
+  * which uses an array for storing the elements
+@@ -285,4 +288,54 @@ public class LightWeightGSet<K, E extends K> implements GSet<K, E> {
+       throw new UnsupportedOperationException("Remove is not supported.");
+     }
+   }
++  
++  /**
++   * Let t = percentage of max memory.
++   * Let e = round(log_2 t).
++   * Then, we choose capacity = 2^e/(size of reference),
++   * unless it is outside the close interval [1, 2^30].
++   */
++  public static int computeCapacity(double percentage, String mapName) {
++    return computeCapacity(Runtime.getRuntime().maxMemory(), percentage,
++        mapName);
++  }
++  
++  @VisibleForTesting
++  static int computeCapacity(long maxMemory, double percentage,
++      String mapName) {
++    if (percentage > 100.0 || percentage < 0.0) {
++      throw new HadoopIllegalArgumentException("Percentage " + percentage
++          + " must be greater than or equal to 0 "
++          + " and less than or equal to 100");
++    }
++    if (maxMemory < 0) {
++      throw new HadoopIllegalArgumentException("Memory " + maxMemory
++          + " must be greater than or equal to 0");
++    }
++    if (percentage == 0.0 || maxMemory == 0) {
++      return 0;
++    }
++    //VM detection
++    //See http://java.sun.com/docs/hotspot/HotSpotFAQ.html#64bit_detection
++    final String vmBit = System.getProperty("sun.arch.data.model");
++
++    //Percentage of max memory
++    final double percentDivisor = 100.0/percentage;
++    final double percentMemory = maxMemory/percentDivisor;
++    
++    //compute capacity
++    final int e1 = (int)(Math.log(percentMemory)/Math.log(2.0) + 0.5);
++    final int e2 = e1 - ("32".equals(vmBit)? 2: 3);
++    final int exponent = e2 < 0? 0: e2 > 30? 30: e2;
++    final int c = 1 << exponent;
++
++    if (LightWeightGSet.LOG.isDebugEnabled()) {
++      LOG.debug("Computing capacity for map " + mapName);
++      LOG.debug("VM type       = " + vmBit + "-bit");
++      LOG.debug(percentage + "% max memory = "
++          + StringUtils.TraditionalBinaryPrefix.long2String(maxMemory, "B", 1));
++      LOG.debug("capacity      = 2^" + exponent + " = " + c + " entries");
++    }
++    return c;
++  }
+ }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestGSet.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestGSet.java
+index ed20077..971d538 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestGSet.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestGSet.java
+@@ -21,6 +21,7 @@ import java.util.ConcurrentModificationException;
+ import java.util.Iterator;
+ import java.util.Random;
+ 
++import org.apache.hadoop.HadoopIllegalArgumentException;
+ import org.apache.hadoop.util.Time;
+ import org.junit.Assert;
+ import org.junit.Test;
+@@ -452,4 +453,81 @@ public class TestGSet {
+       next = e;
+     }
+   }
++  
++  /** 
++   * Test for {@link LightWeightGSet#computeCapacity(double, String)}
++   * with invalid percent less than 0.
++   */
++  @Test(expected=HadoopIllegalArgumentException.class)
++  public void testComputeCapacityNegativePercent() {
++    LightWeightGSet.computeCapacity(1024, -1.0, "testMap");
++  }
++  
++  /** 
++   * Test for {@link LightWeightGSet#computeCapacity(double, String)}
++   * with invalid percent greater than 100.
++   */
++  @Test(expected=HadoopIllegalArgumentException.class)
++  public void testComputeCapacityInvalidPercent() {
++    LightWeightGSet.computeCapacity(1024, 101.0, "testMap");
++  }
++  
++  /** 
++   * Test for {@link LightWeightGSet#computeCapacity(double, String)}
++   * with invalid negative max memory
++   */
++  @Test(expected=HadoopIllegalArgumentException.class)
++  public void testComputeCapacityInvalidMemory() {
++    LightWeightGSet.computeCapacity(-1, 50.0, "testMap");
++  }
++  
++  private static boolean isPowerOfTwo(int num) {
++    return num == 0 || (num > 0 && Integer.bitCount(num) == 1);
++  }
++  
++  /** Return capacity as percentage of total memory */
++  private static int getPercent(long total, int capacity) {
++    // Reference size in bytes
++    double referenceSize = 
++        System.getProperty("sun.arch.data.model").equals("32") ? 4.0 : 8.0;
++    return (int)(((capacity * referenceSize)/total) * 100.0);
++  }
++  
++  /** Return capacity as percentage of total memory */
++  private static void testCapacity(long maxMemory, double percent) {
++    int capacity = LightWeightGSet.computeCapacity(maxMemory, percent, "map");
++    LightWeightGSet.LOG.info("Validating - total memory " + maxMemory + " percent "
++        + percent + " returned capacity " + capacity);
++    // Returned capacity is zero or power of two
++    Assert.assertTrue(isPowerOfTwo(capacity));
++
++    // Ensure the capacity returned is the nearest to the asked perecentage
++    int capacityPercent = getPercent(maxMemory, capacity);
++    if (capacityPercent == percent) {
++      return;
++    } else if (capacityPercent > percent) {
++      Assert.assertTrue(getPercent(maxMemory, capacity * 2) > percent);
++    } else {
++      Assert.assertTrue(getPercent(maxMemory, capacity / 2) < percent);
++    }
++  }
++  
++  /** 
++   * Test for {@link LightWeightGSet#computeCapacity(double, String)}
++   */
++  @Test
++  public void testComputeCapacity() {
++    // Tests for boundary conditions where percent or memory are zero
++    testCapacity(0, 0.0);
++    testCapacity(100, 0.0);
++    testCapacity(0, 100.0);
++    
++    // Compute capacity for some 100 random max memory and percentage
++    Random r = new Random();
++    for (int i = 0; i < 100; i++) {
++      long maxMemory = r.nextInt(Integer.MAX_VALUE);
++      double percent = r.nextInt(101);
++      testCapacity(maxMemory, percent);
++    }
++  }
+ }
+-- 
+1.7.0.4
+

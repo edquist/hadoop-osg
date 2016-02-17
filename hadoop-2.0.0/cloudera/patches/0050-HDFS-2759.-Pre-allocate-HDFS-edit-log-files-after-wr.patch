@@ -1,7 +1,7 @@
 From 8c68fd7abbf8929185eb761754b0052eb2993b8d Mon Sep 17 00:00:00 2001
 From: Aaron T. Myers <atm@cloudera.com>
 Date: Tue, 15 May 2012 14:48:07 -0700
-Subject: [PATCH 050/545] HDFS-2759. Pre-allocate HDFS edit log files after writing version number. Contributed by Aaron T. Myers.
+Subject: [PATCH 0050/1612] HDFS-2759. Pre-allocate HDFS edit log files after writing version number. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1338489 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b902f6c554b8468d808a60382408aa0ea7d70a2c)

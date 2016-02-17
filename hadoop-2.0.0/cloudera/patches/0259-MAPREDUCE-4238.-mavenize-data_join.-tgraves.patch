@@ -1,7 +1,7 @@
 From 829f93a8ff782d8d43ba7c4589d49d9307f0dd58 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 15 May 2012 19:09:59 +0000
-Subject: [PATCH 259/545] MAPREDUCE-4238. mavenize data_join. (tgraves)
+Subject: [PATCH 0259/1612] MAPREDUCE-4238. mavenize data_join. (tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1338835 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4900a83054b309d979a884ece699f68de730edc8)

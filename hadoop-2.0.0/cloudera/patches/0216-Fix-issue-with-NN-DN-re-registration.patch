@@ -1,7 +1,7 @@
 From 0210bcdb4e8ee6a3e6459a9e27869ccfa2264083 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 6 Jul 2012 19:00:06 +0000
-Subject: [PATCH 216/545] Fix issue with NN/DN re-registration.
+Subject: [PATCH 0216/1612] Fix issue with NN/DN re-registration.
 
 Addresses the vulnerability identified by CVE-2012-3376.
 

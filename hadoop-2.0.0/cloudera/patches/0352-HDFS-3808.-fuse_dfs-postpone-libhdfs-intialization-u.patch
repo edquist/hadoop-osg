@@ -1,7 +1,7 @@
 From f2b690b37be90e116b09d71fa4872acdca994468 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Thu, 16 Aug 2012 23:47:33 +0000
-Subject: [PATCH 352/545] HDFS-3808. fuse_dfs: postpone libhdfs intialization until after fork. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0352/1612] HDFS-3808. fuse_dfs: postpone libhdfs intialization until after fork. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1374106 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2619f5a2583af5850c59d7dd35586bc7f6275f5a)

@@ -1,7 +1,7 @@
 From db2745f79fb91768798b570ace26cefdaad17bfb Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 25 May 2012 04:10:15 +0000
-Subject: [PATCH 080/545] HADOOP-8422. Deprecate FileSystem#getDefault* and getServerDefault methods that don't take a Path argument. Contributed by Eli Collins
+Subject: [PATCH 0080/1612] HADOOP-8422. Deprecate FileSystem#getDefault* and getServerDefault methods that don't take a Path argument. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1342495 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f8511836c7dba7ad89ea14d6dbdad6648980bccb)

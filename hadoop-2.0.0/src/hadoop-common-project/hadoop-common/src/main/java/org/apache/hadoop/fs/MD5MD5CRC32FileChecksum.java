@@ -23,11 +23,16 @@ import java.io.IOException;
 
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.WritableUtils;
+import org.apache.hadoop.util.DataChecksum;
 import org.xml.sax.Attributes;
 import org.xml.sax.SAXException;
 import org.znerd.xmlenc.XMLOutputter;
+
+import org.apache.hadoop.fs.MD5MD5CRC32CastagnoliFileChecksum;
+import org.apache.hadoop.fs.MD5MD5CRC32GzipFileChecksum;
 
 /** MD5 of MD5 of CRC32. */
 @InterfaceAudience.LimitedPrivate({"HDFS"})
@@ -54,7 +59,19 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
   
   /** {@inheritDoc} */ 
   public String getAlgorithmName() {
-    return "MD5-of-" + crcPerBlock + "MD5-of-" + bytesPerCRC + "CRC32";
+    return "MD5-of-" + crcPerBlock + "MD5-of-" + bytesPerCRC +
+        DataChecksum.getNameOfType(getCrcType());
+  }
+
+  public static int getCrcTypeFromAlgorithmName(String algorithm)
+      throws IOException {
+    if (algorithm.endsWith(DataChecksum.getNameOfType(DataChecksum.CHECKSUM_CRC32))) {
+      return DataChecksum.CHECKSUM_CRC32;
+    } else if (algorithm.endsWith(DataChecksum.getNameOfType(DataChecksum.CHECKSUM_CRC32C))) {
+      return DataChecksum.CHECKSUM_CRC32C;
+    }
+
+    throw new IOException("Unknown checksum type in " + algorithm);
   }
 
   /** {@inheritDoc} */ 
@@ -63,6 +80,16 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
   /** {@inheritDoc} */ 
   public byte[] getBytes() {
     return WritableUtils.toByteArray(this);
+  }
+
+  /** returns the CRC type */
+  public int getCrcType() {
+    // default to the one that is understood by all releases.
+    return DataChecksum.CHECKSUM_CRC32;
+  }
+
+  public ChecksumOpt getChecksumOpt() {
+    return new ChecksumOpt(getCrcType(), bytesPerCRC);
   }
 
   /** {@inheritDoc} */ 
@@ -86,6 +113,7 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
     if (that != null) {
       xml.attribute("bytesPerCRC", "" + that.bytesPerCRC);
       xml.attribute("crcPerBlock", "" + that.crcPerBlock);
+      xml.attribute("crcType", ""+ DataChecksum.getNameOfType(that.getCrcType()));
       xml.attribute("md5", "" + that.md5);
     }
     xml.endTag();
@@ -97,16 +125,40 @@ public class MD5MD5CRC32FileChecksum extends FileChecksum {
     final String bytesPerCRC = attrs.getValue("bytesPerCRC");
     final String crcPerBlock = attrs.getValue("crcPerBlock");
     final String md5 = attrs.getValue("md5");
+    String crcType = attrs.getValue("crcType");
+    int finalCrcType;
     if (bytesPerCRC == null || crcPerBlock == null || md5 == null) {
       return null;
     }
 
     try {
-      return new MD5MD5CRC32FileChecksum(Integer.valueOf(bytesPerCRC),
-          Integer.valueOf(crcPerBlock), new MD5Hash(md5));
-    } catch(Exception e) {
+      // old versions don't support crcType.
+      if (crcType == null || crcType == "") {
+        finalCrcType = DataChecksum.CHECKSUM_CRC32;
+      } else {
+        finalCrcType = DataChecksum.getTypeFromName(crcType);
+      }
+
+      switch (finalCrcType) {
+        case DataChecksum.CHECKSUM_CRC32:
+          return new MD5MD5CRC32GzipFileChecksum(
+              Integer.valueOf(bytesPerCRC),
+              Integer.valueOf(crcPerBlock),
+              new MD5Hash(md5));
+        case DataChecksum.CHECKSUM_CRC32C:
+          return new MD5MD5CRC32CastagnoliFileChecksum(
+              Integer.valueOf(bytesPerCRC),
+              Integer.valueOf(crcPerBlock),
+              new MD5Hash(md5));
+        default:
+          // we should never get here since finalCrcType will
+          // hold a valid type or we should have got an exception.
+          return null;
+      }
+    } catch (Exception e) {
       throw new SAXException("Invalid attributes: bytesPerCRC=" + bytesPerCRC
-          + ", crcPerBlock=" + crcPerBlock + ", md5=" + md5, e);
+          + ", crcPerBlock=" + crcPerBlock + ", crcType=" + crcType 
+          + ", md5=" + md5, e);
     }
   }
 

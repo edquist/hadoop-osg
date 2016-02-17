@@ -1,7 +1,7 @@
 From 43940d2d9a957fa145bf96b15694521ee76105b6 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Tue, 3 Jul 2012 20:45:21 +0000
-Subject: [PATCH 144/545] HDFS-3343. Improve metrics for DN read latency. Contributed by Andrew Wang.
+Subject: [PATCH 0144/1612] HDFS-3343. Improve metrics for DN read latency. Contributed by Andrew Wang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1356928 13f79535-47bb-0310-9956-ffa450edef68
 ---

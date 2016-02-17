@@ -1,0 +1,92 @@
+From 5938c3209d0458a63a4649428f42b904fc6d5e66 Mon Sep 17 00:00:00 2001
+From: Aaron Twining Myers <atm@apache.org>
+Date: Tue, 11 Feb 2014 02:49:07 +0000
+Subject: [PATCH 1552/1612] HADOOP-10326. M/R jobs can not access S3 if Kerberos is enabled. Contributed by bc Wong.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1566966 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 5062fd644a2b2f9331aa002d574bd440d56a8b52)
+---
+ .../java/org/apache/hadoop/fs/s3/S3FileSystem.java |    6 ++++++
+ .../hadoop/fs/s3native/NativeS3FileSystem.java     |    6 ++++++
+ .../hadoop/fs/s3/S3FileSystemContractBaseTest.java |    7 ++++++-
+ .../NativeS3FileSystemContractBaseTest.java        |    9 +++++++--
+ 4 files changed, 25 insertions(+), 3 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/S3FileSystem.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/S3FileSystem.java
+index 5a5d628..1bd3e9f 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/S3FileSystem.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3/S3FileSystem.java
+@@ -348,6 +348,12 @@ public class S3FileSystem extends FileSystem {
+     return getConf().getLong("fs.s3.block.size", 64 * 1024 * 1024);
+   }
+ 
++  @Override
++  public String getCanonicalServiceName() {
++    // Does not support Token
++    return null;
++  }
++
+   // diagnostic methods
+ 
+   void dump() throws IOException {
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/NativeS3FileSystem.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/NativeS3FileSystem.java
+index 2422eb7..fb0fa89 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/NativeS3FileSystem.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/s3native/NativeS3FileSystem.java
+@@ -699,4 +699,10 @@ public class NativeS3FileSystem extends FileSystem {
+   public Path getWorkingDirectory() {
+     return workingDir;
+   }
++
++  @Override
++  public String getCanonicalServiceName() {
++    // Does not support Token
++    return null;
++  }
+ }
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/s3/S3FileSystemContractBaseTest.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/s3/S3FileSystemContractBaseTest.java
+index d1770d3..d704b00 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/s3/S3FileSystemContractBaseTest.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/s3/S3FileSystemContractBaseTest.java
+@@ -54,5 +54,10 @@ public abstract class S3FileSystemContractBaseTest
+     assertEquals("Double default block size", newBlockSize,
+ 	fs.getFileStatus(file).getBlockSize());
+   }
+-  
++
++  public void testCanonicalName() throws Exception {
++    assertNull("s3 doesn't support security token and shouldn't have canonical name",
++               fs.getCanonicalServiceName());
++  }
++
+ }
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/s3native/NativeS3FileSystemContractBaseTest.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/s3native/NativeS3FileSystemContractBaseTest.java
+index 60010e4..ac6b9ec 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/s3native/NativeS3FileSystemContractBaseTest.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/s3native/NativeS3FileSystemContractBaseTest.java
+@@ -48,7 +48,12 @@ public abstract class NativeS3FileSystemContractBaseTest
+     store.purge("test");
+     super.tearDown();
+   }
+-  
++
++  public void testCanonicalName() throws Exception {
++    assertNull("s3n doesn't support security token and shouldn't have canonical name",
++               fs.getCanonicalServiceName());
++  }
++
+   public void testListStatusForRoot() throws Exception {
+     FileStatus[] paths = fs.listStatus(path("/"));
+     assertEquals(0, paths.length);
+@@ -60,7 +65,7 @@ public abstract class NativeS3FileSystemContractBaseTest
+     assertEquals(1, paths.length);
+     assertEquals(path("/test"), paths[0].getPath());
+   }
+-  
++
+   public void testNoTrailingBackslashOnBucket() throws Exception {
+     assertTrue(fs.getFileStatus(new Path(fs.getUri().toString())).isDirectory());
+   }
+-- 
+1.7.0.4
+

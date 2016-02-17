@@ -1,0 +1,39 @@
+From fd7a3aa1527490e74edb4cdc12350943cbd4941f Mon Sep 17 00:00:00 2001
+From: Andrew Wang <wang@apache.org>
+Date: Thu, 31 Oct 2013 20:56:42 +0000
+Subject: [PATCH 1499/1612] HADOOP-9898. Set SO_KEEPALIVE on all our sockets. Contributed by Todd Lipcon.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1537638 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit fb0f765520c437ce3e01b4f46a94b04a92043aa1)
+---
+ .../main/java/org/apache/hadoop/ipc/Client.java    |    1 +
+ .../main/java/org/apache/hadoop/ipc/Server.java    |    1 +
+ 2 files changed, 2 insertions(+), 0 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Client.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Client.java
+index dcf5dac..4686093 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Client.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Client.java
+@@ -485,6 +485,7 @@ public class Client {
+         try {
+           this.socket = socketFactory.createSocket();
+           this.socket.setTcpNoDelay(tcpNoDelay);
++          this.socket.setKeepAlive(true);
+           
+           /*
+            * Bind the socket to the host specified in the principal name of the
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Server.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Server.java
+index 48eb5f7..6f4a5f5 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Server.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Server.java
+@@ -725,6 +725,7 @@ public abstract class Server {
+ 
+         channel.configureBlocking(false);
+         channel.socket().setTcpNoDelay(tcpNoDelay);
++        channel.socket().setKeepAlive(true);
+         
+         Reader reader = getReader();
+         try {
+-- 
+1.7.0.4
+

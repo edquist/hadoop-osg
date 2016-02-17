@@ -1,7 +1,7 @@
 From 8eef8601fda07d83a491e0ea0196ef3b2ce2118d Mon Sep 17 00:00:00 2001
 From: Siddharth Seth <sseth@apache.org>
 Date: Mon, 25 Jun 2012 17:54:48 +0000
-Subject: [PATCH 339/545] MAPREDUCE-4290. Fix Yarn Applicaiton Status to MR JobState conversion. (Contributed by Devaraj K)
+Subject: [PATCH 0339/1612] MAPREDUCE-4290. Fix Yarn Applicaiton Status to MR JobState conversion. (Contributed by Devaraj K)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1353684 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 09078f15defd7bc8d87dc54af5e54eb7e58ca11c)

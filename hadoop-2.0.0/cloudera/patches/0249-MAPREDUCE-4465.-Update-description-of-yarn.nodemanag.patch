@@ -1,7 +1,7 @@
 From 47f94c38ec9534b0364ecb8beba67a7602745dbc Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Tue, 24 Jul 2012 22:08:27 +0000
-Subject: [PATCH 249/545] MAPREDUCE-4465. Update description of yarn.nodemanager.address property. (bowang via tucu)
+Subject: [PATCH 0249/1612] MAPREDUCE-4465. Update description of yarn.nodemanager.address property. (bowang via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1365322 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b3a7f95190351d0921f037fcf86d97d9b9034ed4)

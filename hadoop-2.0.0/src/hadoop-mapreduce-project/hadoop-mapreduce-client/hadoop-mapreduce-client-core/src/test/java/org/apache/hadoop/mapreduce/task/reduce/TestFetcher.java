@@ -53,7 +53,7 @@ public class TestFetcher {
     private HttpURLConnection connection;
 
     public FakeFetcher(JobConf job, TaskAttemptID reduceId,
-        ShuffleScheduler<K,V> scheduler, MergeManager<K,V> merger, Reporter reporter,
+        ShuffleScheduler<K,V> scheduler, MergeManagerImpl<K,V> merger, Reporter reporter,
         ShuffleClientMetrics metrics, ExceptionReporter exceptionReporter,
         SecretKey jobTokenSecret, HttpURLConnection connection) {
       super(job, reduceId, scheduler, merger, reporter, metrics, exceptionReporter,
@@ -77,7 +77,7 @@ public class TestFetcher {
     JobConf job = new JobConf();
     TaskAttemptID id = TaskAttemptID.forName("attempt_0_1_r_1_1");
     ShuffleScheduler<Text, Text> ss = mock(ShuffleScheduler.class);
-    MergeManager<Text, Text> mm = mock(MergeManager.class);
+    MergeManagerImpl<Text, Text> mm = mock(MergeManagerImpl.class);
     Reporter r = mock(Reporter.class);
     ShuffleClientMetrics metrics = mock(ShuffleClientMetrics.class);
     ExceptionReporter except = mock(ExceptionReporter.class);
@@ -118,8 +118,8 @@ public class TestFetcher {
           encHash);
     
     verify(allErrs).increment(1);
-    verify(ss).copyFailed(map1ID, host, true);
-    verify(ss).copyFailed(map2ID, host, true);
+    verify(ss).copyFailed(map1ID, host, true, false);
+    verify(ss).copyFailed(map2ID, host, true, false);
     
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));
@@ -132,7 +132,7 @@ public class TestFetcher {
     JobConf job = new JobConf();
     TaskAttemptID id = TaskAttemptID.forName("attempt_0_1_r_1_1");
     ShuffleScheduler<Text, Text> ss = mock(ShuffleScheduler.class);
-    MergeManager<Text, Text> mm = mock(MergeManager.class);
+    MergeManagerImpl<Text, Text> mm = mock(MergeManagerImpl.class);
     Reporter r = mock(Reporter.class);
     ShuffleClientMetrics metrics = mock(ShuffleClientMetrics.class);
     ExceptionReporter except = mock(ExceptionReporter.class);
@@ -167,10 +167,9 @@ public class TestFetcher {
     header.write(new DataOutputStream(bout));
     ByteArrayInputStream in = new ByteArrayInputStream(bout.toByteArray());
     when(connection.getInputStream()).thenReturn(in);
-    //Defaults to WAIT, which is what we want to test
-    MapOutput<Text,Text> mapOut = new MapOutput<Text, Text>(map1ID);
+    //Defaults to null, which is what we want to test
     when(mm.reserve(any(TaskAttemptID.class), anyLong(), anyInt()))
-      .thenReturn(mapOut);
+      .thenReturn(null);
     
     underTest.copyFromHost(host);
     
@@ -178,8 +177,8 @@ public class TestFetcher {
       .addRequestProperty(SecureShuffleUtils.HTTP_HEADER_URL_HASH, 
           encHash);
     verify(allErrs, never()).increment(1);
-    verify(ss, never()).copyFailed(map1ID, host, true);
-    verify(ss, never()).copyFailed(map2ID, host, true);
+    verify(ss, never()).copyFailed(map1ID, host, true, false);
+    verify(ss, never()).copyFailed(map2ID, host, true, false);
     
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map1ID));
     verify(ss).putBackKnownMapOutput(any(MapHost.class), eq(map2ID));

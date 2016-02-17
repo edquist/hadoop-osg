@@ -1,7 +1,7 @@
 From 9475c7e379ea1d28b9f971017ee2a09c180bf89a Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 9 Aug 2012 21:58:21 +0000
-Subject: [PATCH 327/545] HADOOP-8659. Native libraries must build with soft-float ABI for Oracle JVM on ARM. Contributed by Trevor Robinson.
+Subject: [PATCH 0327/1612] HADOOP-8659. Native libraries must build with soft-float ABI for Oracle JVM on ARM. Contributed by Trevor Robinson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1371507 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7f3341afb5e6c7a3a5cfe6f1bd7dbc9c3a0293b7)

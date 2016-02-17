@@ -1,7 +1,7 @@
 From e3c5bc25611c6a41c6b7a08710b4d13c8e1a3911 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 11 May 2012 16:45:59 +0000
-Subject: [PATCH 039/545] HADOOP-8276. Auto-HA: add config for java options to pass to zkfc daemon. Contributed by Todd Lipcon
+Subject: [PATCH 0039/1612] HADOOP-8276. Auto-HA: add config for java options to pass to zkfc daemon. Contributed by Todd Lipcon
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1337276 13f79535-47bb-0310-9956-ffa450edef68
 ---

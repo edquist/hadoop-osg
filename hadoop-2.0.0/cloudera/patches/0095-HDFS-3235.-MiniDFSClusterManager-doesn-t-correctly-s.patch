@@ -1,7 +1,7 @@
 From 8466b01541bb1b40a790c51f33dab0b600f80083 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Tue, 10 Apr 2012 02:25:40 +0000
-Subject: [PATCH 095/545] HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option. Contributed by Henry Robinson.
+Subject: [PATCH 0095/1612] HDFS-3235. MiniDFSClusterManager doesn't correctly support -format option. Contributed by Henry Robinson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1311556 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 21dfa6aa0a56d0e6991bb99d3e55b6393155c66e)

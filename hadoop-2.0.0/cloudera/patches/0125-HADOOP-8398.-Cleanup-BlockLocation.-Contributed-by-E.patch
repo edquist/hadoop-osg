@@ -1,7 +1,7 @@
 From 73f183b4dc524f2fff58ffb9efd8f68bab2c9d6c Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 15 May 2012 17:25:49 +0000
-Subject: [PATCH 125/545] HADOOP-8398. Cleanup BlockLocation. Contributed by Eli Collins
+Subject: [PATCH 0125/1612] HADOOP-8398. Cleanup BlockLocation. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1338806 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 402deb267249e379a6b4d4e137a7bd3cec5796ed)

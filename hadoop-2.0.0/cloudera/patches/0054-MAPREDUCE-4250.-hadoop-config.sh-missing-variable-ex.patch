@@ -1,7 +1,7 @@
 From 10ef937723a02e4e898878068c0351764a26dc68 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 16 May 2012 04:15:02 +0000
-Subject: [PATCH 054/545] MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+Subject: [PATCH 0054/1612] MAPREDUCE-4250. hadoop-config.sh missing variable exports, causes Yarn jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339000 13f79535-47bb-0310-9956-ffa450edef68
 ---

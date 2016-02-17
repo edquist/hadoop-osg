@@ -1,7 +1,7 @@
 From a62ba0f8b291d36fb3506d9aed30461c1f2cafcd Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Fri, 20 Jul 2012 18:58:58 +0000
-Subject: [PATCH 246/545] HDFS-3597. SNN fails to start after DFS upgrade. Contributed by Andy Isaacson.
+Subject: [PATCH 0246/1612] HDFS-3597. SNN fails to start after DFS upgrade. Contributed by Andy Isaacson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363899 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a5018d8d06b016b0571b6138c014e60281933a81)

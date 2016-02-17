@@ -1,7 +1,7 @@
 From 09755fa82db27c6bb63a88a06b78e69ff1bfbfc4 Mon Sep 17 00:00:00 2001
 From: Tom White <tom@cloudera.com>
 Date: Tue, 15 May 2012 15:52:42 -0600
-Subject: [PATCH 051/545] CLOUDERA-BUILD. Update to use Jetty 6.1.26.cloudera.1.
+Subject: [PATCH 0051/1612] CLOUDERA-BUILD. Update to use Jetty 6.1.26.cloudera.1.
 
 ---
  hadoop-project/pom.xml |    6 +++---

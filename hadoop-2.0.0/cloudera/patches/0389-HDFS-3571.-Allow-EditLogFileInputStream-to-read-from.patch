@@ -1,7 +1,7 @@
 From 7ba5e174d9c0475d3be4fea114818aa2ea2c442f Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:41:01 -0700
-Subject: [PATCH 389/545] HDFS-3571. Allow EditLogFileInputStream to read from a remote URL. Contributed by Todd Lipcon.
+Subject: [PATCH 0389/1612] HDFS-3571. Allow EditLogFileInputStream to read from a remote URL. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1355174 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d75fb3470cfd336a80b78fceedf42120eaf254e9)

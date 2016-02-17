@@ -1,7 +1,7 @@
 From e816a2eea2208aaad094e9d7b794c2398b9fb86a Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Thu, 24 May 2012 13:10:57 +0000
-Subject: [PATCH 300/545] MAPREDUCE-4224. TestFifoScheduler throws org.apache.hadoop.metrics2.MetricsException (Devaraj K via tgraves)
+Subject: [PATCH 0300/1612] MAPREDUCE-4224. TestFifoScheduler throws org.apache.hadoop.metrics2.MetricsException (Devaraj K via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1342244 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 9d490bbf83812d62699b70d3da478df49cd8d8f1)

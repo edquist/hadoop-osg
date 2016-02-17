@@ -1,7 +1,7 @@
 From f64ea8523ec4136e6cb56cf5da51b216679fa061 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Tue, 22 May 2012 23:19:33 +0000
-Subject: [PATCH 192/545] HDFS-3415. During NameNode starting up, it may pick wrong storage
+Subject: [PATCH 0192/1612] HDFS-3415. During NameNode starting up, it may pick wrong storage
  directory inspector when the layout versions of the storage directories
  are different.
 

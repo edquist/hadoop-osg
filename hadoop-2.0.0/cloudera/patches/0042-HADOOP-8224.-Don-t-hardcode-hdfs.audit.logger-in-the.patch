@@ -1,7 +1,7 @@
 From e894fcfe513b31210c584b424e0ffc654351c471 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 11 May 2012 19:25:07 +0000
-Subject: [PATCH 042/545] HADOOP-8224. Don't hardcode hdfs.audit.logger in the scripts. Contributed by Tomohiko Kinebuchi
+Subject: [PATCH 0042/1612] HADOOP-8224. Don't hardcode hdfs.audit.logger in the scripts. Contributed by Tomohiko Kinebuchi
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1337339 13f79535-47bb-0310-9956-ffa450edef68
 ---

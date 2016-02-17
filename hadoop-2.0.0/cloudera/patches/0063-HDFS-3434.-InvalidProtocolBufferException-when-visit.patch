@@ -1,7 +1,7 @@
 From e3bd9c3796842a475345fcff98db7cdbff86cef2 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 17 May 2012 17:01:13 +0000
-Subject: [PATCH 063/545] HDFS-3434. InvalidProtocolBufferException when visiting DN browseDirectory.jsp. Contributed by Eli Collins
+Subject: [PATCH 0063/1612] HDFS-3434. InvalidProtocolBufferException when visiting DN browseDirectory.jsp. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339712 13f79535-47bb-0310-9956-ffa450edef68
 ---

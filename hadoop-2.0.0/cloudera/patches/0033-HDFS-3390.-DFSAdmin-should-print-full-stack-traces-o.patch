@@ -1,7 +1,7 @@
 From 58ac4b200fddb12c86db10e92130361b7ac9aebb Mon Sep 17 00:00:00 2001
 From: Aaron T. Myers <atm@cloudera.com>
 Date: Wed, 9 May 2012 14:37:25 -0400
-Subject: [PATCH 033/545] HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG logging is enabled. Contributed by Aaron T. Myers.
+Subject: [PATCH 0033/1612] HDFS-3390. DFSAdmin should print full stack traces of errors when DEBUG logging is enabled. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1336327 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b8e655f02c3a0385791b477af026d43096ae407d)

@@ -1,7 +1,7 @@
 From bd0972ddcd915a844ed66a82703b4f3ad7edf9ed Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 25 Jul 2012 21:40:17 +0000
-Subject: [PATCH 374/545] HDFS-3694. Fix getEditLogManifest to fetch httpPort if necessary. Contributed by Todd Lipcon.
+Subject: [PATCH 0374/1612] HDFS-3694. Fix getEditLogManifest to fetch httpPort if necessary. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1365788 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 996b5beb084cc5f0668ca040e260624bd0f2ce1f)

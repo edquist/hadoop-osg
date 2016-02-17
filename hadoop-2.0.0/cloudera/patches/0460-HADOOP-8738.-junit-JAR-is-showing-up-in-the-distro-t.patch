@@ -1,7 +1,7 @@
 From 27230a7745c3c4285842d0c0f5ede0004ae6a4c9 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Tue, 28 Aug 2012 15:30:43 +0000
-Subject: [PATCH 460/545] HADOOP-8738. junit JAR is showing up in the distro (tucu)
+Subject: [PATCH 0460/1612] HADOOP-8738. junit JAR is showing up in the distro (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1378175 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit bef28430d855dc2c7e8380caf88be78989b6a2c0)

@@ -1,7 +1,7 @@
 From da87876b2747fefe489b1f53623f2294825893e9 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 13 Aug 2012 15:11:39 -0700
-Subject: [PATCH 321/545] svn merge -c 1367601 FIXES: MAPREDUCE-4496. AM logs link is missing user name (Jason Lowe via bobby)
+Subject: [PATCH 0321/1612] svn merge -c 1367601 FIXES: MAPREDUCE-4496. AM logs link is missing user name (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1367602 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 743d1f520a171905e77366ad2d14a7a97dd7e646)

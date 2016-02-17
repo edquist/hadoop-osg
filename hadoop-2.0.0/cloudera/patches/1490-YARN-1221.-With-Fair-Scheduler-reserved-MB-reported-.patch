@@ -1,0 +1,92 @@
+From 591cbd2e2b7fedbd402af903dedeca643c0596f1 Mon Sep 17 00:00:00 2001
+From: Sanford Ryza <sandy@apache.org>
+Date: Mon, 30 Sep 2013 21:59:21 +0000
+Subject: [PATCH 1490/1612] YARN-1221. With Fair Scheduler, reserved MB reported in RM web UI increases indefinitely (Siqi Li via Sandy Ryza)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1527794 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 2ee7a6168e4ff54e856aa2a1c6515a6a2adc579f)
+
+Conflicts:
+
+	hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java
+---
+ .../scheduler/fair/AppSchedulable.java             |    6 ---
+ .../scheduler/fair/TestFairScheduler.java          |   38 ++++++++++++++++++++
+ 2 files changed, 38 insertions(+), 6 deletions(-)
+
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/AppSchedulable.java b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/AppSchedulable.java
+index aff9922..543468c 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/AppSchedulable.java
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/AppSchedulable.java
+@@ -199,10 +199,6 @@ public class AppSchedulable extends Schedulable {
+       RMContainer rmContainer = app.reserve(node, priority, null,
+           container);
+       node.reserveResource(app, priority, rmContainer);
+-      getMetrics().reserveResource(app.getUser(),
+-          container.getResource());
+-      scheduler.getRootQueueMetrics().reserveResource(app.getUser(),
+-          container.getResource());
+     }
+ 
+     else {
+@@ -223,8 +219,6 @@ public class AppSchedulable extends Schedulable {
+     node.unreserveResource(app);
+     getMetrics().unreserveResource(
+         app.getUser(), rmContainer.getContainer().getResource());
+-    scheduler.getRootQueueMetrics().unreserveResource(
+-        app.getUser(), rmContainer.getContainer().getResource());
+   }
+ 
+   /**
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java
+index 923dbfe..2023930 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/TestFairScheduler.java
+@@ -347,6 +347,44 @@ public class TestFairScheduler {
+   }
+ 
+   @Test
++  public void testSchedulerRootQueueMetrics() throws InterruptedException {
++	  
++    // Add a node
++    RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
++    NodeAddedSchedulerEvent nodeEvent1 = new NodeAddedSchedulerEvent(node1);
++    scheduler.handle(nodeEvent1);
++
++    // Queue 1 requests full capacity of node
++    createSchedulingRequest(1024, "queue1", "user1", 1);
++    scheduler.update();
++    NodeUpdateSchedulerEvent updateEvent = new NodeUpdateSchedulerEvent(node1);
++    scheduler.handle(updateEvent);
++
++    // Now queue 2 requests likewise
++    createSchedulingRequest(1024, "queue2", "user1", 1);
++    scheduler.update();
++    scheduler.handle(updateEvent);
++
++    // Make sure reserved memory gets updated correctly
++    assertEquals(1024, scheduler.rootMetrics.getReservedMB());
++    
++    // Now another node checks in with capacity
++    RMNode node2 = MockNodes.newNodeInfo(1, Resources.createResource(1024));
++    NodeAddedSchedulerEvent nodeEvent2 = new NodeAddedSchedulerEvent(node2);
++    NodeUpdateSchedulerEvent updateEvent2 = new NodeUpdateSchedulerEvent(node2);
++    scheduler.handle(nodeEvent2);
++    scheduler.handle(updateEvent2);
++
++
++    // The old reservation should still be there...
++    assertEquals(1024, scheduler.rootMetrics.getReservedMB());
++
++    // ... but it should disappear when we update the first node.
++    scheduler.handle(updateEvent);
++    assertEquals(0, scheduler.rootMetrics.getReservedMB());
++  }
++
++  @Test (timeout = 5000)
+   public void testSimpleContainerAllocation() {
+     // Add a node
+     RMNode node1 = MockNodes.newNodeInfo(1, Resources.createResource(1024, 4));
+-- 
+1.7.0.4
+

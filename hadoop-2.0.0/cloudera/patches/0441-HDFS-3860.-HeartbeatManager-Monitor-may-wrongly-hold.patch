@@ -1,7 +1,7 @@
 From 9ab6ec8551c219f2e1351edfd071362b5ae9ced7 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Tue, 28 Aug 2012 17:02:33 +0000
-Subject: [PATCH 441/545] HDFS-3860. HeartbeatManager#Monitor may wrongly hold the writelock of namesystem. Contributed by Jing Zhao.
+Subject: [PATCH 0441/1612] HDFS-3860. HeartbeatManager#Monitor may wrongly hold the writelock of namesystem. Contributed by Jing Zhao.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1378229 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 73fc2655bb241c85ea33fff8b8bebe566cfcc88d)

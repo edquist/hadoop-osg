@@ -1,7 +1,7 @@
 From 04d4028357a6404b088151e7fcb8ac188fe748b5 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Fri, 11 May 2012 00:27:08 +0000
-Subject: [PATCH 214/545] HDFS-3385. ClassCastException when trying to append a file.
+Subject: [PATCH 0214/1612] HDFS-3385. ClassCastException when trying to append a file.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1336977 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 001d39a13d6eb3aa8b418299de3ff3d00d083db3)

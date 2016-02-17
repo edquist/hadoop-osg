@@ -1,7 +1,7 @@
 From 069aa98edeaaaadc5a18751bac9dc43e3211e55b Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Mon, 4 Jun 2012 17:54:48 +0000
-Subject: [PATCH 185/545] HDFS-744. Support hsync in HDFS. Contributed by Lars Hofhansl.
+Subject: [PATCH 0185/1612] HDFS-744. Support hsync in HDFS. Contributed by Lars Hofhansl.
 
 HDFS-731 implements hsync by default as hflush. As descriibed in
 HADOOP-6313, the real expected semantics should be "flushes out to all

@@ -1,7 +1,7 @@
 From b1f41063f905495c6d1e36302b628821a46177f1 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 19 Jun 2012 19:40:44 +0000
-Subject: [PATCH 119/545] MAPREDUCE-4267. mavenize pipes (tgraves via bobby)
+Subject: [PATCH 0119/1612] MAPREDUCE-4267. mavenize pipes (tgraves via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1351818 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 92c1005d35c3618ce3894e471df1f1751c7d7c34)

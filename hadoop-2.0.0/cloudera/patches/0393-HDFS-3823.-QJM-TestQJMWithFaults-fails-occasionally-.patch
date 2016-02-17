@@ -1,7 +1,7 @@
 From d05848b0827eaf201d2cc2d604beb2b93ecaa929 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Mon, 20 Aug 2012 23:44:14 +0000
-Subject: [PATCH 393/545] HDFS-3823. QJM: TestQJMWithFaults fails occasionally because of missed setting of HTTP port. Contributed by Todd Lipcon and Aaron T. Myers.
+Subject: [PATCH 0393/1612] HDFS-3823. QJM: TestQJMWithFaults fails occasionally because of missed setting of HTTP port. Contributed by Todd Lipcon and Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1375323 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 946ce88340a918692944e11b77a2baf33d69dcab)

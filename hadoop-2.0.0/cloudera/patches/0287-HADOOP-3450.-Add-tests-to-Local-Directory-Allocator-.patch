@@ -1,7 +1,7 @@
 From 951ce03ba8d9d773410433a66b22cbfbab0e476a Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Sat, 30 Jun 2012 18:51:26 +0000
-Subject: [PATCH 287/545] HADOOP-3450. Add tests to Local Directory Allocator for asserting their URI-returning capability. Contributed by Sho Shimauchi. (harsh)
+Subject: [PATCH 0287/1612] HADOOP-3450. Add tests to Local Directory Allocator for asserting their URI-returning capability. Contributed by Sho Shimauchi. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1355789 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ee48fddab8c6fd3abad42d2307d9d552fa09b309)

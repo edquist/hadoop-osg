@@ -1,7 +1,7 @@
 From 6f5b79a69d3a298bc284736f415805b775ad2b81 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 25 Jul 2012 21:47:19 +0000
-Subject: [PATCH 376/545] HDFS-3693. JNStorage should read its storage info even before a writer becomes active. Contributed by Todd Lipcon.
+Subject: [PATCH 0376/1612] HDFS-3693. JNStorage should read its storage info even before a writer becomes active. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1365794 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit c2065afd7cc41e5c4e0bee3e06deed57248c2837)

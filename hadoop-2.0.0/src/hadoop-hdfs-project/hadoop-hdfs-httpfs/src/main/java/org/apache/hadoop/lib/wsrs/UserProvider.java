@@ -31,6 +31,7 @@ import javax.ws.rs.core.Context;
 import javax.ws.rs.ext.Provider;
 import java.lang.reflect.Type;
 import java.security.Principal;
+import java.text.MessageFormat;
 import java.util.regex.Pattern;
 
 @Provider
@@ -40,12 +41,39 @@ public class UserProvider extends AbstractHttpContextInjectable<Principal> imple
 
   public static final String USER_NAME_PARAM = "user.name";
 
-  public static final Pattern USER_PATTERN = Pattern.compile("[_a-zA-Z0-9]+");
 
-  private static class UserParam extends StringParam {
+  public static final String USER_PATTERN_KEY 
+    = "httpfs.user.provider.user.pattern";
+
+  public static final String USER_PATTERN_DEFAULT 
+    = "^[A-Za-z_][A-Za-z0-9._-]*[$]?$";
+
+  private static Pattern userPattern = Pattern.compile(USER_PATTERN_DEFAULT);
+
+  public static void setUserPattern(String pattern) {
+    userPattern = Pattern.compile(pattern);
+  }
+
+  public static Pattern getUserPattern() {
+    return userPattern;
+  }
+
+  static class UserParam extends StringParam {
 
     public UserParam(String user) {
-      super(USER_NAME_PARAM, user, USER_PATTERN);
+      super(USER_NAME_PARAM, user, getUserPattern());
+    }
+
+    @Override
+    public String parseParam(String str) {
+      if (str != null) {
+        int len = str.length();
+        if (len < 1) {
+          throw new IllegalArgumentException(MessageFormat.format(
+            "Parameter [{0}], it's length must be at least 1", getName()));
+        }
+      }
+      return super.parseParam(str);
     }
   }
 

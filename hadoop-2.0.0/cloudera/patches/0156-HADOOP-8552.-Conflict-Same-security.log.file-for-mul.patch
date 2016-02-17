@@ -1,7 +1,7 @@
 From f0840b0988d0e4d68f259f66db0f8a1acdaad265 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 16 Jul 2012 17:28:49 +0000
-Subject: [PATCH 156/545] HADOOP-8552. Conflict: Same security.log.file for multiple users. (kkambatl via tucu)
+Subject: [PATCH 0156/1612] HADOOP-8552. Conflict: Same security.log.file for multiple users. (kkambatl via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362151 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit afeaa0913ee5cb99fe418e068e9433ceeeafaa44)

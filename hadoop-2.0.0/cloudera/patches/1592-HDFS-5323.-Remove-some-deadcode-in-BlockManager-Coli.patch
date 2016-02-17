@@ -1,0 +1,94 @@
+From 5f069ffd5c84c86c20dc94cd58247957a9c33bdb Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Wed, 9 Oct 2013 22:27:27 +0000
+Subject: [PATCH 1592/1612] HDFS-5323.  Remove some deadcode in BlockManager (Colin Patrick McCabe)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1530814 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 6ee54401b5ccf9f10e24313ea6fff1aac056d594)
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java
+---
+ .../hdfs/server/blockmanagement/BlockManager.java  |    7 +++----
+ .../hdfs/server/blockmanagement/BlocksMap.java     |    6 +++---
+ .../namenode/metrics/TestNameNodeMetrics.java      |    8 --------
+ 3 files changed, 6 insertions(+), 15 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+index 64f6bcc..0304fd4 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+@@ -75,6 +75,7 @@ import org.apache.hadoop.hdfs.server.protocol.ReceivedDeletedBlockInfo;
+ import org.apache.hadoop.hdfs.util.LightWeightLinkedSet;
+ import org.apache.hadoop.net.Node;
+ import org.apache.hadoop.util.Daemon;
++import org.apache.hadoop.util.LightWeightGSet;
+ import org.apache.hadoop.util.Time;
+ 
+ import com.google.common.annotations.VisibleForTesting;
+@@ -90,9 +91,6 @@ public class BlockManager {
+   static final Log LOG = LogFactory.getLog(BlockManager.class);
+   static final Log blockLog = NameNode.blockStateChangeLog;
+ 
+-  /** Default load factor of map */
+-  public static final float DEFAULT_MAP_LOAD_FACTOR = 0.75f;
+-
+   private static final String QUEUE_REASON_CORRUPT_STATE =
+     "it has the wrong state or generation stamp";
+ 
+@@ -236,7 +234,8 @@ public class BlockManager {
+     invalidateBlocks = new InvalidateBlocks(datanodeManager);
+ 
+     // Compute the map capacity by allocating 2% of total memory
+-    blocksMap = new BlocksMap(DEFAULT_MAP_LOAD_FACTOR);
++    blocksMap = new BlocksMap(
++        LightWeightGSet.computeCapacity(2.0, "BlocksMap"));
+     blockplacement = BlockPlacementPolicy.getInstance(
+         conf, stats, datanodeManager.getNetworkTopology());
+     pendingReplications = new PendingReplicationBlocks(conf.getInt(
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
+index 033e1b9..be5f311 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlocksMap.java
+@@ -57,11 +57,11 @@ class BlocksMap {
+   /** Constant {@link LightWeightGSet} capacity. */
+   private final int capacity;
+   
+-  private volatile GSet<Block, BlockInfo> blocks;
++  private GSet<Block, BlockInfo> blocks;
+ 
+-  BlocksMap(final float loadFactor) {
++  BlocksMap(int capacity) {
+     // Use 2% of total memory to size the GSet capacity
+-    this.capacity = LightWeightGSet.computeCapacity(2.0, "BlocksMap");
++    this.capacity = capacity;
+     this.blocks = new LightWeightGSet<Block, BlockInfo>(capacity);
+   }
+ 
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java
+index ae3ac47..e7d020a 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java
+@@ -154,18 +154,10 @@ public class TestNameNodeMetrics {
+     assertCounter("CreateFileOps", 1L, rb);
+     assertCounter("FilesCreated", (long)file.depth(), rb);
+ 
+-    // Blocks are stored in a hashmap. Compute its capacity, which
+-    // doubles every time the number of entries reach the threshold.
+-    int threshold = (int)(blockCapacity * BlockManager.DEFAULT_MAP_LOAD_FACTOR);
+-    while (threshold < blockCount) {
+-      blockCapacity <<= 1;
+-    }
+-    updateMetrics();
+     long filesTotal = file.depth() + 1; // Add 1 for root
+     rb = getMetrics(NS_METRICS);
+     assertGauge("FilesTotal", filesTotal, rb);
+     assertGauge("BlocksTotal", blockCount, rb);
+-    assertGauge("BlockCapacity", blockCapacity, rb);
+     fs.delete(file, true);
+     filesTotal--; // reduce the filecount for deleted file
+ 
+-- 
+1.7.0.4
+

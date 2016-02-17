@@ -1,7 +1,7 @@
 From b1b078bcd0a72cc452a65b09de0287c76867335a Mon Sep 17 00:00:00 2001
 From: Siddharth Seth <sseth@apache.org>
 Date: Thu, 2 Aug 2012 21:55:37 +0000
-Subject: [PATCH 325/545] MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler. (Contributed by Todd Lipcon and Siddharth Seth)
+Subject: [PATCH 0325/1612] MAPREDUCE-3289. Make use of fadvise in the NM's shuffle handler. (Contributed by Todd Lipcon and Siddharth Seth)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1368718 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 709c9f38eedc2c7b1907154006c0f2fda651ee43)

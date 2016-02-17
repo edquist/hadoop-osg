@@ -1,0 +1,89 @@
+From 0b2f33907315816ba91fb7768c1aeab88656409d Mon Sep 17 00:00:00 2001
+From: Junping Du <junping_du@apache.org>
+Date: Fri, 13 Dec 2013 03:01:05 +0000
+Subject: [PATCH 1542/1612] Merge 1550620 from trunk: HDFS-5652. Refactor invalid block token exception handling in DFSInputStream. (Liang Xie via junping_du)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1550623 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 3f5e499ca6501d7daf5f16876c1e6f13ae5505e2)
+---
+ .../org/apache/hadoop/hdfs/DFSInputStream.java     |   50 ++++++++++++--------
+ 1 files changed, 30 insertions(+), 20 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java
+index 5bf5c95..4841e80 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java
+@@ -552,21 +552,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable
+           // The encryption key used is invalid.
+           refetchEncryptionKey--;
+           dfsClient.clearDataEncryptionKey();
+-        } else if ((ex instanceof InvalidBlockTokenException || ex instanceof InvalidToken)
+-            && refetchToken > 0) {
+-          DFSClient.LOG.info("Will fetch a new access token and retry, " 
+-              + "access token was invalid when connecting to " + targetAddr
+-              + " : " + ex);
+-          /*
+-           * Get a new access token and retry. Retry is needed in 2 cases. 1)
+-           * When both NN and DN re-started while DFSClient holding a cached
+-           * access token. 2) In the case that NN fails to update its
+-           * access key at pre-set interval (by a wide margin) and
+-           * subsequently restarts. In this case, DN re-registers itself with
+-           * NN and receives a new access key, but DN will delete the old
+-           * access key from its memory since it's considered expired based on
+-           * the estimated expiration date.
+-           */
++        } else if (refetchToken > 0 && tokenRefetchNeeded(ex, targetAddr)) {
+           refetchToken--;
+           fetchBlockAt(target);
+         } else {
+@@ -920,11 +906,7 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable
+           // The encryption key used is invalid.
+           refetchEncryptionKey--;
+           dfsClient.clearDataEncryptionKey();
+-        } else if ((e instanceof InvalidBlockTokenException || e instanceof InvalidToken)
+-            && refetchToken > 0) {
+-          DFSClient.LOG.info("Will get a new access token and retry, "
+-              + "access token was invalid when connecting to " + targetAddr
+-              + " : " + e);
++        } else if (refetchToken > 0 && tokenRefetchNeeded(e, targetAddr)) {
+           refetchToken--;
+           fetchBlockAt(block.getStartOffset());
+           continue;
+@@ -945,6 +927,34 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable
+     }
+   }
+ 
++  /**
++   * Should the block access token be refetched on an exception
++   * 
++   * @param ex Exception received
++   * @param targetAddr Target datanode address from where exception was received
++   * @return true if block access token has expired or invalid and it should be
++   *         refetched
++   */
++  private static boolean tokenRefetchNeeded(IOException ex,
++      InetSocketAddress targetAddr) {
++    /*
++     * Get a new access token and retry. Retry is needed in 2 cases. 1)
++     * When both NN and DN re-started while DFSClient holding a cached
++     * access token. 2) In the case that NN fails to update its
++     * access key at pre-set interval (by a wide margin) and
++     * subsequently restarts. In this case, DN re-registers itself with
++     * NN and receives a new access key, but DN will delete the old
++     * access key from its memory since it's considered expired based on
++     * the estimated expiration date.
++     */
++    if (ex instanceof InvalidBlockTokenException || ex instanceof InvalidToken) {
++      DFSClient.LOG.info("Access token was invalid when connecting to "
++          + targetAddr + " : " + ex);
++      return true;
++    }
++    return false;
++  }
++
+   private Peer newTcpPeer(InetSocketAddress addr) throws IOException {
+     Peer peer = null;
+     boolean success = false;
+-- 
+1.7.0.4
+

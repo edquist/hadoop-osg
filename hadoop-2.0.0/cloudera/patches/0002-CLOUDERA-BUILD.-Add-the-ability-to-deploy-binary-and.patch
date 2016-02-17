@@ -1,7 +1,7 @@
 From 471017c7a217c8b3b200ef4322be986727be7526 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@cloudera.com>
 Date: Sun, 11 Mar 2012 15:14:52 -0700
-Subject: [PATCH 002/545] CLOUDERA-BUILD. Add the ability to deploy binary and src tarballs.
+Subject: [PATCH 0002/1612] CLOUDERA-BUILD. Add the ability to deploy binary and src tarballs.
 
 ---
  hadoop-dist/pom.xml |   32 +++++++++++++++++++++++++++++++-

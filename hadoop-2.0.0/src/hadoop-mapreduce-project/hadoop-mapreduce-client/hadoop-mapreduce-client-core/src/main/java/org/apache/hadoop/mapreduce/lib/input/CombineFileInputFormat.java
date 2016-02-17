@@ -215,10 +215,10 @@ public abstract class CombineFileInputFormat<K, V>
     // times, one time each for each pool in the next loop.
     List<Path> newpaths = new LinkedList<Path>();
     for (int i = 0; i < paths.length; i++) {
-      Path p = new Path(paths[i].toUri().getPath());
+      FileSystem fs = paths[i].getFileSystem(conf);
+      Path p = fs.makeQualified(paths[i]);
       newpaths.add(p);
     }
-    paths = null;
 
     // In one single iteration, process all the paths in a single pool.
     // Processing one pool at a time ensures that a split contains paths

@@ -1,0 +1,139 @@
+From 8877c17229f0b3e1881ce65268131224cc24466e Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Mon, 30 Dec 2013 19:36:26 +0000
+Subject: [PATCH 1527/1612] HDFS-5582. hdfs getconf -excludeFile or -includeFile always failed (satish via cmccabe)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1554297 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 17928a222c10a6acc52b1c69c503b3d1dab195ba)
+---
+ .../java/org/apache/hadoop/hdfs/tools/GetConf.java |    5 +-
+ .../org/apache/hadoop/hdfs/tools/TestGetConf.java  |   73 +++++++++++++++++++-
+ 2 files changed, 75 insertions(+), 3 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/tools/GetConf.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/tools/GetConf.java
+index 778ac59..92a3864 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/tools/GetConf.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/tools/GetConf.java
+@@ -29,6 +29,7 @@ import java.util.Map;
+ import org.apache.hadoop.HadoopIllegalArgumentException;
+ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.conf.Configured;
++import org.apache.hadoop.hdfs.DFSConfigKeys;
+ import org.apache.hadoop.hdfs.DFSUtil;
+ import org.apache.hadoop.hdfs.HdfsConfiguration;
+ import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
+@@ -85,9 +86,9 @@ public class GetConf extends Configured implements Tool {
+       map.put(BACKUP.getName().toLowerCase(), 
+           new BackupNodesCommandHandler());
+       map.put(INCLUDE_FILE.getName().toLowerCase(), 
+-          new CommandHandler("DFSConfigKeys.DFS_HOSTS"));
++          new CommandHandler(DFSConfigKeys.DFS_HOSTS));
+       map.put(EXCLUDE_FILE.getName().toLowerCase(),
+-          new CommandHandler("DFSConfigKeys.DFS_HOSTS_EXCLUDE"));
++          new CommandHandler(DFSConfigKeys.DFS_HOSTS_EXCLUDE));
+       map.put(NNRPCADDRESSES.getName().toLowerCase(),
+           new NNRpcAddressesCommandHandler());
+       map.put(CONFKEY.getName().toLowerCase(),
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/tools/TestGetConf.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/tools/TestGetConf.java
+index 652979e..c9a936b 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/tools/TestGetConf.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/tools/TestGetConf.java
+@@ -33,10 +33,15 @@ import java.io.PrintStream;
+ import java.net.InetSocketAddress;
+ import java.util.ArrayList;
+ import java.util.Arrays;
++import java.util.Iterator;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.StringTokenizer;
+ 
++import org.apache.hadoop.fs.FSDataOutputStream;
++import org.apache.hadoop.fs.FileSystem;
++import org.apache.hadoop.fs.Path;
++import org.apache.hadoop.hdfs.DFSConfigKeys;
+ import org.apache.hadoop.hdfs.DFSUtil;
+ import org.apache.hadoop.hdfs.DFSUtil.ConfiguredNNAddress;
+ import org.apache.hadoop.hdfs.HdfsConfiguration;
+@@ -55,7 +60,7 @@ public class TestGetConf {
+   enum TestType {
+     NAMENODE, BACKUP, SECONDARY, NNRPCADDRESSES
+   }
+-  
++  FileSystem localFileSys; 
+   /** Setup federation nameServiceIds in the configuration */
+   private void setupNameServices(HdfsConfiguration conf, int nameServiceIdCount) {
+     StringBuilder nsList = new StringBuilder();
+@@ -367,4 +372,70 @@ public class TestGetConf {
+       }
+     }
+   }
++  @Test
++  public void TestGetConfExcludeCommand() throws Exception{
++  	HdfsConfiguration conf = new HdfsConfiguration();
++    // Set up the hosts/exclude files.
++    localFileSys = FileSystem.getLocal(conf);
++    Path workingDir = localFileSys.getWorkingDirectory();
++    Path dir = new Path(workingDir, System.getProperty("test.build.data", "target/test/data") + "/Getconf/");
++    Path hostsFile = new Path(dir, "hosts");
++    Path excludeFile = new Path(dir, "exclude");
++    
++    // Setup conf
++    conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
++    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
++    writeConfigFile(hostsFile, null);
++    writeConfigFile(excludeFile, null);    
++    String[] args = {"-excludeFile"};
++    String ret = runTool(conf, args, true);
++    assertEquals(excludeFile.toUri().getPath(),ret.trim());
++    cleanupFile(localFileSys, excludeFile.getParent());
++  }
++  
++  @Test
++  public void TestGetConfIncludeCommand() throws Exception{
++  	HdfsConfiguration conf = new HdfsConfiguration();
++    // Set up the hosts/exclude files.
++    localFileSys = FileSystem.getLocal(conf);
++    Path workingDir = localFileSys.getWorkingDirectory();
++    Path dir = new Path(workingDir, System.getProperty("test.build.data", "target/test/data") + "/Getconf/");
++    Path hostsFile = new Path(dir, "hosts");
++    Path excludeFile = new Path(dir, "exclude");
++    
++    // Setup conf
++    conf.set(DFSConfigKeys.DFS_HOSTS, hostsFile.toUri().getPath());
++    conf.set(DFSConfigKeys.DFS_HOSTS_EXCLUDE, excludeFile.toUri().getPath());
++    writeConfigFile(hostsFile, null);
++    writeConfigFile(excludeFile, null);    
++    String[] args = {"-includeFile"};
++    String ret = runTool(conf, args, true);
++    assertEquals(hostsFile.toUri().getPath(),ret.trim());
++    cleanupFile(localFileSys, excludeFile.getParent());
++  }
++  
++  private void writeConfigFile(Path name, ArrayList<String> nodes) 
++      throws IOException {
++      // delete if it already exists
++      if (localFileSys.exists(name)) {
++        localFileSys.delete(name, true);
++      }
++
++      FSDataOutputStream stm = localFileSys.create(name);
++      
++      if (nodes != null) {
++        for (Iterator<String> it = nodes.iterator(); it.hasNext();) {
++          String node = it.next();
++          stm.writeBytes(node);
++          stm.writeBytes("\n");
++        }
++      }
++      stm.close();
++    }
++  
++  private void cleanupFile(FileSystem fileSys, Path name) throws IOException {
++    assertTrue(fileSys.exists(name));
++    fileSys.delete(name, true);
++    assertTrue(!fileSys.exists(name));
++  }
+ }
+-- 
+1.7.0.4
+

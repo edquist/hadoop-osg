@@ -1,7 +1,7 @@
 From 537899cca788aacfb62a55f046bb857efd8bb2b1 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 13 Jul 2012 00:43:01 +0000
-Subject: [PATCH 330/545] MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
+Subject: [PATCH 0330/1612] MAPREDUCE-3451. Port Fair Scheduler to MR2 (pwendell via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1361020 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit fa84b0d4abe092b855321895cec95a15e9be00ce)

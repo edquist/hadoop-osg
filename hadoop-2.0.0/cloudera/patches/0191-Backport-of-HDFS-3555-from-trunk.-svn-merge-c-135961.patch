@@ -1,7 +1,7 @@
 From c16c4ab1ad302188cb5b1da752f8016f7890c1f4 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Tue, 10 Jul 2012 11:53:39 +0000
-Subject: [PATCH 191/545] Backport of HDFS-3555 from trunk. svn merge -c 1359619 ../../trunk. (harsh)
+Subject: [PATCH 0191/1612] Backport of HDFS-3555 from trunk. svn merge -c 1359619 ../../trunk. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1359621 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e81a36cbb6329d0482495fac7090b437c303fb44)

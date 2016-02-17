@@ -1,7 +1,7 @@
 From 1446907d1f5d642520e36fa8feedefa183aefa62 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 19 Jul 2012 18:22:56 +0000
-Subject: [PATCH 240/545] HDFS-3673. libhdfs: fix some compiler warnings. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0240/1612] HDFS-3673. libhdfs: fix some compiler warnings. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363457 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2538173a98a654f4d263493361b6c0ee3229490d)

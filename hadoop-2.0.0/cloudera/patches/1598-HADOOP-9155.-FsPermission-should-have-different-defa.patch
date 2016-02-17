@@ -1,0 +1,359 @@
+From 5e78c69add172909838882272f0b9ca38bb8d547 Mon Sep 17 00:00:00 2001
+From: Charles Lamb <clamb@cloudera.com>
+Date: Mon, 28 Apr 2014 11:27:51 -0400
+Subject: [PATCH 1598/1612] HADOOP-9155. FsPermission should have different default value, 777 for directory and 666 for file. Contributed by Binglin Chang.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1431148 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 956570fe0fa38c10d03601c3ec01fbb913191425)
+
+Conflicts:
+
+	hadoop-common-project/hadoop-common/CHANGES.txt
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSClient.java
+---
+ .../java/org/apache/hadoop/fs/FileContext.java     |   24 ++++++++++++++++--
+ .../main/java/org/apache/hadoop/fs/FileStatus.java |   13 ++++++++--
+ .../main/java/org/apache/hadoop/fs/FileSystem.java |    6 ++--
+ .../org/apache/hadoop/fs/ftp/FTPFileSystem.java    |    4 +-
+ .../org/apache/hadoop/fs/local/RawLocalFs.java     |    2 +-
+ .../apache/hadoop/fs/permission/FsPermission.java  |   25 +++++++++++++++++++-
+ .../hadoop/fs/FileContextPermissionBase.java       |    2 +-
+ .../java/org/apache/hadoop/fs/TestFileStatus.java  |    4 +-
+ .../fs/TestLocalFSFileContextMainOperations.java   |   12 +++++++++
+ .../hadoop/fs/TestLocalFileSystemPermission.java   |    2 +-
+ .../java/org/apache/hadoop/hdfs/DFSClient.java     |   10 ++++----
+ .../hadoop/hdfs/protocol/HdfsFileStatus.java       |    5 +++-
+ 12 files changed, 86 insertions(+), 23 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileContext.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileContext.java
+index 2df511c..7d020c3 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileContext.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileContext.java
+@@ -162,7 +162,25 @@ import org.apache.hadoop.util.ShutdownHookManager;
+ public final class FileContext {
+   
+   public static final Log LOG = LogFactory.getLog(FileContext.class);
++  /**
++   * Default permission for directory and symlink
++   * In previous versions, this default permission was also used to
++   * create files, so files created end up with ugo+x permission.
++   * See HADOOP-9155 for detail. 
++   * Two new constants are added to solve this, please use 
++   * {@link FileContext#DIR_DEFAULT_PERM} for directory, and use
++   * {@link FileContext#FILE_DEFAULT_PERM} for file.
++   * This constant is kept for compatibility.
++   */
+   public static final FsPermission DEFAULT_PERM = FsPermission.getDefault();
++  /**
++   * Default permission for directory
++   */
++  public static final FsPermission DIR_DEFAULT_PERM = FsPermission.getDirDefault();
++  /**
++   * Default permission for file
++   */
++  public static final FsPermission FILE_DEFAULT_PERM = FsPermission.getFileDefault();
+ 
+   /**
+    * Priority of the FileContext shutdown hook.
+@@ -644,7 +662,7 @@ public final class FileContext {
+     CreateOpts.Perms permOpt = 
+       (CreateOpts.Perms) CreateOpts.getOpt(CreateOpts.Perms.class, opts);
+     FsPermission permission = (permOpt != null) ? permOpt.getValue() :
+-                                      FsPermission.getDefault();
++                                      FILE_DEFAULT_PERM;
+     permission = permission.applyUMask(umask);
+ 
+     final CreateOpts[] updatedOpts = 
+@@ -691,7 +709,7 @@ public final class FileContext {
+       IOException {
+     final Path absDir = fixRelativePart(dir);
+     final FsPermission absFerms = (permission == null ? 
+-          FsPermission.getDefault() : permission).applyUMask(umask);
++          FsPermission.getDirDefault() : permission).applyUMask(umask);
+     new FSLinkResolver<Void>() {
+       public Void next(final AbstractFileSystem fs, final Path p) 
+         throws IOException, UnresolvedLinkException {
+@@ -2125,7 +2143,7 @@ public final class FileContext {
+       FileStatus fs = FileContext.this.getFileStatus(qSrc);
+       if (fs.isDirectory()) {
+         checkDependencies(qSrc, qDst);
+-        mkdir(qDst, FsPermission.getDefault(), true);
++        mkdir(qDst, FsPermission.getDirDefault(), true);
+         FileStatus[] contents = listStatus(qSrc);
+         for (FileStatus content : contents) {
+           copy(makeQualified(content.getPath()), makeQualified(new Path(qDst,
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileStatus.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileStatus.java
+index be9e734..99efd78 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileStatus.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileStatus.java
+@@ -79,8 +79,15 @@ public class FileStatus implements Writable, Comparable {
+     this.blocksize = blocksize;
+     this.modification_time = modification_time;
+     this.access_time = access_time;
+-    this.permission = (permission == null) ? 
+-                      FsPermission.getDefault() : permission;
++    if (permission != null) {
++      this.permission = permission;
++    } else if (isdir) {
++      this.permission = FsPermission.getDirDefault();
++    } else if (symlink!=null) {
++      this.permission = FsPermission.getDefault();
++    } else {
++      this.permission = FsPermission.getFileDefault();
++    }
+     this.owner = (owner == null) ? "" : owner;
+     this.group = (group == null) ? "" : group;
+     this.symlink = symlink;
+@@ -217,7 +224,7 @@ public class FileStatus implements Writable, Comparable {
+    */
+   protected void setPermission(FsPermission permission) {
+     this.permission = (permission == null) ? 
+-                      FsPermission.getDefault() : permission;
++                      FsPermission.getFileDefault() : permission;
+   }
+   
+   /**
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileSystem.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileSystem.java
+index 866b442..6483b88 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileSystem.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/FileSystem.java
+@@ -885,7 +885,7 @@ public abstract class FileSystem extends Configured implements Closeable {
+                                             long blockSize,
+                                             Progressable progress
+                                             ) throws IOException {
+-    return this.create(f, FsPermission.getDefault().applyUMask(
++    return this.create(f, FsPermission.getFileDefault().applyUMask(
+         FsPermission.getUMask(getConf())), overwrite, bufferSize,
+         replication, blockSize, progress);
+   }
+@@ -1065,7 +1065,7 @@ public abstract class FileSystem extends Configured implements Closeable {
+       boolean overwrite,
+       int bufferSize, short replication, long blockSize,
+       Progressable progress) throws IOException {
+-    return this.createNonRecursive(f, FsPermission.getDefault(),
++    return this.createNonRecursive(f, FsPermission.getFileDefault(),
+         overwrite, bufferSize, replication, blockSize, progress);
+   }
+ 
+@@ -1912,7 +1912,7 @@ public abstract class FileSystem extends Configured implements Closeable {
+    * Call {@link #mkdirs(Path, FsPermission)} with default permission.
+    */
+   public boolean mkdirs(Path f) throws IOException {
+-    return mkdirs(f, FsPermission.getDefault());
++    return mkdirs(f, FsPermission.getDirDefault());
+   }
+ 
+   /**
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/ftp/FTPFileSystem.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/ftp/FTPFileSystem.java
+index 1c19ce2..4f8c128 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/ftp/FTPFileSystem.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/ftp/FTPFileSystem.java
+@@ -224,7 +224,7 @@ public class FTPFileSystem extends FileSystem {
+     }
+     
+     Path parent = absolute.getParent();
+-    if (parent == null || !mkdirs(client, parent, FsPermission.getDefault())) {
++    if (parent == null || !mkdirs(client, parent, FsPermission.getDirDefault())) {
+       parent = (parent == null) ? new Path("/") : parent;
+       disconnect(client);
+       throw new IOException("create(): Mkdirs failed to create: " + parent);
+@@ -483,7 +483,7 @@ public class FTPFileSystem extends FileSystem {
+     if (!exists(client, absolute)) {
+       Path parent = absolute.getParent();
+       created = (parent == null || mkdirs(client, parent, FsPermission
+-          .getDefault()));
++          .getDirDefault()));
+       if (created) {
+         String parentDir = parent.toUri().getPath();
+         client.changeWorkingDirectory(parentDir);
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/local/RawLocalFs.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/local/RawLocalFs.java
+index ab3e2e1..f42f17c 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/local/RawLocalFs.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/local/RawLocalFs.java
+@@ -85,7 +85,7 @@ public class RawLocalFs extends DelegateToFileSystem {
+                             "system: "+target.toString());
+     }
+     if (createParent) {
+-      mkdir(link.getParent(), FsPermission.getDefault(), true);
++      mkdir(link.getParent(), FsPermission.getDirDefault(), true);
+     }
+     // NB: Use createSymbolicLink in java.nio.file.Path once available
+     try {
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/permission/FsPermission.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/permission/FsPermission.java
+index fc29fc7..0939d65 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/permission/FsPermission.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/permission/FsPermission.java
+@@ -274,12 +274,35 @@ public class FsPermission implements Writable {
+     conf.setInt(DEPRECATED_UMASK_LABEL, umask.toShort());
+   }
+ 
+-  /** Get the default permission. */
++  /**
++   * Get the default permission for directory and symlink.
++   * In previous versions, this default permission was also used to
++   * create files, so files created end up with ugo+x permission.
++   * See HADOOP-9155 for detail. 
++   * Two new methods are added to solve this, please use 
++   * {@link FsPermission#getDirDefault()} for directory, and use
++   * {@link FsPermission#getFileDefault()} for file.
++   * This method is kept for compatibility.
++   */
+   public static FsPermission getDefault() {
+     return new FsPermission((short)00777);
+   }
+ 
+   /**
++   * Get the default permission for directory.
++   */
++  public static FsPermission getDirDefault() {
++    return new FsPermission((short)00777);
++  }
++
++  /**
++   * Get the default permission for file.
++   */
++  public static FsPermission getFileDefault() {
++    return new FsPermission((short)00666);
++  }
++
++  /**
+    * Create a FsPermission from a Unix symbolic permission string
+    * @param unixSymbolicPermission e.g. "-rw-rw-rw-"
+    */
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/FileContextPermissionBase.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/FileContextPermissionBase.java
+index 39ae246..d4f7277 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/FileContextPermissionBase.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/FileContextPermissionBase.java
+@@ -95,7 +95,7 @@ public abstract class FileContextPermissionBase {
+     String filename = "foo";
+     Path f = getTestRootPath(fc, filename);
+     createFile(fc, filename);
+-    doFilePermissionCheck(FileContext.DEFAULT_PERM.applyUMask(fc.getUMask()),
++    doFilePermissionCheck(FileContext.FILE_DEFAULT_PERM.applyUMask(fc.getUMask()),
+                         fc.getFileStatus(f).getPermission());
+   }
+   
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestFileStatus.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestFileStatus.java
+index e538048..5614dd6 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestFileStatus.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestFileStatus.java
+@@ -121,7 +121,7 @@ public class TestFileStatus {
+     FileStatus fileStatus = new FileStatus(LENGTH, isdir,
+         REPLICATION, BLKSIZE, MTIME, PATH);   
+     validateAccessors(fileStatus, LENGTH, isdir, REPLICATION, BLKSIZE, MTIME,
+-        0, FsPermission.getDefault(), "", "", null, PATH);
++        0, FsPermission.getDirDefault(), "", "", null, PATH);
+   }
+ 
+   /**
+@@ -131,7 +131,7 @@ public class TestFileStatus {
+   public void constructorBlank() throws IOException {
+     FileStatus fileStatus = new FileStatus();  
+     validateAccessors(fileStatus, 0, false, 0, 0, 0,
+-        0, FsPermission.getDefault(), "", "", null, null);
++        0, FsPermission.getFileDefault(), "", "", null, null);
+   }
+ 
+   /**
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestLocalFSFileContextMainOperations.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestLocalFSFileContextMainOperations.java
+index 901b6c9..f0ad445 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestLocalFSFileContextMainOperations.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestLocalFSFileContextMainOperations.java
+@@ -24,6 +24,8 @@ import org.apache.hadoop.conf.Configuration;
+ import org.junit.Assert;
+ import org.junit.Before;
+ import org.junit.Test;
++import org.apache.hadoop.fs.FileContextTestHelper;
++import org.apache.hadoop.fs.permission.FsPermission;
+ 
+ public class TestLocalFSFileContextMainOperations extends FileContextMainOperationsBaseTest {
+ 
+@@ -45,4 +47,14 @@ public class TestLocalFSFileContextMainOperations extends FileContextMainOperati
+     FileContext fc1 = FileContext.getLocalFSFileContext();
+     Assert.assertTrue(fc1 != fc);
+   }
++
++  @Test
++  public void testDefaultFilePermission() throws IOException {
++    Path file = FileContextTestHelper.getTestRootPath(fc,
++        "testDefaultFilePermission");
++    FileContextTestHelper.createFile(fc, file);
++    FsPermission expect = FileContext.FILE_DEFAULT_PERM.applyUMask(fc.getUMask());
++    Assert.assertEquals(expect, fc.getFileStatus(file)
++        .getPermission());
++  }
+ }
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestLocalFileSystemPermission.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestLocalFileSystemPermission.java
+index 4508e14..5e98573 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestLocalFileSystemPermission.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/fs/TestLocalFileSystemPermission.java
+@@ -73,7 +73,7 @@ public class TestLocalFileSystemPermission extends TestCase {
+     try {
+       FsPermission initialPermission = getPermission(localfs, f);
+       System.out.println(filename + ": " + initialPermission);
+-      assertEquals(FsPermission.getDefault().applyUMask(FsPermission.getUMask(conf)), initialPermission);
++      assertEquals(FsPermission.getFileDefault().applyUMask(FsPermission.getUMask(conf)), initialPermission);
+     }
+     catch(Exception e) {
+       System.out.println(StringUtils.stringifyException(e));
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSClient.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSClient.java
+index 9f87a9b..d22dd0d 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSClient.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSClient.java
+@@ -1170,8 +1170,8 @@ public class DFSClient implements java.io.Closeable {
+ 
+   /**
+    * Call {@link #create(String, FsPermission, EnumSet, short, long, 
+-   * Progressable, int)} with default <code>permission</code>
+-   * {@link FsPermission#getDefault()}.
++   * Progressable, int, ChecksumOpt)} with default <code>permission</code>
++   * {@link FsPermission#getFileDefault()}.
+    * 
+    * @param src File name
+    * @param overwrite overwrite an existing file if true
+@@ -1189,7 +1189,7 @@ public class DFSClient implements java.io.Closeable {
+                              Progressable progress,
+                              int buffersize)
+       throws IOException {
+-    return create(src, FsPermission.getDefault(),
++    return create(src, FsPermission.getFileDefault(),
+         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
+             : EnumSet.of(CreateFlag.CREATE), replication, blockSize, progress,
+         buffersize, null);
+@@ -1220,7 +1220,7 @@ public class DFSClient implements java.io.Closeable {
+    * 
+    * @param src File name
+    * @param permission The permission of the directory being created.
+-   *          If null, use default permission {@link FsPermission#getDefault()}
++   *          If null, use default permission {@link FsPermission#getFileDefault()}
+    * @param flag indicates create a new file or create/overwrite an
+    *          existing file or append to an existing file
+    * @param createParent create missing parent directory if true
+@@ -1246,7 +1246,7 @@ public class DFSClient implements java.io.Closeable {
+                              ChecksumOpt checksumOpt) throws IOException {
+     checkOpen();
+     if (permission == null) {
+-      permission = FsPermission.getDefault();
++      permission = FsPermission.getFileDefault();
+     }
+     FsPermission masked = permission.applyUMask(dfsClientConf.uMask);
+     if(LOG.isDebugEnabled()) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/HdfsFileStatus.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/HdfsFileStatus.java
+index e067867..26b6e98 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/HdfsFileStatus.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocol/HdfsFileStatus.java
+@@ -67,7 +67,10 @@ public class HdfsFileStatus {
+     this.modification_time = modification_time;
+     this.access_time = access_time;
+     this.permission = (permission == null) ? 
+-                      FsPermission.getDefault() : permission;
++        ((isdir || symlink!=null) ? 
++            FsPermission.getDefault() : 
++            FsPermission.getFileDefault()) :
++        permission;
+     this.owner = (owner == null) ? "" : owner;
+     this.group = (group == null) ? "" : group;
+     this.symlink = symlink;
+-- 
+1.7.0.4
+

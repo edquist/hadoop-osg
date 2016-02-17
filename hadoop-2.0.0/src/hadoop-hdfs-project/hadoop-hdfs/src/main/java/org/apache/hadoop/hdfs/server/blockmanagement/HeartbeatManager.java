@@ -56,17 +56,33 @@ class HeartbeatManager implements DatanodeStatistics {
   /** Heartbeat monitor thread */
   private final Daemon heartbeatThread = new Daemon(new Monitor());
 
+    
   final Namesystem namesystem;
   final BlockManager blockManager;
 
-  HeartbeatManager(final Namesystem namesystem, final BlockManager blockManager,
-      final Configuration conf) {
-    this.heartbeatRecheckInterval = conf.getInt(
-        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY, 
-        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 minutes
-
+  HeartbeatManager(final Namesystem namesystem,
+      final BlockManager blockManager, final Configuration conf) {
     this.namesystem = namesystem;
     this.blockManager = blockManager;
+    boolean avoidStaleDataNodesForWrite = conf.getBoolean(
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_AVOID_STALE_DATANODE_FOR_WRITE_DEFAULT);
+    long recheckInterval = conf.getInt(
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY,
+        DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_DEFAULT); // 5 min
+    long staleInterval = conf.getLong(
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY,
+        DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_DEFAULT);// 30s
+
+    if (avoidStaleDataNodesForWrite && staleInterval < recheckInterval) {
+      this.heartbeatRecheckInterval = staleInterval;
+      LOG.info("Setting heartbeat recheck interval to " + staleInterval
+          + " since " + DFSConfigKeys.DFS_NAMENODE_STALE_DATANODE_INTERVAL_KEY
+          + " is less than "
+          + DFSConfigKeys.DFS_NAMENODE_HEARTBEAT_RECHECK_INTERVAL_KEY);
+    } else {
+      this.heartbeatRecheckInterval = recheckInterval;
+    }
   }
 
   void activate(Configuration conf) {
@@ -208,21 +224,28 @@ class HeartbeatManager implements DatanodeStatistics {
     final DatanodeManager dm = blockManager.getDatanodeManager();
     // It's OK to check safe mode w/o taking the lock here, we re-check
     // for safe mode after taking the lock before removing a datanode.
-    if (namesystem.isInSafeMode()) {
+    if (namesystem.isInStartupSafeMode()) {
       return;
     }
     boolean allAlive = false;
     while (!allAlive) {
       // locate the first dead node.
       DatanodeID dead = null;
+      // check the number of stale nodes
+      int numOfStaleNodes = 0;
       synchronized(this) {
         for (DatanodeDescriptor d : datanodes) {
-          if (dm.isDatanodeDead(d)) {
+          if (dead == null && dm.isDatanodeDead(d)) {
             stats.incrExpiredHeartbeats();
             dead = d;
-            break;
+          }
+          if (d.isStale(dm.getStaleInterval())) {
+            numOfStaleNodes++;
           }
         }
+        
+        // Set the number of stale nodes in the DatanodeManager
+        dm.setNumStaleNodes(numOfStaleNodes);
       }
 
       allAlive = dead == null;
@@ -230,7 +253,7 @@ class HeartbeatManager implements DatanodeStatistics {
         // acquire the fsnamesystem lock, and then remove the dead node.
         namesystem.writeLock();
         try {
-          if (namesystem.isInSafeMode()) {
+          if (namesystem.isInStartupSafeMode()) {
             return;
           }
           synchronized(this) {

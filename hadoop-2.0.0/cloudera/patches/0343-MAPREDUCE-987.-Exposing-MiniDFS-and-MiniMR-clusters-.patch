@@ -1,7 +1,7 @@
 From 54bd087433d0e0c40e7fd87ba17929567fc9a3be Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 20 Jul 2012 23:19:23 +0000
-Subject: [PATCH 343/545] MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process command-line. (ahmed via tucu)
+Subject: [PATCH 0343/1612] MAPREDUCE-987. Exposing MiniDFS and MiniMR clusters as a single process command-line. (ahmed via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1364020 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7f68100c1603bf62a5b5812b6559a04a0daa806a)

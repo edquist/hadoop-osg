@@ -50,6 +50,7 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.UpgradeAction;
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
+import org.apache.hadoop.hdfs.protocol.HdfsConstants.SafeModeAction;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.TransferFsImage;
 import org.apache.hadoop.ipc.RPC;
@@ -84,7 +85,7 @@ public class DFSAdmin extends FsShell {
       super(fs.getConf());
       if (!(fs instanceof DistributedFileSystem)) {
         throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-            " is not a distributed file system");
+            " is not an HDFS file system");
       }
       this.dfs = (DistributedFileSystem)fs;
     }
@@ -288,7 +289,7 @@ public class DFSAdmin extends FsShell {
     FileSystem fs = getFS();
     if (!(fs instanceof DistributedFileSystem)) {
       throw new IllegalArgumentException("FileSystem " + fs.getUri() + 
-      " is not a distributed file system");
+      " is not an HDFS file system");
     }
     return (DistributedFileSystem)fs;
   }
@@ -323,8 +324,7 @@ public class DFSAdmin extends FsShell {
       System.out.println("DFS Used: " + used
                          + " (" + StringUtils.byteDesc(used) + ")");
       System.out.println("DFS Used%: "
-                         + StringUtils.limitDecimalTo2(((1.0 * used) / presentCapacity) * 100)
-                         + "%");
+          + StringUtils.formatPercent(used/(double)presentCapacity, 2));
       
       /* These counts are not always upto date. They are updated after  
        * iteration of an internal list. Should be updated in a few seconds to 
@@ -407,7 +407,7 @@ public class DFSAdmin extends FsShell {
         } catch (java.lang.InterruptedException e) {
           throw new IOException("Wait Interrupted");
         }
-        inSafeMode = dfs.isInSafeMode();
+        inSafeMode = dfs.setSafeMode(SafeModeAction.SAFEMODE_GET);
       }
     }
 
@@ -778,15 +778,15 @@ public class DFSAdmin extends FsShell {
    * Usage: java DFSAdmin -metasave filename
    * @param argv List of of command line parameters.
    * @param idx The index of the command that is being processed.
-   * @exception IOException if an error accoured wile accessing
+   * @exception IOException if an error occurred while accessing
    *            the file or path.
    */
   public int metaSave(String[] argv, int idx) throws IOException {
     String pathname = argv[idx];
     DistributedFileSystem dfs = getDFS();
     dfs.metaSave(pathname);
-    System.out.println("Created file " + pathname + " on server " +
-                       dfs.getUri());
+    System.out.println("Created metasave file " + pathname + " in the log " +
+        "directory of namenode " + dfs.getUri());
     return 0;
   }
 

@@ -49,7 +49,57 @@ import org.apache.hadoop.io.MD5Hash;
 import org.apache.hadoop.io.Text;
 
 /**
- * Contains inner classes for reading or writing the on-disk format for FSImages.
+ * Contains inner classes for reading or writing the on-disk format for
+ * FSImages.
+ * 
+ * In particular, the format of the FSImage looks like:
+ * <pre>
+ * FSImage {
+ *   LayoutVersion: int, NamespaceID: int, NumberItemsInFSDirectoryTree: long,
+ *   NamesystemGenerationStamp: long, TransactionID: long
+ *   {FSDirectoryTree, FilesUnderConstruction, SecretManagerState} (can be compressed)
+ * }
+ * 
+ * FSDirectoryTree (if {@link Feature#FSIMAGE_NAME_OPTIMIZATION} is supported) {
+ *   INodeInfo of root, NumberOfChildren of root: int
+ *   [list of INodeInfo of root's children],
+ *   [list of INodeDirectoryInfo of root's directory children]
+ * }
+ * 
+ * FSDirectoryTree (if {@link Feature#FSIMAGE_NAME_OPTIMIZATION} not supported){
+ *   [list of INodeInfo of INodes in topological order]
+ * }
+ * 
+ * INodeInfo {
+ *   {
+ *     LocalName: short + byte[]
+ *   } when {@link Feature#FSIMAGE_NAME_OPTIMIZATION} is supported
+ *   or 
+ *   {
+ *     FullPath: byte[]
+ *   } when {@link Feature#FSIMAGE_NAME_OPTIMIZATION} is not supported
+ *   ReplicationFactor: short, ModificationTime: long,
+ *   AccessTime: long, PreferredBlockSize: long,
+ *   NumberOfBlocks: int (-1 for INodeDirectory, -2 for INodeSymLink),
+ *   { 
+ *     NsQuota: long, DsQuota: long, FsPermission: short, PermissionStatus
+ *   } for INodeDirectory
+ *   or 
+ *   {
+ *     SymlinkString, FsPermission: short, PermissionStatus
+ *   } for INodeSymlink
+ *   or
+ *   {
+ *     [list of BlockInfo], FsPermission: short, PermissionStatus
+ *   } for INodeFile
+ * }
+ * 
+ * INodeDirectoryInfo {
+ *   FullPath of the directory: short + byte[],
+ *   NumberOfChildren: int, [list of INodeInfo of children INode]
+ *   [list of INodeDirectoryInfo of the directory children]
+ * }
+ * </pre>
  */
 @InterfaceAudience.Private
 @InterfaceStability.Evolving
@@ -181,8 +231,8 @@ class FSImageFormat {
         loadSecretManagerState(in);
 
         // make sure to read to the end of file
-        int eof = in.read();
-        assert eof == -1 : "Should have reached the end of image file " + curFile;
+        boolean eof = (in.read() == -1);
+        assert eof : "Should have reached the end of image file " + curFile;
       } finally {
         in.close();
       }
@@ -366,14 +416,7 @@ class FSImageFormat {
 
         // verify that file exists in namespace
         String path = cons.getLocalName();
-        INode old = fsDir.getFileINode(path);
-        if (old == null) {
-          throw new IOException("Found lease for non-existent file " + path);
-        }
-        if (old.isDirectory()) {
-          throw new IOException("Found lease for directory " + path);
-        }
-        INodeFile oldnode = (INodeFile) old;
+        INodeFile oldnode = INodeFile.valueOf(fsDir.getINode(path), path);
         fsDir.replaceNode(path, oldnode, cons);
         namesystem.leaseManager.addLease(cons.getClientName(), path); 
       }

@@ -1,7 +1,7 @@
 From 00000c7683be32596bb64c4a35b6d1d325cfc135 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Tue, 14 Aug 2012 00:52:10 +0000
-Subject: [PATCH 474/545] HDFS-3792. Fix two findbugs introduced by HDFS-3695. Contributed by Todd Lipcon.
+Subject: [PATCH 0474/1612] HDFS-3792. Fix two findbugs introduced by HDFS-3695. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1372690 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3af7ea7700202e897cfef8a694236b821ca66391)

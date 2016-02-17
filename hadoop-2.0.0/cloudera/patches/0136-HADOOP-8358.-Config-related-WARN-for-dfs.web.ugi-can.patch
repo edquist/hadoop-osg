@@ -1,7 +1,7 @@
 From ad4cf76b16dd31f0d50f5e21785a62035fd90330 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Mon, 28 May 2012 15:36:00 +0000
-Subject: [PATCH 136/545] HADOOP-8358. Config-related WARN for dfs.web.ugi can be avoided. (harsh)
+Subject: [PATCH 0136/1612] HADOOP-8358. Config-related WARN for dfs.web.ugi can be avoided. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1343290 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0a8fdd5fafaccd45bf87b6ad1d502687374c97d0)

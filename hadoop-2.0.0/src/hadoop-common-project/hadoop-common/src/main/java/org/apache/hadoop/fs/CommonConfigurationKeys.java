@@ -68,6 +68,11 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
     "ipc.server.read.threadpool.size";
   /** Default value for IPC_SERVER_RPC_READ_THREADS_KEY */
   public static final int     IPC_SERVER_RPC_READ_THREADS_DEFAULT = 1;
+  
+  public static final String IPC_MAXIMUM_DATA_LENGTH =
+      "ipc.maximum.data.length";
+  
+  public static final int IPC_MAXIMUM_DATA_LENGTH_DEFAULT = 64 * 1024 * 1024;
 
   /** How many calls per handler are allowed in the queue. */
   public static final String  IPC_SERVER_HANDLER_QUEUE_SIZE_KEY =
@@ -119,7 +124,18 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
   SECURITY_HA_SERVICE_PROTOCOL_ACL = "security.ha.service.protocol.acl";
   public static final String 
   SECURITY_ZKFC_PROTOCOL_ACL = "security.zkfc.protocol.acl";
-  
+  public static final String
+  SECURITY_CLIENT_PROTOCOL_ACL = "security.client.protocol.acl";
+  public static final String SECURITY_CLIENT_DATANODE_PROTOCOL_ACL =
+      "security.client.datanode.protocol.acl";
+  public static final String
+  SECURITY_DATANODE_PROTOCOL_ACL = "security.datanode.protocol.acl";
+  public static final String
+  SECURITY_INTER_DATANODE_PROTOCOL_ACL = "security.inter.datanode.protocol.acl";
+  public static final String
+  SECURITY_NAMENODE_PROTOCOL_ACL = "security.namenode.protocol.acl";
+  public static final String SECURITY_QJOURNAL_SERVICE_PROTOCOL_ACL =
+      "security.qjournal.service.protocol.acl";
   public static final String HADOOP_SECURITY_TOKEN_SERVICE_USE_IP =
       "hadoop.security.token.service.use_ip";
   public static final boolean HADOOP_SECURITY_TOKEN_SERVICE_USE_IP_DEFAULT =
@@ -189,5 +205,18 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
    */
   public static final String KERBEROS_TICKET_CACHE_PATH =
       "hadoop.security.kerberos.ticket.cache.path";
-}
 
+  public static final String HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_KEY =
+    "hadoop.security.uid.cache.secs";
+
+  public static final long HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_DEFAULT =
+    4*60*60; // 4 hours
+  
+  public static final String HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS =
+    "hadoop.user.group.metrics.percentiles.intervals";
+
+  public static final String RPC_METRICS_QUANTILE_ENABLE =
+      "rpc.metrics.quantile.enable";
+  public static final String  RPC_METRICS_PERCENTILES_INTERVALS_KEY =
+      "rpc.metrics.percentiles.intervals";
+}

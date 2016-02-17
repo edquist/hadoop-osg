@@ -24,11 +24,12 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
+import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
+import org.apache.hadoop.yarn.api.records.impl.pb.ApplicationSubmissionContextPBImpl;
 import org.apache.hadoop.yarn.MockApps;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.ApplicationsStore.ApplicationStore;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 
@@ -67,6 +68,11 @@ public class MockRMApp implements RMApp {
   @Override
   public ApplicationId getApplicationId() {
     return id;
+  }
+  
+  @Override
+  public ApplicationSubmissionContext getApplicationSubmissionContext() {
+    return new ApplicationSubmissionContextPBImpl();
   }
 
   @Override
@@ -119,7 +125,9 @@ public class MockRMApp implements RMApp {
   public Map<ApplicationAttemptId, RMAppAttempt> getAppAttempts() {
     Map<ApplicationAttemptId, RMAppAttempt> attempts =
       new LinkedHashMap<ApplicationAttemptId, RMAppAttempt>();
-    attempts.put(attempt.getAppAttemptId(), attempt);
+    if(attempt != null) {
+      attempts.put(attempt.getAppAttemptId(), attempt);
+    }
     return attempts;
   }
 
@@ -134,11 +142,6 @@ public class MockRMApp implements RMApp {
 
   @Override
   public ApplicationReport createAndGetApplicationReport(boolean allowAccess) {
-    throw new UnsupportedOperationException("Not supported yet.");
-  }
-
-  @Override
-  public ApplicationStore getApplicationStore() {
     throw new UnsupportedOperationException("Not supported yet.");
   }
 

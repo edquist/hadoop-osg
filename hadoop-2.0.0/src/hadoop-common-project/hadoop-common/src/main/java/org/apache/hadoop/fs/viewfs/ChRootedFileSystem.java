@@ -19,11 +19,14 @@ package org.apache.hadoop.fs.viewfs;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.net.URI;
+import java.util.EnumSet;
+
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.ContentSummary;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
@@ -89,7 +92,11 @@ class ChRootedFileSystem extends FilterFileSystem {
   public ChRootedFileSystem(final URI uri, Configuration conf)
       throws IOException {
     super(FileSystem.get(uri, conf));
-    chRootPathPart = new Path(uri.getPath());
+    String pathString = uri.getPath();
+    if (pathString.isEmpty()) {
+      pathString = "/";
+    }
+    chRootPathPart = new Path(pathString);
     chRootPathPartString = chRootPathPart.toUri().getPath();
     myUri = uri;
     workingDir = getHomeDirectory();
@@ -148,12 +155,6 @@ class ChRootedFileSystem extends FilterFileSystem {
     return makeQualified(
         new Path(chRootPathPartString + f.toUri().toString()));
   }
-  
-  @Override
-  public Path getHomeDirectory() {
-    return  new Path("/user/"+System.getProperty("user.name")).makeQualified(
-          getUri(), null);
-  }
 
   @Override
   public Path getWorkingDirectory() {
@@ -171,6 +172,16 @@ class ChRootedFileSystem extends FilterFileSystem {
       final long blockSize, final Progressable progress) throws IOException {
     return super.create(fullPath(f), permission, overwrite, bufferSize,
         replication, blockSize, progress);
+  }
+  
+  @Override
+  @Deprecated
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    
+    return super.createNonRecursive(fullPath(f), permission, flags, bufferSize, replication, blockSize,
+        progress);
   }
 
   @Override

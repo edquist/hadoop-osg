@@ -78,6 +78,10 @@ public class BlockPoolSliceStorage extends Storage {
     this.clusterID = clusterId;
   }
 
+  private BlockPoolSliceStorage() {
+    super(NodeType.DATA_NODE);
+  }
+
   /**
    * Analyze storage directories. Recover from previous transitions if required.
    * 
@@ -336,7 +340,7 @@ public class BlockPoolSliceStorage extends Storage {
     // 4.rename <SD>/curernt/<bpid>/previous.tmp to <SD>/curernt/<bpid>/previous
     rename(bpTmpDir, bpPrevDir);
     LOG.info("Upgrade of block pool " + blockpoolID + " at " + bpSd.getRoot()
-        + " is complete.");
+        + " is complete");
   }
 
   /**
@@ -382,7 +386,7 @@ public class BlockPoolSliceStorage extends Storage {
     if (!prevDir.exists())
       return;
     // read attributes out of the VERSION file of previous directory
-    DataStorage prevInfo = new DataStorage();
+    BlockPoolSliceStorage prevInfo = new BlockPoolSliceStorage();
     prevInfo.readPreviousVersionProperties(bpSd);
 
     // We allow rollback to a state, which is either consistent with
@@ -413,7 +417,7 @@ public class BlockPoolSliceStorage extends Storage {
     
     // 3. delete removed.tmp dir
     deleteDir(tmpDir);
-    LOG.info("Rollback of " + bpSd.getRoot() + " is complete.");
+    LOG.info("Rollback of " + bpSd.getRoot() + " is complete");
   }
 
   /*

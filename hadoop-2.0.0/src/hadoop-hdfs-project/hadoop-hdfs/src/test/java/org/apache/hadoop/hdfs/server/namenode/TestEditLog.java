@@ -69,6 +69,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.metrics.NameNodeMetrics;
 import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.test.GenericTestUtils;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.util.Time;
@@ -449,7 +450,7 @@ public class TestEditLog {
 
       // Now ask to sync edit from B, which should sync both edits.
       doCallLogSync(threadB, editLog);
-      assertEquals("logSync from second thread should bump txid up to 2",
+      assertEquals("logSync from second thread should bump txid up to 3",
         3, editLog.getSyncTxId());
 
       // Now ask to sync edit from A, which was already batched in - thus
@@ -629,6 +630,7 @@ public class TestEditLog {
         
         // Now restore the backup
         FileUtil.fullyDeleteContents(dfsDir);
+        dfsDir.delete();
         backupDir.renameTo(dfsDir);
         
         // Directory layout looks like:
@@ -755,19 +757,24 @@ public class TestEditLog {
       File log = new File(currentDir,
           NNStorage.getInProgressEditsFileName(3));
 
-      new EditLogFileOutputStream(log, 1024).create();
-      if (!inBothDirs) {
-        break;
+      EditLogFileOutputStream stream = new EditLogFileOutputStream(log, 1024);
+      try {
+        stream.create();
+        if (!inBothDirs) {
+          break;
+        }
+        
+        NNStorage storage = new NNStorage(conf, 
+            Collections.<URI>emptyList(),
+            Lists.newArrayList(uri));
+        
+        if (updateTransactionIdFile) {
+          storage.writeTransactionIdFileToStorage(3);
+        }
+        storage.close();
+      } finally {
+        stream.close();
       }
-      
-      NNStorage storage = new NNStorage(conf, 
-          Collections.<URI>emptyList(),
-          Lists.newArrayList(uri));
-      
-      if (updateTransactionIdFile) {
-        storage.writeTransactionIdFileToStorage(3);
-      }
-      storage.close();
     }
     
     try {
@@ -855,6 +862,11 @@ public class TestEditLog {
     @Override
     public boolean isInProgress() {
       return true;
+    }
+
+    @Override
+    public void setMaxOpSize(int maxOpSize) {
+      reader.setMaxOpSize(maxOpSize);
     }
   }
 
@@ -1211,22 +1223,19 @@ public class TestEditLog {
    *
    */
   static void validateNoCrash(byte garbage[]) throws IOException {
-    final String TEST_LOG_NAME = "test_edit_log";
+    final File TEST_LOG_NAME = new File(TEST_DIR, "test_edit_log");
 
     EditLogFileOutputStream elfos = null;
-    File file = null;
     EditLogFileInputStream elfis = null;
     try {
-      file = new File(TEST_LOG_NAME);
-      elfos = new EditLogFileOutputStream(file, 0);
+      elfos = new EditLogFileOutputStream(TEST_LOG_NAME, 0);
       elfos.create();
       elfos.writeRaw(garbage, 0, garbage.length);
       elfos.setReadyToFlush();
       elfos.flushAndSync(true);
       elfos.close();
       elfos = null;
-      file = new File(TEST_LOG_NAME);
-      elfis = new EditLogFileInputStream(file);
+      elfis = new EditLogFileInputStream(TEST_LOG_NAME);
 
       // verify that we can read everything without killing the JVM or
       // throwing an exception other than IOException
@@ -1329,12 +1338,15 @@ public class TestEditLog {
     FSEditLog editlog = getFSEditLog(storage);
     editlog.initJournalsForWrite();
     long startTxId = 1;
+    Collection<EditLogInputStream> streams = null;
     try {
-      readAllEdits(editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL),
-          startTxId);
+      streams = editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL);
+      readAllEdits(streams, startTxId);
     } catch (IOException e) {
       LOG.error("edit log failover didn't work", e);
       fail("Edit log failover didn't work");
+    } finally {
+      IOUtils.cleanup(null, streams.toArray(new EditLogInputStream[0]));
     }
   }
 
@@ -1375,12 +1387,15 @@ public class TestEditLog {
     FSEditLog editlog = getFSEditLog(storage);
     editlog.initJournalsForWrite();
     long startTxId = 1;
+    Collection<EditLogInputStream> streams = null;
     try {
-      readAllEdits(editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL),
-          startTxId);
+      streams = editlog.selectInputStreams(startTxId, 4*TXNS_PER_ROLL);
+      readAllEdits(streams, startTxId);
     } catch (IOException e) {
       LOG.error("edit log failover didn't work", e);
       fail("Edit log failover didn't work");
+    } finally {
+      IOUtils.cleanup(null, streams.toArray(new EditLogInputStream[0]));
     }
   }
 

@@ -19,8 +19,7 @@ package org.apache.hadoop.security;
 import static org.junit.Assert.*;
 import org.junit.*;
 
-import org.mockito.Mockito;
-import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.*;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -35,10 +34,12 @@ import javax.security.auth.login.AppConfigurationEntry;
 import javax.security.auth.login.LoginContext;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.io.Text;
 import org.apache.hadoop.metrics2.MetricsRecordBuilder;
 import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.security.token.TokenIdentifier;
+import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
 import static org.apache.hadoop.test.MetricsAsserts.*;
 import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 
@@ -50,6 +51,10 @@ public class TestUserGroupInformation {
   final private static String[] GROUP_NAMES = 
     new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
   
+  // Rollover interval of percentile metrics (in seconds)
+  private static final int PERCENTILES_INTERVAL = 1;
+  private static Configuration conf;
+ 
   /**
    * UGI should not use the default security conf, else it will collide
    * with other classes that may change the default conf.  Using this dummy
@@ -76,16 +81,22 @@ public class TestUserGroupInformation {
     UserGroupInformation.setConfiguration(conf);
     javax.security.auth.login.Configuration.setConfiguration(
         new DummyLoginConfiguration());
+
+    TestUserGroupInformation.conf = conf;
   }
-  
+
   /** Test login method */
   @Test
   public void testLogin() throws Exception {
+    conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
+      String.valueOf(PERCENTILES_INTERVAL));
+    UserGroupInformation.setConfiguration(conf);
     // login from unix
     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
     assertEquals(UserGroupInformation.getCurrentUser(),
                  UserGroupInformation.getLoginUser());
     assertTrue(ugi.getGroupNames().length >= 1);
+    verifyGroupMetrics(1);
 
     // ensure that doAs works correctly
     UserGroupInformation userGroupInfo = 
@@ -194,8 +205,6 @@ public class TestUserGroupInformation {
   public void testEqualsWithRealUser() throws Exception {
     UserGroupInformation realUgi1 = UserGroupInformation.createUserForTesting(
         "RealUser", GROUP_NAMES);
-    UserGroupInformation realUgi2 = UserGroupInformation.createUserForTesting(
-        "RealUser", GROUP_NAMES);
     UserGroupInformation proxyUgi1 = UserGroupInformation.createProxyUser(
         USER_NAME, realUgi1);
     UserGroupInformation proxyUgi2 =
@@ -213,7 +222,146 @@ public class TestUserGroupInformation {
     assertArrayEquals(new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME},
                       uugi.getGroupNames());
   }
+
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test
+  public <T extends TokenIdentifier> void testAddToken() throws Exception {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createRemoteUser("someone"); 
+    
+    Token<T> t1 = mock(Token.class);
+    Token<T> t2 = mock(Token.class);
+    Token<T> t3 = mock(Token.class);
+    
+    // add token to ugi
+    ugi.addToken(t1);
+    checkTokens(ugi, t1);
+
+    // replace token t1 with t2 - with same key (null)
+    ugi.addToken(t2);
+    checkTokens(ugi, t2);
+    
+    // change t1 service and add token
+    when(t1.getService()).thenReturn(new Text("t1"));
+    ugi.addToken(t1);
+    checkTokens(ugi, t1, t2);
   
+    // overwrite t1 token with t3 - same key (!null)
+    when(t3.getService()).thenReturn(new Text("t1"));
+    ugi.addToken(t3);
+    checkTokens(ugi, t2, t3);
+
+    // just try to re-add with new name
+    when(t1.getService()).thenReturn(new Text("t1.1"));
+    ugi.addToken(t1);
+    checkTokens(ugi, t1, t2, t3);    
+
+    // just try to re-add with new name again
+    ugi.addToken(t1);
+    checkTokens(ugi, t1, t2, t3);    
+  }
+
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test
+  public <T extends TokenIdentifier> void testGetCreds() throws Exception {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createRemoteUser("someone"); 
+    
+    Text service = new Text("service");
+    Token<T> t1 = mock(Token.class);
+    when(t1.getService()).thenReturn(service);
+    Token<T> t2 = mock(Token.class);
+    when(t2.getService()).thenReturn(new Text("service2"));
+    Token<T> t3 = mock(Token.class);
+    when(t3.getService()).thenReturn(service);
+    
+    // add token to ugi
+    ugi.addToken(t1);
+    ugi.addToken(t2);
+    checkTokens(ugi, t1, t2);
+
+    Credentials creds = ugi.getCredentials();
+    creds.addToken(t3.getService(), t3);
+    assertSame(t3, creds.getToken(service));
+    // check that ugi wasn't modified
+    checkTokens(ugi, t1, t2);
+  }
+
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test
+  public <T extends TokenIdentifier> void testAddCreds() throws Exception {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createRemoteUser("someone"); 
+    
+    Text service = new Text("service");
+    Token<T> t1 = mock(Token.class);
+    when(t1.getService()).thenReturn(service);
+    Token<T> t2 = mock(Token.class);
+    when(t2.getService()).thenReturn(new Text("service2"));
+    byte[] secret = new byte[]{};
+    Text secretKey = new Text("sshhh");
+
+    // fill credentials
+    Credentials creds = new Credentials();
+    creds.addToken(t1.getService(), t1);
+    creds.addToken(t2.getService(), t2);
+    creds.addSecretKey(secretKey, secret);
+    
+    // add creds to ugi, and check ugi
+    ugi.addCredentials(creds);
+    checkTokens(ugi, t1, t2);
+    assertSame(secret, ugi.getCredentials().getSecretKey(secretKey));
+  }
+
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test
+  public <T extends TokenIdentifier> void testGetCredsNotSame()
+      throws Exception {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createRemoteUser("someone"); 
+    Credentials creds = ugi.getCredentials();
+    // should always get a new copy
+    assertNotSame(creds, ugi.getCredentials());
+  }
+
+  
+  private void checkTokens(UserGroupInformation ugi, Token<?> ... tokens) {
+    // check the ugi's token collection
+    Collection<Token<?>> ugiTokens = ugi.getTokens();
+    for (Token<?> t : tokens) {
+      assertTrue(ugiTokens.contains(t));
+    }
+    assertEquals(tokens.length, ugiTokens.size());
+
+    // check the ugi's credentials
+    Credentials ugiCreds = ugi.getCredentials();
+    for (Token<?> t : tokens) {
+      assertSame(t, ugiCreds.getToken(t.getService()));
+    }
+    assertEquals(tokens.length, ugiCreds.numberOfTokens());
+  }
+
+  @SuppressWarnings("unchecked") // from Mockito mocks
+  @Test
+  public <T extends TokenIdentifier> void testAddNamedToken() throws Exception {
+    UserGroupInformation ugi = 
+        UserGroupInformation.createRemoteUser("someone"); 
+    
+    Token<T> t1 = mock(Token.class);
+    Text service1 = new Text("t1");
+    Text service2 = new Text("t2");
+    when(t1.getService()).thenReturn(service1);
+    
+    // add token
+    ugi.addToken(service1, t1);
+    assertSame(t1, ugi.getCredentials().getToken(service1));
+
+    // add token with another name
+    ugi.addToken(service2, t1);
+    assertSame(t1, ugi.getCredentials().getToken(service1));
+    assertSame(t1, ugi.getCredentials().getToken(service2));
+  }
+
   @SuppressWarnings("unchecked") // from Mockito mocks
   @Test
   public <T extends TokenIdentifier> void testUGITokens() throws Exception {
@@ -221,15 +369,26 @@ public class TestUserGroupInformation {
       UserGroupInformation.createUserForTesting("TheDoctor", 
                                                 new String [] { "TheTARDIS"});
     Token<T> t1 = mock(Token.class);
+    when(t1.getService()).thenReturn(new Text("t1"));
     Token<T> t2 = mock(Token.class);
+    when(t2.getService()).thenReturn(new Text("t2"));
+    
+    Credentials creds = new Credentials();
+    byte[] secretKey = new byte[]{};
+    Text secretName = new Text("shhh");
+    creds.addSecretKey(secretName, secretKey);
     
     ugi.addToken(t1);
     ugi.addToken(t2);
+    ugi.addCredentials(creds);
     
     Collection<Token<? extends TokenIdentifier>> z = ugi.getTokens();
     assertTrue(z.contains(t1));
     assertTrue(z.contains(t2));
     assertEquals(2, z.size());
+    Credentials ugiCreds = ugi.getCredentials();
+    assertSame(secretKey, ugiCreds.getSecretKey(secretName));
+    assertEquals(1, ugiCreds.numberOfSecretKeys());
     
     try {
       z.remove(t1);
@@ -363,6 +522,21 @@ public class TestUserGroupInformation {
     if (failure > 0) {
       assertCounter("LoginFailureNumPos", failure, rb);
       assertGaugeGt("LoginFailureAvgTime", 0, rb);
+    }
+  }
+
+  private static void verifyGroupMetrics(
+      long groups) throws InterruptedException {
+    MetricsRecordBuilder rb = getMetrics("UgiMetrics");
+    if (groups > 0) {
+      assertCounterGt("GetGroupsNumOps", groups-1, rb);
+      double avg = getDoubleGauge("GetGroupsAvgTime", rb);
+      assertTrue(avg >= 0.0);
+
+      // Sleep for an interval+slop to let the percentiles rollover
+      Thread.sleep((PERCENTILES_INTERVAL+1)*1000);
+      // Check that the percentiles were updated
+      assertQuantileGauges("GetGroups1s", rb);
     }
   }
 

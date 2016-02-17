@@ -41,6 +41,7 @@ import org.apache.hadoop.yarn.state.SingleArcTransition;
 import org.apache.hadoop.yarn.state.StateMachine;
 import org.apache.hadoop.yarn.state.StateMachineFactory;
 
+@SuppressWarnings({"unchecked", "rawtypes"})
 public class RMContainerImpl implements RMContainer {
 
   private static final Log LOG = LogFactory.getLog(RMContainerImpl.class);
@@ -95,10 +96,15 @@ public class RMContainerImpl implements RMContainer {
         RMContainerEventType.FINISHED, new FinishedTransition())
     .addTransition(RMContainerState.RUNNING, RMContainerState.KILLED,
         RMContainerEventType.KILL, new KillTransition())
+    .addTransition(RMContainerState.RUNNING, RMContainerState.RELEASED,
+        RMContainerEventType.RELEASED, new KillTransition())
+    .addTransition(RMContainerState.RUNNING, RMContainerState.RUNNING,
+        RMContainerEventType.EXPIRE)
 
     // Transitions from COMPLETED state
     .addTransition(RMContainerState.COMPLETED, RMContainerState.COMPLETED,
-        EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL))
+        EnumSet.of(RMContainerEventType.EXPIRE, RMContainerEventType.RELEASED,
+            RMContainerEventType.KILL))
 
     // Transitions from EXPIRED state
     .addTransition(RMContainerState.EXPIRED, RMContainerState.EXPIRED,
@@ -106,11 +112,13 @@ public class RMContainerImpl implements RMContainer {
 
     // Transitions from RELEASED state
     .addTransition(RMContainerState.RELEASED, RMContainerState.RELEASED,
-        EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL))
+        EnumSet.of(RMContainerEventType.EXPIRE, RMContainerEventType.RELEASED,
+            RMContainerEventType.KILL, RMContainerEventType.FINISHED))
 
     // Transitions from KILLED state
     .addTransition(RMContainerState.KILLED, RMContainerState.KILLED,
-        EnumSet.of(RMContainerEventType.RELEASED, RMContainerEventType.KILL))
+        EnumSet.of(RMContainerEventType.EXPIRE, RMContainerEventType.RELEASED,
+            RMContainerEventType.KILL, RMContainerEventType.FINISHED))
 
     // create the topology tables
     .installTopology(); 
@@ -191,6 +199,11 @@ public class RMContainerImpl implements RMContainer {
   }
   
   @Override
+  public String toString() {
+    return containerId.toString();
+  }
+  
+  @Override
   public void handle(RMContainerEvent event) {
     LOG.debug("Processing " + event.getContainerId() + " of type " + event.getType());
     try {
@@ -213,7 +226,7 @@ public class RMContainerImpl implements RMContainer {
       writeLock.unlock();
     }
   }
-
+  
   private static class BaseTransition implements
       SingleArcTransition<RMContainerImpl, RMContainerEvent> {
 

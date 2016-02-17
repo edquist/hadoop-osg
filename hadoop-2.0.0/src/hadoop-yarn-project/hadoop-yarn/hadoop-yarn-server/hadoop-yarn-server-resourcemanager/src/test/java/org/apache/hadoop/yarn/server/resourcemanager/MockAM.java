@@ -28,8 +28,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.AllocateRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.AllocateResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.FinalApplicationStatus;
 import org.apache.hadoop.yarn.api.records.ContainerId;
@@ -47,7 +45,7 @@ public class MockAM {
   private volatile int responseId = 0;
   private final ApplicationAttemptId attemptId;
   private final RMContext context;
-  private final AMRMProtocol amRMProtocol;
+  private AMRMProtocol amRMProtocol;
 
   private final List<ResourceRequest> requests = new ArrayList<ResourceRequest>();
   private final List<ContainerId> releases = new ArrayList<ContainerId>();
@@ -58,6 +56,10 @@ public class MockAM {
     this.amRMProtocol = amRMProtocol;
     this.attemptId = attemptId;
   }
+  
+  void setAMRMProtocol(AMRMProtocol amRMProtocol) {
+    this.amRMProtocol = amRMProtocol;
+  }
 
   public void waitForState(RMAppAttemptState finalState) throws Exception {
     RMApp app = context.getRMApps().get(attemptId.getApplicationId());
@@ -66,7 +68,8 @@ public class MockAM {
     while (!finalState.equals(attempt.getAppAttemptState())
         && timeoutSecs++ < 20) {
       System.out
-          .println("AppAttempt State is : " + attempt.getAppAttemptState()
+          .println("AppAttempt : " + attemptId + " State is : " 
+              + attempt.getAppAttemptState()
               + " Waiting for state : " + finalState);
       Thread.sleep(500);
     }
@@ -91,14 +94,14 @@ public class MockAM {
     requests.addAll(createReq(hosts, memory, priority, containers));
   }
 
-  public AMResponse schedule() throws Exception {
-    AMResponse response = allocate(requests, releases);
+  public AllocateResponse schedule() throws Exception {
+    AllocateResponse response = allocate(requests, releases);
     requests.clear();
     releases.clear();
     return response;
   }
 
-  public AMResponse allocate(
+  public AllocateResponse allocate(
       String host, int memory, int numContainers,
       List<ContainerId> releases) throws Exception {
     List<ResourceRequest> reqs = createReq(new String[]{host}, memory, 1, numContainers);
@@ -112,13 +115,13 @@ public class MockAM {
       ResourceRequest hostReq = createResourceReq(host, memory, priority,
           containers);
       reqs.add(hostReq);
-      ResourceRequest rackReq = createResourceReq("default-rack", memory,
+      ResourceRequest rackReq = createResourceReq("/default-rack", memory,
           priority, containers);
       reqs.add(rackReq);
     }
 
-    ResourceRequest offRackReq = createResourceReq("*", memory, priority,
-        containers);
+    ResourceRequest offRackReq = createResourceReq(ResourceRequest.ANY, memory,
+        priority, containers);
     reqs.add(offRackReq);
     return reqs;
 
@@ -138,13 +141,12 @@ public class MockAM {
     return req;
   }
 
-  public AMResponse allocate(
+  public AllocateResponse allocate(
       List<ResourceRequest> resourceRequest, List<ContainerId> releases)
       throws Exception {
     AllocateRequest req = BuilderUtils.newAllocateRequest(attemptId,
         ++responseId, 0F, resourceRequest, releases);
-    AllocateResponse resp = amRMProtocol.allocate(req);
-    return resp.getAMResponse();
+    return amRMProtocol.allocate(req);
   }
 
   public void unregisterAppAttempt() throws Exception {

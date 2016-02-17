@@ -1,0 +1,46 @@
+From 19be38ebc83fbca72b049d11a9906b70260baa46 Mon Sep 17 00:00:00 2001
+From: Uma Maheswara Rao G <umamahesh@apache.org>
+Date: Tue, 31 Dec 2013 16:26:48 +0000
+Subject: [PATCH 1543/1612] Merge. HDFS-5671. Fix socket leak in DFSInputStream#getBlockReader. Contributed by JamesLi
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1554556 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit e719744b934987a8956b8b6c6426e1b578e1a921)
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java
+---
+ .../org/apache/hadoop/hdfs/DFSInputStream.java     |   18 ++++++++++++++----
+ 1 files changed, 14 insertions(+), 4 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java
+index 4841e80..332b01c 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSInputStream.java
+@@ -1113,10 +1113,20 @@ public class DFSInputStream extends FSInputStream implements ByteBufferReadable
+     }
+     // Try to create a new remote peer.
+     Peer peer = newTcpPeer(dnAddr);
+-    return BlockReaderFactory.newBlockReader(
+-        dfsClient.conf, file, block, blockToken, startOffset,
+-        len, verifyChecksum, clientName, peer, chosenNode, 
+-        dsFactory, peerCache, fileInputStreamCache, false);
++    try {
++      reader = BlockReaderFactory.newBlockReader(dfsClient.getConf(), file,
++          block, blockToken, startOffset, len, verifyChecksum, clientName,
++          peer, chosenNode, dsFactory, peerCache, fileInputStreamCache, false);
++      return reader;
++    } catch (IOException ex) {
++      DFSClient.LOG.debug(
++          "Exception while getting block reader, closing stale " + peer, ex);
++      throw ex;
++    } finally {
++      if (reader == null) {
++        IOUtils.closeQuietly(peer);
++      }
++    }
+   }
+ 
+ 
+-- 
+1.7.0.4
+

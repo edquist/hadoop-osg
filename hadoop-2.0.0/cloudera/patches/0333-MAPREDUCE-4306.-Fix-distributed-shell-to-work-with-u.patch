@@ -1,7 +1,7 @@
 From 3942d8957bfbb040c59fec061c21a518f918c206 Mon Sep 17 00:00:00 2001
 From: Siddharth Seth <sseth@apache.org>
 Date: Tue, 19 Jun 2012 22:00:45 +0000
-Subject: [PATCH 333/545] MAPREDUCE-4306. Fix distributed shell to work with users other than the one running the daemons. (Contributed by Ahmed Radwan)
+Subject: [PATCH 0333/1612] MAPREDUCE-4306. Fix distributed shell to work with users other than the one running the daemons. (Contributed by Ahmed Radwan)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1351876 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 46242e779cef66e0d01518bc6fbb64470065418b)

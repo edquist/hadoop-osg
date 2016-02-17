@@ -86,6 +86,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.rmapp.RMApp;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttempt;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptState;
 import org.apache.hadoop.yarn.server.resourcemanager.security.ApplicationTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
@@ -217,10 +218,11 @@ public class TestContainerManagerSecurity {
     dummyIdentifier.readFields(di);
 
     // Malice user modifies the resource amount
-    Resource modifiedResource = BuilderUtils.newResource(2048);
+    Resource modifiedResource = BuilderUtils.newResource(2048, 1);
     ContainerTokenIdentifier modifiedIdentifier = new ContainerTokenIdentifier(
-        dummyIdentifier.getContainerID(), dummyIdentifier.getNmHostAddress(),
-        modifiedResource, Long.MAX_VALUE);
+        dummyIdentifier.getContainerID(), dummyIdentifier.getNmHostAddress(), "testUser",
+        modifiedResource, Long.MAX_VALUE, dummyIdentifier.getMasterKeyId());
+
     Token<ContainerTokenIdentifier> modifiedToken = new Token<ContainerTokenIdentifier>(
         modifiedIdentifier.getBytes(), containerToken.getPassword().array(),
         new Text(containerToken.getKind()), new Text(containerToken
@@ -248,14 +250,14 @@ public class TestContainerManagerSecurity {
               + "it will indicate RPC success");
         } catch (Exception e) {
           Assert.assertEquals(
-              java.lang.reflect.UndeclaredThrowableException.class
-                  .getCanonicalName(), e.getClass().getCanonicalName());
+            java.lang.reflect.UndeclaredThrowableException.class
+              .getCanonicalName(), e.getClass().getCanonicalName());
           Assert.assertTrue(e
-              .getCause()
-              .getMessage()
-              .contains(
-                  "DIGEST-MD5: digest response format violation. "
-                      + "Mismatched response."));
+            .getCause()
+            .getMessage()
+            .contains(
+              "DIGEST-MD5: digest response format violation. "
+                  + "Mismatched response."));
         }
         return null;
       }
@@ -319,24 +321,29 @@ public class TestContainerManagerSecurity {
 
         callWithIllegalContainerID(client, tokenId);
         callWithIllegalResource(client, tokenId);
+        callWithIllegalUserName(client, tokenId);
 
         return client;
       }
     });
     
-    /////////// End of testing for illegal containerIDs and illegal Resources
+    // ///////// End of testing for illegal containerIDs, illegal Resources and
+    // illegal users
 
     /////////// Test calls with expired tokens
     RPC.stopProxy(client);
     unauthorizedUser = UserGroupInformation
         .createRemoteUser(containerID.toString());
 
+    RMContainerTokenSecretManager containerTokenSecreteManager = 
+      resourceManager.getRMContainerTokenSecretManager(); 
     final ContainerTokenIdentifier newTokenId =
         new ContainerTokenIdentifier(tokenId.getContainerID(),
-          tokenId.getNmHostAddress(), tokenId.getResource(),
-          System.currentTimeMillis() - 1);
+          tokenId.getNmHostAddress(), "testUser", tokenId.getResource(),
+          System.currentTimeMillis() - 1, 
+          containerTokenSecreteManager.getCurrentKey().getKeyId());
     byte[] passowrd =
-        resourceManager.getContainerTokenSecretManager().createPassword(
+        containerTokenSecreteManager.createPassword(
             newTokenId);
     // Create a valid token by using the key from the RM.
     token = new Token<ContainerTokenIdentifier>(
@@ -396,23 +403,9 @@ public class TestContainerManagerSecurity {
       UnsupportedFileSystemException, YarnRemoteException,
       InterruptedException {
 
-    // TODO: Use a resource to work around bugs. Today NM doesn't create local
-    // app-dirs if there are no file to download!!
-    String fileName = "testFile-" + appID.toString();
-    File testFile = new File(localDir.getAbsolutePath(), fileName);
-    FileWriter tmpFile = new FileWriter(testFile);
-    tmpFile.write("testing");
-    tmpFile.close();
-    URL testFileURL = ConverterUtils.getYarnUrlFromPath(FileContext
-        .getFileContext().makeQualified(
-            new Path(localDir.getAbsolutePath(), fileName)));
-    LocalResource rsrc = BuilderUtils.newLocalResource(testFileURL,
-        LocalResourceType.FILE, LocalResourceVisibility.PRIVATE, testFile
-            .length(), testFile.lastModified());
-
     ContainerLaunchContext amContainer = BuilderUtils
         .newContainerLaunchContext(null, "testUser", BuilderUtils
-            .newResource(1024), Collections.singletonMap(fileName, rsrc),
+            .newResource(1024, 1), Collections.<String, LocalResource>emptyMap(),
             new HashMap<String, String>(), Arrays.asList("sleep", "100"),
             new HashMap<String, ByteBuffer>(), null,
             new HashMap<ApplicationAccessType, String>());
@@ -489,14 +482,14 @@ public class TestContainerManagerSecurity {
 
     // Request a container allocation.
     List<ResourceRequest> ask = new ArrayList<ResourceRequest>();
-    ask.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0), "*",
-        BuilderUtils.newResource(1024), 1));
+    ask.add(BuilderUtils.newResourceRequest(BuilderUtils.newPriority(0),
+        ResourceRequest.ANY, BuilderUtils.newResource(1024, 1), 1));
 
     AllocateRequest allocateRequest = BuilderUtils.newAllocateRequest(
         BuilderUtils.newApplicationAttemptId(appID, 1), 0, 0F, ask,
         new ArrayList<ContainerId>());
     List<Container> allocatedContainers = scheduler.allocate(allocateRequest)
-        .getAMResponse().getAllocatedContainers();
+        .getAllocatedContainers();
 
     // Modify ask to request no more.
     allocateRequest.clearAsks();
@@ -508,7 +501,7 @@ public class TestContainerManagerSecurity {
       Thread.sleep(1000);
       allocateRequest.setResponseId(allocateRequest.getResponseId() + 1);
       allocatedContainers = scheduler.allocate(allocateRequest)
-          .getAMResponse().getAllocatedContainers();
+          .getAllocatedContainers();
     }
 
     Assert.assertNotNull("Container is not allocted!", allocatedContainers);
@@ -562,13 +555,38 @@ public class TestContainerManagerSecurity {
               + " but found " + context.getResource().toString()));
     }
   }
+  
+  void callWithIllegalUserName(ContainerManager client,
+      ContainerTokenIdentifier tokenId) {
+    StartContainerRequest request = recordFactory
+        .newRecordInstance(StartContainerRequest.class);
+    // Authenticated but unauthorized, due to wrong resource
+    ContainerLaunchContext context =
+        createContainerLaunchContextForTest(tokenId);
+    context.setUser("Saruman"); // Set a different user-name.
+    request.setContainerLaunchContext(context);
+    try {
+      client.startContainer(request);
+      fail("Connection initiation with unauthorized "
+          + "access is expected to fail.");
+    } catch (YarnRemoteException e) {
+      LOG.info("Got exception : ", e);
+      Assert.assertTrue(e.getMessage().contains(
+          "Unauthorized request to start container. "));
+      Assert.assertTrue(e.getMessage().contains(
+        "Expected user-name " + tokenId.getApplicationSubmitter()
+            + " but found " + context.getUser()));
+    }
+  }
 
   private ContainerLaunchContext createContainerLaunchContextForTest(
       ContainerTokenIdentifier tokenId) {
     ContainerLaunchContext context =
         BuilderUtils.newContainerLaunchContext(tokenId.getContainerID(),
             "testUser",
-            BuilderUtils.newResource(tokenId.getResource().getMemory()),
+            BuilderUtils.newResource(
+                tokenId.getResource().getMemory(), 
+                tokenId.getResource().getVirtualCores()),
             new HashMap<String, LocalResource>(),
             new HashMap<String, String>(), new ArrayList<String>(),
             new HashMap<String, ByteBuffer>(), null,

@@ -54,7 +54,15 @@
 <FONT color="green">051</FONT>       * If &lt;i&gt;names&lt;/i&gt; is empty, the returned list is also empty<a name="line.51"></a>
 <FONT color="green">052</FONT>       */<a name="line.52"></a>
 <FONT color="green">053</FONT>      public List&lt;String&gt; resolve(List&lt;String&gt; names);<a name="line.53"></a>
-<FONT color="green">054</FONT>    }<a name="line.54"></a>
+<FONT color="green">054</FONT>    <a name="line.54"></a>
+<FONT color="green">055</FONT>      /**<a name="line.55"></a>
+<FONT color="green">056</FONT>       * Reload all of the cached mappings.<a name="line.56"></a>
+<FONT color="green">057</FONT>       *<a name="line.57"></a>
+<FONT color="green">058</FONT>       * If there is a cache, this method will clear it, so that future accesses<a name="line.58"></a>
+<FONT color="green">059</FONT>       * will get a chance to see the new data.<a name="line.59"></a>
+<FONT color="green">060</FONT>       */<a name="line.60"></a>
+<FONT color="green">061</FONT>      public void reloadCachedMappings();<a name="line.61"></a>
+<FONT color="green">062</FONT>    }<a name="line.62"></a>
 
 
 

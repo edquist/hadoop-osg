@@ -1,7 +1,7 @@
 From c3e0b3a0e863492648d3b646e782b6a88c32ab07 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 31 Jul 2012 19:20:03 +0000
-Subject: [PATCH 449/545] MAPREDUCE-4493. Distibuted Cache Compatability Issues (Robert Evans via tgraves)
+Subject: [PATCH 0449/1612] MAPREDUCE-4493. Distibuted Cache Compatability Issues (Robert Evans via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367713 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ab5d67b75a79e3c13f51da5a9c304056f6daa290)

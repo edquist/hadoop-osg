@@ -1,7 +1,7 @@
 From e425d580faecff68f3c8ac0fd6d7012dba7fcfe6 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 29 Jun 2012 22:59:09 +0000
-Subject: [PATCH 184/545] HDFS-3580. incompatible types; no instance(s) of type variable(s) V exist so that V conforms to boolean compiling HttpFSServer.java with OpenJDK
+Subject: [PATCH 0184/1612] HDFS-3580. incompatible types; no instance(s) of type variable(s) V exist so that V conforms to boolean compiling HttpFSServer.java with OpenJDK
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1355595 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 651d4ca1affeb684560f016ee41ec6aa6177c24b)

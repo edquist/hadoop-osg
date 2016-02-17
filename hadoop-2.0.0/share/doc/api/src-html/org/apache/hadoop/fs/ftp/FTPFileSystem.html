@@ -227,7 +227,7 @@
 <FONT color="green">224</FONT>        }<a name="line.224"></a>
 <FONT color="green">225</FONT>        <a name="line.225"></a>
 <FONT color="green">226</FONT>        Path parent = absolute.getParent();<a name="line.226"></a>
-<FONT color="green">227</FONT>        if (parent == null || !mkdirs(client, parent, FsPermission.getDefault())) {<a name="line.227"></a>
+<FONT color="green">227</FONT>        if (parent == null || !mkdirs(client, parent, FsPermission.getDirDefault())) {<a name="line.227"></a>
 <FONT color="green">228</FONT>          parent = (parent == null) ? new Path("/") : parent;<a name="line.228"></a>
 <FONT color="green">229</FONT>          disconnect(client);<a name="line.229"></a>
 <FONT color="green">230</FONT>          throw new IOException("create(): Mkdirs failed to create: " + parent);<a name="line.230"></a>
@@ -486,7 +486,7 @@
 <FONT color="green">483</FONT>        if (!exists(client, absolute)) {<a name="line.483"></a>
 <FONT color="green">484</FONT>          Path parent = absolute.getParent();<a name="line.484"></a>
 <FONT color="green">485</FONT>          created = (parent == null || mkdirs(client, parent, FsPermission<a name="line.485"></a>
-<FONT color="green">486</FONT>              .getDefault()));<a name="line.486"></a>
+<FONT color="green">486</FONT>              .getDirDefault()));<a name="line.486"></a>
 <FONT color="green">487</FONT>          if (created) {<a name="line.487"></a>
 <FONT color="green">488</FONT>            String parentDir = parent.toUri().getPath();<a name="line.488"></a>
 <FONT color="green">489</FONT>            client.changeWorkingDirectory(parentDir);<a name="line.489"></a>

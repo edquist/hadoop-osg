@@ -1,7 +1,7 @@
 From e9ade756cd3ae27888a49c2b556f41d13b8e43d8 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Mon, 14 May 2012 19:38:12 -0700
-Subject: [PATCH 046/545] HDFS-3031. Fix complete() and getAdditionalBlock() RPCs to be idempotent. Contributed by Todd Lipcon.
+Subject: [PATCH 0046/1612] HDFS-3031. Fix complete() and getAdditionalBlock() RPCs to be idempotent. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1338467 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7964c411def1d96cd6c777323b6e1943796c1576)

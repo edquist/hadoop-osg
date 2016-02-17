@@ -1,7 +1,7 @@
 From 9f48556076be49f82822c6064cd1e835c2721d44 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Tue, 7 Aug 2012 17:46:24 +0000
-Subject: [PATCH 313/545] HDFS-3291. add test that covers HttpFS working w/ a non-HDFS Hadoop filesystem (tucu)
+Subject: [PATCH 0313/1612] HDFS-3291. add test that covers HttpFS working w/ a non-HDFS Hadoop filesystem (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1370392 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 759518e31ad64fa48114a2a12a90264d37d12c28)

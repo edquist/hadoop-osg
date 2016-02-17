@@ -1,7 +1,7 @@
 From 2dad664979fb8324f16e7f7673bd2d9ec6df8e70 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Mon, 4 Jun 2012 17:49:21 -0700
-Subject: [PATCH 091/545] MAPREDUCE-4301. Dedupe some strings in MRAM for memory savings (bobby via tgraves)
+Subject: [PATCH 0091/1612] MAPREDUCE-4301. Dedupe some strings in MRAM for memory savings (bobby via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1346002 13f79535-47bb-0310-9956-ffa450edef68
 ---

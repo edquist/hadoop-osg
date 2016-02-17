@@ -40,6 +40,8 @@ import org.apache.hadoop.util.ToolRunner;
 import java.io.IOException;
 import java.util.Random;
 
+import com.google.common.annotations.VisibleForTesting;
+
 /**
  * DistCp is the main driver-class for DistCpV2.
  * For command-line use, DistCp::main() orchestrates the parsing of command-line
@@ -87,7 +89,8 @@ public class DistCp extends Configured implements Tool {
   /**
    * To be used with the ToolRunner. Not for public consumption.
    */
-  private DistCp() {}
+  @VisibleForTesting
+  public DistCp() {}
 
   /**
    * Implementation of Tool::run(). Orchestrates the copy of source file(s)
@@ -98,9 +101,14 @@ public class DistCp extends Configured implements Tool {
    * @return On success, it returns 0. Else, -1.
    */
   public int run(String[] argv) {
+    if (argv.length < 1) {
+      OptionsParser.usage();
+      return DistCpConstants.INVALID_ARGUMENT;
+    }
+    
     try {
       inputOptions = (OptionsParser.parse(argv));
-
+      setTargetPathExists();
       LOG.info("Input Options: " + inputOptions);
     } catch (Throwable e) {
       LOG.error("Invalid arguments: ", e);
@@ -163,6 +171,18 @@ public class DistCp extends Configured implements Tool {
     return job;
   }
 
+  /**
+   * Set targetPathExists in both inputOptions and job config,
+   * for the benefit of CopyCommitter
+   */
+  private void setTargetPathExists() throws IOException {
+    Path target = inputOptions.getTargetPath();
+    FileSystem targetFS = target.getFileSystem(getConf());
+    boolean targetExists = targetFS.exists(target);
+    inputOptions.setTargetPathExists(targetExists);
+    getConf().setBoolean(DistCpConstants.CONF_LABEL_TARGET_PATH_EXISTS, 
+        targetExists);
+  }
   /**
    * Create Job object for submitting it, with all the configuration
    *
@@ -314,7 +334,7 @@ public class DistCp extends Configured implements Tool {
    * @return Returns the path where the copy listing is created
    * @throws IOException - If any
    */
-  private Path createInputFileListing(Job job) throws IOException {
+  protected Path createInputFileListing(Job job) throws IOException {
     Path fileListingPath = getFileListingPath();
     CopyListing copyListing = CopyListing.getCopyListing(job.getConfiguration(),
         job.getCredentials(), inputOptions);
@@ -329,7 +349,7 @@ public class DistCp extends Configured implements Tool {
    * @return - Path where the copy listing file has to be saved
    * @throws IOException - Exception if any
    */
-  private Path getFileListingPath() throws IOException {
+  protected Path getFileListingPath() throws IOException {
     String fileListPathStr = metaFolder + "/fileList.seq";
     Path path = new Path(fileListPathStr);
     return new Path(path.toUri().normalize().toString());
@@ -359,18 +379,20 @@ public class DistCp extends Configured implements Tool {
    * @param argv Command-line arguments sent to DistCp.
    */
   public static void main(String argv[]) {
+    int exitCode;
     try {
       DistCp distCp = new DistCp();
       Cleanup CLEANUP = new Cleanup(distCp);
 
       ShutdownHookManager.get().addShutdownHook(CLEANUP,
         SHUTDOWN_HOOK_PRIORITY);
-      System.exit(ToolRunner.run(getDefaultConf(), distCp, argv));
+      exitCode = ToolRunner.run(getDefaultConf(), distCp, argv);
     }
     catch (Exception e) {
       LOG.error("Couldn't complete DistCp operation: ", e);
-      System.exit(DistCpConstants.UNKNOWN_ERROR);
+      exitCode = DistCpConstants.UNKNOWN_ERROR;
     }
+    System.exit(exitCode);
   }
 
   /**

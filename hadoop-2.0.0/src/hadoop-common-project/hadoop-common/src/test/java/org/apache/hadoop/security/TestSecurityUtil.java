@@ -137,6 +137,7 @@ public class TestSecurityUtil {
 
   @Test
   public void testBuildDTServiceName() {
+    SecurityUtil.setTokenServiceUseIp(true);
     assertEquals("127.0.0.1:123",
         SecurityUtil.buildDTServiceName(URI.create("test://LocalHost"), 123)
     );
@@ -153,6 +154,7 @@ public class TestSecurityUtil {
   
   @Test
   public void testBuildTokenServiceSockAddr() {
+    SecurityUtil.setTokenServiceUseIp(true);
     assertEquals("127.0.0.1:123",
         SecurityUtil.buildTokenService(new InetSocketAddress("LocalHost", 123)).toString()
     );
@@ -319,7 +321,9 @@ public class TestSecurityUtil {
 
   @Test
   public void testSocketAddrWithIP() {
-    verifyServiceAddr("127.0.0.1", "127.0.0.1");
+    String staticHost = "127.0.0.1";
+    NetUtils.addStaticResolution(staticHost, "localhost");
+    verifyServiceAddr(staticHost, "127.0.0.1");
   }
 
   @Test

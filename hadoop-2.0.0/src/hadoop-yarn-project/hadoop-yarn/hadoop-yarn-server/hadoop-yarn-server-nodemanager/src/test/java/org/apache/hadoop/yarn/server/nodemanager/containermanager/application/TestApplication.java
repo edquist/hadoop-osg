@@ -30,9 +30,9 @@ import java.util.HashMap;
 import java.util.List;
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
-import org.apache.hadoop.yarn.api.records.ApplicationAccessType;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.ContainerLaunchContext;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
@@ -50,8 +50,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.Conta
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ApplicationLocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
-import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.security.ApplicationACLsManager;
@@ -142,6 +142,60 @@ public class TestApplication {
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
 
       wa.containerFinished(0);
+      assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
+      assertEquals(2, wa.app.getContainers().size());
+
+      wa.containerFinished(1);
+      wa.containerFinished(2);
+      assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
+      assertEquals(0, wa.app.getContainers().size());
+    } finally {
+      if (wa != null)
+        wa.finished();
+    }
+  }
+
+  /**
+   * Finished containers properly tracked when only container finishes in APP_INITING
+   */
+  @Test
+  public void testContainersCompleteDuringAppInit1() {
+    WrappedApplication wa = null;
+    try {
+      wa = new WrappedApplication(3, 314159265358979L, "yak", 1);
+      wa.initApplication();
+      wa.initContainer(-1);
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+
+      wa.containerFinished(0);
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+
+      wa.applicationInited();
+      assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
+      assertEquals(0, wa.app.getContainers().size());
+    } finally {
+      if (wa != null)
+        wa.finished();
+    }
+  }
+
+  /**
+   * Finished containers properly tracked when 1 of several containers finishes in APP_INITING
+   */
+  @Test
+  public void testContainersCompleteDuringAppInit2() {
+    WrappedApplication wa = null;
+    try {
+      wa = new WrappedApplication(3, 314159265358979L, "yak", 3);
+      wa.initApplication();
+      wa.initContainer(-1);
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+
+      wa.containerFinished(0);
+
+      assertEquals(ApplicationState.INITING, wa.app.getApplicationState());
+
+      wa.applicationInited();
       assertEquals(ApplicationState.RUNNING, wa.app.getApplicationState());
       assertEquals(2, wa.app.getContainers().size());
 

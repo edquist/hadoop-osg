@@ -1,7 +1,7 @@
 From d509e27c57bff95f6d0f229fd967e8799b700c68 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 17 Aug 2012 23:26:55 +0000
-Subject: [PATCH 361/545] HADOOP-8710. Remove ability for users to easily run the trash emptire. Contributed by Eli Collins
+Subject: [PATCH 0361/1612] HADOOP-8710. Remove ability for users to easily run the trash emptire. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1374476 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 9e95aa75d67eb939a5f2cbfed5ca201e7e14ed69)

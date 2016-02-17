@@ -1,7 +1,7 @@
 From 5e4ef72c123e1cccd6622fdd60d6dc8058604596 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Mon, 11 Jun 2012 13:54:46 +0000
-Subject: [PATCH 262/545] MAPREDUCE-3927. Shuffle hang when set map.failures.percent (Bhallamudi Venkata Siva Kamesh via tgraves)
+Subject: [PATCH 0262/1612] MAPREDUCE-3927. Shuffle hang when set map.failures.percent (Bhallamudi Venkata Siva Kamesh via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1348846 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 91cee8c06bbfcee78cbdf63d3dc85435aa1c5342)

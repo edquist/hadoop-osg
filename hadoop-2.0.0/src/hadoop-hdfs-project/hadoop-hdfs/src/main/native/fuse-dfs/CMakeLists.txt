@@ -16,6 +16,8 @@
 # limitations under the License.
 #
 
+set(CMAKE_SKIP_RPATH TRUE)
+
 # Find Linux FUSE
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
     find_package(PkgConfig REQUIRED)
@@ -70,6 +72,7 @@ IF(FUSE_FOUND)
         hdfs
         m
         pthread
+        rt
     )
     add_executable(test_fuse_dfs
         test/test_fuse_dfs.c

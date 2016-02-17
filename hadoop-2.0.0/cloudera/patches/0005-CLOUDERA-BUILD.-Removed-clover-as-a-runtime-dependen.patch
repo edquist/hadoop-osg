@@ -1,7 +1,7 @@
 From 82713f59b907042eee057281d836f0bff9b89d80 Mon Sep 17 00:00:00 2001
 From: Patrick Hunt <phunt@cloudera.com>
 Date: Wed, 11 Apr 2012 17:02:33 -0700
-Subject: [PATCH 005/545] CLOUDERA-BUILD. Removed clover as a runtime dependency.
+Subject: [PATCH 0005/1612] CLOUDERA-BUILD. Removed clover as a runtime dependency.
 
 ---
  hadoop-project/pom.xml |    6 +-----

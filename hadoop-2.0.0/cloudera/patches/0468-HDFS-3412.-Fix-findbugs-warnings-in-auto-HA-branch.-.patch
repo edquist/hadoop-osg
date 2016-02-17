@@ -1,7 +1,7 @@
 From dfef183e72779173b9543436fb95fcfd96cfb8ae Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Tue, 15 May 2012 18:16:49 +0000
-Subject: [PATCH 468/545] HDFS-3412. Fix findbugs warnings in auto-HA branch. Contributed by Todd Lipcon.
+Subject: [PATCH 0468/1612] HDFS-3412. Fix findbugs warnings in auto-HA branch. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1338817 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 681018b2b99d971acb73318fcde3dfbf0a2e1321)

@@ -1,7 +1,7 @@
 From 519276841eea9fcc9360fc78db445dea2a5e7ff2 Mon Sep 17 00:00:00 2001
 From: Vinod Kumar Vavilapalli <vinodkv@apache.org>
 Date: Tue, 10 Jul 2012 21:26:48 +0000
-Subject: [PATCH 329/545] MAPREDUCE-3940. ContainerTokens should have an expiry interval. Contributed by Siddharth Seth and Vinod Kumar Vavilapalli.
+Subject: [PATCH 0329/1612] MAPREDUCE-3940. ContainerTokens should have an expiry interval. Contributed by Siddharth Seth and Vinod Kumar Vavilapalli.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1359910 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 50a1e204f9c25debf2666e117e0fe45560137def)

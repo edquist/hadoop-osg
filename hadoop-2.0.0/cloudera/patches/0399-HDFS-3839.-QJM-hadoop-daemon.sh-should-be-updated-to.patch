@@ -1,7 +1,7 @@
 From ce89743597dddd4c383dc612ae123c4d1217bad2 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 22 Aug 2012 18:46:00 +0000
-Subject: [PATCH 399/545] HDFS-3839. QJM: hadoop-daemon.sh should be updated to accept "journalnode". Contributed by Eli Collins
+Subject: [PATCH 0399/1612] HDFS-3839. QJM: hadoop-daemon.sh should be updated to accept "journalnode". Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1376187 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 06ccfe8b3953c7d76e7469a73d4350784f8ee5ed)

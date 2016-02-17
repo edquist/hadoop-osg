@@ -1,7 +1,7 @@
 From dd6657486238807b42887bf0f69da5fbcde65777 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:28:12 -0700
-Subject: [PATCH 367/545] Merge r:1344386 HDFS-3474. Cleanup Exception handling in BookKeeper journal manager. Contributed by Ivan Kelly.
+Subject: [PATCH 0367/1612] Merge r:1344386 HDFS-3474. Cleanup Exception handling in BookKeeper journal manager. Contributed by Ivan Kelly.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1344397 13f79535-47bb-0310-9956-ffa450edef68
 

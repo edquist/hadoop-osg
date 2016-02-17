@@ -1,7 +1,7 @@
 From 910f4991eef9c066aa324fa00213d3d7e0c93197 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 18:56:05 -0700
-Subject: [PATCH 391/545] HADOOP-8642. ProtobufRpcEngine should log all RPCs if TRACE logging is enabled. Contributed by Todd Lipcon.
+Subject: [PATCH 0391/1612] HADOOP-8642. ProtobufRpcEngine should log all RPCs if TRACE logging is enabled. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1366127 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3640d524661c7c83493281bba6439b1d4882418f)

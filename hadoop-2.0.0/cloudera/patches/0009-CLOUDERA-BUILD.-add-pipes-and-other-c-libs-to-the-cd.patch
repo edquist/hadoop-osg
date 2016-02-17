@@ -1,7 +1,7 @@
 From 09bb5da7ebaf04861172deacac90bcd389aafaed Mon Sep 17 00:00:00 2001
 From: Roman Shaposhnik <rvs@cloudera.com>
 Date: Thu, 29 Mar 2012 19:24:01 -0700
-Subject: [PATCH 009/545] CLOUDERA-BUILD. add pipes (and other c++ libs) to the cdh4 build (CDH-5075)
+Subject: [PATCH 0009/1612] CLOUDERA-BUILD. add pipes (and other c++ libs) to the cdh4 build (CDH-5075)
 
 ---
  .../resources/assemblies/hadoop-mapreduce-dist.xml |   15 +++++++++

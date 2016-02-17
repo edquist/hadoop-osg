@@ -1,7 +1,7 @@
 From 72c9300c98085032a3ea131d6bb90c2bb73c8fe8 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 6 Aug 2012 18:14:47 +0000
-Subject: [PATCH 279/545] MAPREDUCE-4498. Remove hsqldb jar from Hadoop runtime classpath. (rkanter via tucu)
+Subject: [PATCH 0279/1612] MAPREDUCE-4498. Remove hsqldb jar from Hadoop runtime classpath. (rkanter via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1369906 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5a12ba8b7e0c649bbb60634e01837a350fbd7f86)

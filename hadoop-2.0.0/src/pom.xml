@@ -17,11 +17,11 @@
   <parent>
     <groupId>com.cloudera.cdh</groupId>
     <artifactId>cdh-root</artifactId>
-    <version>4.1.1</version>
+    <version>4.7.1</version>
   </parent>
   <groupId>org.apache.hadoop</groupId>
   <artifactId>hadoop-main</artifactId>
-  <version>2.0.0-cdh4.1.1</version>
+  <version>2.0.0-cdh4.7.1</version>
   <description>Apache Hadoop Main</description>
   <name>Apache Hadoop Main</name>
   <packaging>pom</packaging>
@@ -83,6 +83,8 @@
   <properties>
     <distMgmtSnapshotsName>Apache Development Snapshot Repository</distMgmtSnapshotsName>
     <distMgmtSnapshotsUrl>https://repository.apache.org/content/repositories/snapshots</distMgmtSnapshotsUrl>
+    <javaVersion>1.6</javaVersion>
+    <targetJavaVersion>1.6</targetJavaVersion>
   </properties>
 
   <modules>
@@ -106,16 +108,6 @@
           <groupId>org.apache.maven.plugins</groupId>
           <artifactId>maven-enforcer-plugin</artifactId>
           <version>1.0</version>
-          <configuration>
-            <rules>
-              <requireMavenVersion>
-                <version>[3.0.2,)</version>
-              </requireMavenVersion>
-              <requireJavaVersion>
-                <version>1.6</version>
-              </requireJavaVersion>
-            </rules>
-          </configuration>
         </plugin>
         <plugin>
           <groupId>org.apache.maven.plugins</groupId>
@@ -157,6 +149,16 @@
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-enforcer-plugin</artifactId>
         <inherited>false</inherited>
+        <configuration>
+          <rules>
+            <requireMavenVersion>
+              <version>[3.0.2,)</version>
+            </requireMavenVersion>
+            <requireJavaVersion>
+              <version>[${javaVersion}.0,${javaVersion}.1000}]</version>
+            </requireJavaVersion>
+          </rules>
+        </configuration>
         <executions>
           <execution>
             <id>clean</id>

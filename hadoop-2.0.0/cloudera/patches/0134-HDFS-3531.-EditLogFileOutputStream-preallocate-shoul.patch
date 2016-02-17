@@ -1,7 +1,7 @@
 From be1d167b2c2cebd841d691a05bdd89f829223f05 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 13 Jun 2012 02:42:52 +0000
-Subject: [PATCH 134/545] HDFS-3531. EditLogFileOutputStream#preallocate should check for incomplete writes. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0134/1612] HDFS-3531. EditLogFileOutputStream#preallocate should check for incomplete writes. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349616 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b33b9fdd3691cd25b0787c7046524a8ffcfc56cc)

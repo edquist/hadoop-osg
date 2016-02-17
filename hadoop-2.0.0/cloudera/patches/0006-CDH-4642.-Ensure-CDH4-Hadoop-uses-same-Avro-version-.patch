@@ -1,7 +1,7 @@
 From 5e98bf2ed3ce851ac553de10566384a8f1315406 Mon Sep 17 00:00:00 2001
 From: Andrew Bayer <andrew@cloudera.com>
 Date: Tue, 13 Mar 2012 08:45:41 -0700
-Subject: [PATCH 006/545] CDH-4642. Ensure CDH4 Hadoop uses same Avro version as other components.
+Subject: [PATCH 0006/1612] CDH-4642. Ensure CDH4 Hadoop uses same Avro version as other components.
 
 ---
  hadoop-project/pom.xml |    4 ++--

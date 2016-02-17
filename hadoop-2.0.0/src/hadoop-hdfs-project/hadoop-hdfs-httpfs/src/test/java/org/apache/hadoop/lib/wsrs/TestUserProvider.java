@@ -19,13 +19,18 @@
 package org.apache.hadoop.lib.wsrs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertNull;
 
 import java.security.Principal;
 
 import javax.ws.rs.core.MultivaluedMap;
 
+import org.apache.hadoop.test.TestException;
+import org.apache.hadoop.test.TestExceptionHelper;
+import org.junit.Rule;
 import org.junit.Test;
+import org.junit.rules.MethodRule;
 import org.mockito.Mockito;
 import org.slf4j.MDC;
 
@@ -34,6 +39,9 @@ import com.sun.jersey.api.core.HttpRequestContext;
 import com.sun.jersey.core.spi.component.ComponentScope;
 
 public class TestUserProvider {
+
+  @Rule
+  public MethodRule exceptionHelper = new TestExceptionHelper();
 
   @Test
   @SuppressWarnings("unchecked")
@@ -92,4 +100,43 @@ public class TestUserProvider {
     assertEquals(up.getInjectable(null, null, Principal.class), up);
     assertNull(up.getInjectable(null, null, String.class));
   }
+
+  @Test
+  @TestException(exception = IllegalArgumentException.class)
+  public void userNameEmpty() {
+    new UserProvider.UserParam("");
+  }
+
+  @Test
+  @TestException(exception = IllegalArgumentException.class)
+  public void userNameInvalidStart() {
+    new UserProvider.UserParam("1x");
+  }
+
+  @Test
+  @TestException(exception = IllegalArgumentException.class)
+  public void userNameInvalidDollarSign() {
+    new UserProvider.UserParam("1$x");
+  }
+
+  @Test
+  public void userNameMinLength() {
+    new UserProvider.UserParam("a");
+  }
+
+  @Test
+  public void userNameValidDollarSign() {
+    new UserProvider.UserParam("a$");
+  }
+
+  @Test
+  public void customUserPattern() {
+    try {
+      UserProvider.setUserPattern("1");
+      new UserProvider.UserParam("1");      
+    } finally {
+      UserProvider.setUserPattern(UserProvider.USER_PATTERN_DEFAULT);
+    }
+  }
+
 }

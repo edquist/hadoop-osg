@@ -1,7 +1,7 @@
 From 0d0130e9e6f43bfacc6fc12181d492219083cb17 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Tue, 14 Aug 2012 21:32:09 -0700
-Subject: [PATCH 345/545] HADOOP-8699. some common testcases create core-site.xml in test-classes making other testcases to fail. (tucu)
+Subject: [PATCH 0345/1612] HADOOP-8699. some common testcases create core-site.xml in test-classes making other testcases to fail. (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1373207 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d30638d160f63e30c25c750a7fed4d516175a5c1)

@@ -1,7 +1,7 @@
 From 776851748da95e443aba4226b51ded27aae1c84c Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sat, 14 Jul 2012 00:22:55 +0000
-Subject: [PATCH 207/545] HDFS-3492. fix some misuses of InputStream#skip. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0207/1612] HDFS-3492. fix some misuses of InputStream#skip. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1361450 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 940df5ce6f647bc4e7c0a4a8d067c7514621482f)

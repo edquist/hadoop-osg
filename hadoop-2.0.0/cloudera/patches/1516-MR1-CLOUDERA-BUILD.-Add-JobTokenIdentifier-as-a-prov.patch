@@ -1,0 +1,24 @@
+From 98d1bf08e6ce42df9fc3194c2d1037bc259707cf Mon Sep 17 00:00:00 2001
+From: Karthik Kambatla <kasha@cloudera.com>
+Date: Sat, 16 Nov 2013 02:40:56 +0530
+Subject: [PATCH 1516/1612] MR1: CLOUDERA-BUILD. Add JobTokenIdentifier as a provider for TokenIdentifier
+
+---
+ hadoop-mapreduce1-project/build.xml |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/hadoop-mapreduce1-project/build.xml b/hadoop-mapreduce1-project/build.xml
+index 146c0f6..234f945 100644
+--- a/hadoop-mapreduce1-project/build.xml
++++ b/hadoop-mapreduce1-project/build.xml
+@@ -668,6 +668,7 @@
+         <provider classname="org.apache.hadoop.hdfs.HftpFileSystem$TokenManager"/>
+       </service>
+       <service type="org.apache.hadoop.security.token.TokenIdentifier">
++        <provider classname="org.apache.hadoop.mapreduce.security.token.JobTokenIdentifier"/>
+         <provider classname="org.apache.hadoop.mapreduce.security.token.delegation.DelegationTokenIdentifier"/>
+       </service>
+       <fileset dir="${conf.dir}" includes="${jar.properties.list}" />
+-- 
+1.7.0.4
+

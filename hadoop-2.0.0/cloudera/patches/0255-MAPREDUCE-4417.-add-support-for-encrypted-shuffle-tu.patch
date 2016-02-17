@@ -1,7 +1,7 @@
 From 1cb817994e332a87fccbd14f5a97aa50919d1932 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Thu, 26 Jul 2012 10:23:40 -0700
-Subject: [PATCH 255/545] MAPREDUCE-4417. add support for encrypted shuffle (tucu)
+Subject: [PATCH 0255/1612] MAPREDUCE-4417. add support for encrypted shuffle (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1365979 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7dae18aa150c2eab8104c3913d057564831eb533)

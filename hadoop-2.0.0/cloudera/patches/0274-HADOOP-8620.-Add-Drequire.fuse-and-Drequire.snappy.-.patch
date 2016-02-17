@@ -1,7 +1,7 @@
 From d8b3fd61ef858a634bae0c539698e39fb6648d00 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 1 Aug 2012 21:23:10 +0000
-Subject: [PATCH 274/545] HADOOP-8620. Add -Drequire.fuse and -Drequire.snappy. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0274/1612] HADOOP-8620. Add -Drequire.fuse and -Drequire.snappy. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1368251 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f0b79377cebfd2507a55b937376bda5f80dd2fc5)

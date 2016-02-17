@@ -1,7 +1,7 @@
 From 2fc2abf2f6eedf20eddd737defd55fb7e8897ac1 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Sat, 7 Apr 2012 17:14:59 -0700
-Subject: [PATCH 022/545] HADOOP-8260. Replace ClientBaseWithFixes with our own modified copy of the class. Contributed by Todd Lipcon.
+Subject: [PATCH 0022/1612] HADOOP-8260. Replace ClientBaseWithFixes with our own modified copy of the class. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1310888 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3e83726b3f1542873b8dca6f526995d7eb3e574b)

@@ -1,0 +1,376 @@
+From 50b96dd51c244c87502001ba49374ee5ee2454f4 Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Fri, 6 Sep 2013 19:05:26 +0000
+Subject: [PATCH 1567/1612] HDFS-4879. Add BlockedArrayList collection to avoid CMS full GCs (Contributed by Todd Lipcon)
+
+There were a number of conflicts in this backport due to the lack of snapshots
+in CDH4.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1520667 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit e4e85dd3766da8bf4e0f1d6495ddaba93d843c9d)
+
+Change-Id: Id06f13ae5b5fca6691dc29e1bd2f37fa80c6047e
+---
+ .../hadoop/hdfs/server/namenode/FSDirectory.java   |    5 +-
+ .../hadoop/hdfs/server/namenode/FSNamesystem.java  |   15 +-
+ .../apache/hadoop/hdfs/util/ChunkedArrayList.java  |  171 ++++++++++++++++++++
+ .../hadoop/hdfs/util/TestChunkedArrayList.java     |   93 +++++++++++
+ 4 files changed, 273 insertions(+), 11 deletions(-)
+ create mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/ChunkedArrayList.java
+ create mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestChunkedArrayList.java
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java
+index 788e64f..0c0ebdb 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSDirectory.java
+@@ -58,6 +58,7 @@ import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager;
+ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor;
+ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+ import org.apache.hadoop.hdfs.util.ByteArray;
++import org.apache.hadoop.hdfs.util.ChunkedArrayList;
+ 
+ import com.google.common.annotations.VisibleForTesting;
+ import com.google.common.base.Preconditions;
+@@ -763,7 +764,7 @@ public class FSDirectory implements Closeable {
+         if (removedDst != null) {
+           INode rmdst = removedDst;
+           removedDst = null;
+-          List<Block> collectedBlocks = new ArrayList<Block>();
++          List<Block> collectedBlocks = new ChunkedArrayList<Block>();
+           filesDeleted = rmdst.collectSubtreeBlocksAndClear(collectedBlocks);
+           getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+         }
+@@ -1067,7 +1068,7 @@ public class FSDirectory implements Closeable {
+   void unprotectedDelete(String src, long mtime) 
+     throws UnresolvedLinkException {
+     assert hasWriteLock();
+-    List<Block> collectedBlocks = new ArrayList<Block>();
++    List<Block> collectedBlocks = new ChunkedArrayList<Block>();
+     int filesRemoved = unprotectedDelete(src, collectedBlocks, mtime);
+     if (filesRemoved > 0) {
+       getFSNamesystem().removePathAndBlocks(src, collectedBlocks);
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+index d1a257a..be39f05 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+@@ -197,6 +197,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamenodeCommand;
+ import org.apache.hadoop.hdfs.server.protocol.NamenodeRegistration;
+ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
+ import org.apache.hadoop.hdfs.server.protocol.UpgradeCommand;
++import org.apache.hadoop.hdfs.util.ChunkedArrayList;
+ import org.apache.hadoop.io.IOUtils;
+ import org.apache.hadoop.io.Text;
+ import org.apache.hadoop.ipc.Server;
+@@ -2924,7 +2925,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       boolean enforcePermission)
+       throws AccessControlException, SafeModeException, UnresolvedLinkException,
+              IOException {
+-    ArrayList<Block> collectedBlocks = new ArrayList<Block>();
++    ChunkedArrayList<Block> collectedBlocks = new ChunkedArrayList<Block>();
+     FSPermissionChecker pc = getPermissionChecker();
+     checkOperation(OperationCategory.WRITE);
+     writeLock();
+@@ -2963,20 +2964,16 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+    * ensure that other waiters on the lock can get in. See HDFS-2938
+    */
+   private void removeBlocks(List<Block> blocks) {
+-    int start = 0;
+-    int end = 0;
+-    while (start < blocks.size()) {
+-      end = BLOCK_DELETION_INCREMENT + start;
+-      end = end > blocks.size() ? blocks.size() : end;
++    Iterator<Block> iter = blocks.iterator();
++    while (iter.hasNext()) {
+       writeLock();
+       try {
+-        for (int i = start; i < end; i++) {
+-          blockManager.removeBlock(blocks.get(i));
++        for (int i = 0; i < BLOCK_DELETION_INCREMENT && iter.hasNext(); i++) {
++          blockManager.removeBlock(iter.next());
+         }
+       } finally {
+         writeUnlock();
+       }
+-      start = end;
+     }
+   }
+   
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/ChunkedArrayList.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/ChunkedArrayList.java
+new file mode 100644
+index 0000000..89a0db6
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/ChunkedArrayList.java
+@@ -0,0 +1,171 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hdfs.util;
++
++import java.util.AbstractList;
++import java.util.Iterator;
++import java.util.List;
++
++import org.apache.hadoop.classification.InterfaceAudience;
++
++import com.google.common.annotations.VisibleForTesting;
++import com.google.common.base.Preconditions;
++import com.google.common.collect.Iterables;
++import com.google.common.collect.Lists;
++
++/**
++ * Simplified List implementation which stores elements as a list
++ * of chunks, each chunk having a maximum size. This improves over
++ * using an ArrayList in that creating a large list will never require
++ * a large amount of contiguous heap space -- thus reducing the likelihood
++ * of triggering a CMS compaction pause due to heap fragmentation.
++ * 
++ * The first chunks allocated are small, but each additional chunk is
++ * 50% larger than the previous, ramping up to a configurable maximum
++ * chunk size. Reasonable defaults are provided which should be a good
++ * balance between not making any large allocations while still retaining
++ * decent performance.
++ *
++ * This currently only supports a small subset of List operations --
++ * namely addition and iteration.
++ */
++@InterfaceAudience.Private
++public class ChunkedArrayList<T> extends AbstractList<T> {
++
++  /**
++   * The chunks which make up the full list.
++   */
++  private final List<List<T>> chunks = Lists.newArrayList();
++  
++  /**
++   * Cache of the last element in the 'chunks' array above.
++   * This speeds up the add operation measurably.
++   */
++  private List<T> lastChunk = null;
++
++  /**
++   * The capacity with which the last chunk was allocated.
++   */
++  private int lastChunkCapacity;
++  
++  /**
++   * The capacity of the first chunk to allocate in a cleared list.
++   */
++  private final int initialChunkCapacity;
++  
++  /**
++   * The maximum number of elements for any chunk.
++   */
++  private final int maxChunkSize;
++
++  /**
++   * Total number of elements in the list.
++   */
++  private int size;
++  
++  /**
++   * Default initial size is 6 elements, since typical minimum object
++   * size is 64 bytes, and this leaves enough space for the object
++   * header.
++   */
++  private static final int DEFAULT_INITIAL_CHUNK_CAPACITY = 6;
++  
++  /**
++   * Default max size is 8K elements - which, at 8 bytes per element
++   * should be about 64KB -- small enough to easily fit in contiguous
++   * free heap space even with a fair amount of fragmentation.
++   */
++  private static final int DEFAULT_MAX_CHUNK_SIZE = 8*1024;
++  
++
++  public ChunkedArrayList() {
++    this(DEFAULT_INITIAL_CHUNK_CAPACITY, DEFAULT_MAX_CHUNK_SIZE);
++  }
++
++  /**
++   * @param initialChunkCapacity the capacity of the first chunk to be
++   * allocated
++   * @param maxChunkSize the maximum size of any chunk allocated
++   */
++  public ChunkedArrayList(int initialChunkCapacity, int maxChunkSize) {
++    Preconditions.checkArgument(maxChunkSize >= initialChunkCapacity);
++    this.initialChunkCapacity = initialChunkCapacity;
++    this.maxChunkSize = maxChunkSize;
++  }
++
++  @Override
++  public Iterator<T> iterator() {
++    return Iterables.concat(chunks).iterator();
++  }
++
++  @Override
++  public boolean add(T e) {
++    if (lastChunk == null) {
++      addChunk(initialChunkCapacity);
++    } else if (lastChunk.size() >= lastChunkCapacity) {
++      int newCapacity = lastChunkCapacity + (lastChunkCapacity >> 1);
++      addChunk(Math.min(newCapacity, maxChunkSize));
++    }
++    size++;
++    return lastChunk.add(e);
++  }
++
++  @Override
++  public void clear() {
++    chunks.clear();
++    lastChunk = null;
++    lastChunkCapacity = 0;
++    size = 0;
++  }
++  
++  private void addChunk(int capacity) {
++    lastChunk = Lists.newArrayListWithCapacity(capacity);
++    chunks.add(lastChunk);
++    lastChunkCapacity = capacity;
++  }
++
++  @Override
++  public boolean isEmpty() {
++    return size == 0;
++  }
++
++  @Override
++  public int size() {
++    return size;
++  }
++  
++  @VisibleForTesting
++  int getNumChunks() {
++    return chunks.size();
++  }
++  
++  @VisibleForTesting
++  int getMaxChunkSize() {
++    int size = 0;
++    for (List<T> chunk : chunks) {
++      size = Math.max(size, chunk.size());
++    }
++    return size;
++  }
++
++  @Override
++  public T get(int arg0) {
++    throw new UnsupportedOperationException(
++        this.getClass().getName() + " does not support random access");
++  }
++}
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestChunkedArrayList.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestChunkedArrayList.java
+new file mode 100644
+index 0000000..a1e49cc
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/util/TestChunkedArrayList.java
+@@ -0,0 +1,93 @@
++/*
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hdfs.util;
++
++import static org.junit.Assert.*;
++
++import java.util.ArrayList;
++
++import org.junit.Test;
++
++import com.google.common.base.Stopwatch;
++
++public class TestChunkedArrayList {
++
++  @Test
++  public void testBasics() {
++    final int N_ELEMS = 100000;
++    ChunkedArrayList<Integer> l = new ChunkedArrayList<Integer>();
++    assertTrue(l.isEmpty());
++    // Insert a bunch of elements.
++    for (int i = 0; i < N_ELEMS; i++) {
++      l.add(i);
++    }
++    assertFalse(l.isEmpty());
++    assertEquals(N_ELEMS, l.size());
++
++    // Check that it got chunked.
++    assertTrue(l.getNumChunks() > 10);
++    assertEquals(8192, l.getMaxChunkSize());
++  }
++  
++  @Test
++  public void testIterator() {
++    ChunkedArrayList<Integer> l = new ChunkedArrayList<Integer>();
++    for (int i = 0; i < 30000; i++) {
++      l.add(i);
++    }
++    
++    int i = 0;
++    for (int fromList : l) {
++      assertEquals(i, fromList);
++      i++;
++    }
++  }
++  
++  @Test
++  public void testPerformance() {
++    String obj = "hello world";
++    
++    final int numElems = 1000000;
++    final int numTrials = 5;
++    
++    for (int trial = 0; trial < numTrials; trial++) {
++      System.gc();
++      {
++        ArrayList<String> arrayList = new ArrayList<String>();
++        Stopwatch sw = new Stopwatch();
++        sw.start();
++        for (int i = 0; i < numElems; i++) {
++          arrayList.add(obj);
++        }
++        System.out.println("       ArrayList " + sw.elapsedMillis());
++      }
++      
++      // test ChunkedArrayList
++      System.gc();
++      {
++        ChunkedArrayList<String> chunkedList = new ChunkedArrayList<String>();
++        Stopwatch sw = new Stopwatch();
++        sw.start();
++        for (int i = 0; i < numElems; i++) {
++          chunkedList.add(obj);
++        }
++        System.out.println("ChunkedArrayList " + sw.elapsedMillis());
++      }
++    }
++  }
++}
+-- 
+1.7.0.4
+

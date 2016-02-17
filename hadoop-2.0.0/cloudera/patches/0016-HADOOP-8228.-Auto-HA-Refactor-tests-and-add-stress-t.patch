@@ -1,7 +1,7 @@
 From 97dd9428c9d262950be148eed55cfe4450132f69 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Tue, 3 Apr 2012 16:52:26 -0700
-Subject: [PATCH 016/545] HADOOP-8228. Auto HA: Refactor tests and add stress tests. Contributed by Todd Lipcon.
+Subject: [PATCH 0016/1612] HADOOP-8228. Auto HA: Refactor tests and add stress tests. Contributed by Todd Lipcon.
 
 Modified from upstream:
 - In CDH, HADOOP-8077 was committed first, so needed to modify DummyHAService

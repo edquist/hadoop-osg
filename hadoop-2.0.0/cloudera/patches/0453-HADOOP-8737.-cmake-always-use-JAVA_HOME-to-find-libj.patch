@@ -1,7 +1,7 @@
 From d1a1d4b187fc0b257009e16efaf1c69715fe9c02 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 29 Aug 2012 05:30:06 +0000
-Subject: [PATCH 453/545] HADOOP-8737. cmake: always use JAVA_HOME to find libjvm.so, jni.h, jni_md.h. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0453/1612] HADOOP-8737. cmake: always use JAVA_HOME to find libjvm.so, jni.h, jni_md.h. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1378444 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7ce6a61465596998073c8c82a976e8b612d8a7bd)

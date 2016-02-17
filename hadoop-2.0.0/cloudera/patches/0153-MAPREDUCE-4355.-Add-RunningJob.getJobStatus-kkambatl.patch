@@ -1,7 +1,7 @@
 From 1b57d27373a657e33f34ff3aa3ef61a6834be16c Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 5 Jul 2012 16:29:09 +0000
-Subject: [PATCH 153/545] MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
+Subject: [PATCH 0153/1612] MAPREDUCE-4355. Add RunningJob.getJobStatus() (kkambatl via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1357723 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 6e0e0b018a6e91c3ff1543e2c9f91295ad7f4107)

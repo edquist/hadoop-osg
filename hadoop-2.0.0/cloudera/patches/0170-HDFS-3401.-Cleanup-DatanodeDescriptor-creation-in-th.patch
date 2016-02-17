@@ -1,7 +1,7 @@
 From 97599f6655e7c0d2c9a07dda4532cf98baa064d2 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 11 May 2012 00:03:37 +0000
-Subject: [PATCH 170/545] HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. Contributed by Eli Collins
+Subject: [PATCH 0170/1612] HDFS-3401. Cleanup DatanodeDescriptor creation in the tests. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336972 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3dcc91654d23c2f14d66b3c108c78d50c1ed8930)

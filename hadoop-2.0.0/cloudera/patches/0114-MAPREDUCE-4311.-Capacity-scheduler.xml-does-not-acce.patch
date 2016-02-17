@@ -1,7 +1,7 @@
 From 32a0974f58f62a3233de899ff7317635a2811d9c Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 19 Jun 2012 13:06:51 +0000
-Subject: [PATCH 114/545] MAPREDUCE-4311. Capacity scheduler.xml does not accept decimal values for capacity and maximum-capacity settings (Karthik Kambatla via tgraves)
+Subject: [PATCH 0114/1612] MAPREDUCE-4311. Capacity scheduler.xml does not accept decimal values for capacity and maximum-capacity settings (Karthik Kambatla via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1351700 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f2d9df5580af822c488a3206ef4623d5095c929c)

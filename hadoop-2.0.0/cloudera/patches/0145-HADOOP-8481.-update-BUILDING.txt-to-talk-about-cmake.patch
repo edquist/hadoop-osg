@@ -1,7 +1,7 @@
 From 775c7a74646f10ea17997ce03a9017a987fe65fc Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 4 Jun 2012 20:48:47 +0000
-Subject: [PATCH 145/545] HADOOP-8481. update BUILDING.txt to talk about cmake rather than autotools. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0145/1612] HADOOP-8481. update BUILDING.txt to talk about cmake rather than autotools. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1346148 13f79535-47bb-0310-9956-ffa450edef68
 ---

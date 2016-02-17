@@ -1,7 +1,7 @@
 From 16bd098e52ceb42096064c30849cf8dbdadbfd82 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 10 Jul 2012 20:50:17 +0000
-Subject: [PATCH 425/545] HADOOP-8573. Configuration tries to read from an inputstream resource multiple times (Robert Evans via tgraves)
+Subject: [PATCH 0425/1612] HADOOP-8573. Configuration tries to read from an inputstream resource multiple times (Robert Evans via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1359891 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0bd332d1b59f67b5171d40140aec5490ea2ac32a)

@@ -1,7 +1,7 @@
 From 8de2c2bf462ec7527db2b005039c74007ca40998 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 13 Jun 2012 03:31:47 +0000
-Subject: [PATCH 112/545] HDFS-3372. offlineEditsViewer should be able to read a binary edits file with recovery mode. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0112/1612] HDFS-3372. offlineEditsViewer should be able to read a binary edits file with recovery mode. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349628 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a73b8b244251c0e8f757fe2ab12b34e9cee9b602)

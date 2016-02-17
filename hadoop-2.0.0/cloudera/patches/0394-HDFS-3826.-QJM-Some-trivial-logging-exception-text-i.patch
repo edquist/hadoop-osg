@@ -1,7 +1,7 @@
 From 258244e14138bb5c7dccec47257ff513f5bdcaf0 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Tue, 21 Aug 2012 00:48:06 +0000
-Subject: [PATCH 394/545] HDFS-3826. QJM: Some trivial logging / exception text improvements. Contributed by Todd Lipcon and Aaron T. Myers.
+Subject: [PATCH 0394/1612] HDFS-3826. QJM: Some trivial logging / exception text improvements. Contributed by Todd Lipcon and Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1375356 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8597531b7c21bcde0abf30faf7c773a83e7bb40d)

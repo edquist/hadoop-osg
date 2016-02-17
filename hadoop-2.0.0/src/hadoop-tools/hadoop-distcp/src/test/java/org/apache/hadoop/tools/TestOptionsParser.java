@@ -110,6 +110,24 @@ public class TestOptionsParser {
         "hdfs://localhost:8020/target/"});
     Assert.assertEquals(options.getMapBandwidth(), 11);
   }
+  
+  @Test(expected=IllegalArgumentException.class)
+  public void testParseNonPositiveBandwidth() {
+    OptionsParser.parse(new String[] {
+        "-bandwidth",
+        "-11",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+  }
+  
+  @Test(expected=IllegalArgumentException.class)
+  public void testParseZeroBandwidth() {
+    OptionsParser.parse(new String[] {
+        "-bandwidth",
+        "0",
+        "hdfs://localhost:8020/source/first",
+        "hdfs://localhost:8020/target/"});
+  }
 
   @Test
   public void testParseSkipCRC() {
@@ -329,7 +347,7 @@ public class TestOptionsParser {
     DistCpOptions option = new DistCpOptions(new Path("abc"), new Path("xyz"));
     String val = "DistCpOptions{atomicCommit=false, syncFolder=false, deleteMissing=false, " +
         "ignoreFailures=false, maxMaps=20, sslConfigurationFile='null', copyStrategy='uniformsize', " +
-        "sourceFileListing=abc, sourcePaths=null, targetPath=xyz}";
+        "sourceFileListing=abc, sourcePaths=null, targetPath=xyz, targetPathExists=true}";
     Assert.assertEquals(val, option.toString());
     Assert.assertNotSame(DistCpOptionSwitch.ATOMIC_COMMIT.toString(),
         DistCpOptionSwitch.ATOMIC_COMMIT.name());

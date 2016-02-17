@@ -1,7 +1,7 @@
 From 0d9b3b15ba26115d427c7824e3a6564624d7154b Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 23 May 2012 15:56:59 +0000
-Subject: [PATCH 075/545] HDFS-3454. Balancer unconditionally logs InterruptedException at INFO level on shutdown if security is enabled. Contributed by Eli Collins
+Subject: [PATCH 0075/1612] HDFS-3454. Balancer unconditionally logs InterruptedException at INFO level on shutdown if security is enabled. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1341916 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4507294356199c591992c1c54ba793651ed4aae7)

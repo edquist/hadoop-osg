@@ -1,7 +1,7 @@
 From 653ba4fd4f766be220e658a385babd24080c7dca Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Mon, 9 Jul 2012 16:14:24 +0000
-Subject: [PATCH 437/545] MAPREDUCE-4402. TestFileInputFormat fails intermittently (Jason Lowe via bobby)
+Subject: [PATCH 0437/1612] MAPREDUCE-4402. TestFileInputFormat fails intermittently (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1359252 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b38e15c48d1170679c62867dee04a677e646bc45)

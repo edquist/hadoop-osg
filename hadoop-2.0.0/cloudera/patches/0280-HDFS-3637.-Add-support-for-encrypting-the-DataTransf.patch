@@ -1,7 +1,7 @@
 From 96627d2aa5d5634789a0118cbd7e675ee7e1b643 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Tue, 7 Aug 2012 16:46:03 +0000
-Subject: [PATCH 280/545] HDFS-3637. Add support for encrypting the DataTransferProtocol. Contributed by Aaron T. Myers.
+Subject: [PATCH 0280/1612] HDFS-3637. Add support for encrypting the DataTransferProtocol. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1370360 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8f7ec09f2a13b72622d6fe73bed6c9f3a62f15d0)

@@ -1,7 +1,7 @@
 From a37c49a308f25ae576e8a8fc6bc85a0d8d1dde0c Mon Sep 17 00:00:00 2001
 From: Aaron T. Myers <atm@cloudera.com>
 Date: Thu, 17 May 2012 03:37:21 -0700
-Subject: [PATCH 062/545] HDFS-3433. GetImageServlet should allow administrative requestors when security is enabled. Contributed by Aaron T. Myers.
+Subject: [PATCH 0062/1612] HDFS-3433. GetImageServlet should allow administrative requestors when security is enabled. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1339543 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f448a430ccc5695d1a60a3d0fd1cbfeeffe0d2f4)

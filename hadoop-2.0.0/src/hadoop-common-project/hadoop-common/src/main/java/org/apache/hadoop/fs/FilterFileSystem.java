@@ -22,15 +22,12 @@ import java.io.*;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.EnumSet;
-import java.util.List;
-
 import org.apache.hadoop.classification.InterfaceAudience;
 import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.fs.ContentSummary;
-import org.apache.hadoop.security.Credentials;
-import org.apache.hadoop.security.token.Token;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.util.Progressable;
 
 /****************************************************************
@@ -96,16 +93,18 @@ public class FilterFileSystem extends FileSystem {
   public URI getUri() {
     return fs.getUri();
   }
-
-  /**
-   * Returns a qualified URI whose scheme and authority identify this
-   * FileSystem.
-   */
+  
+  
   @Override
   protected URI getCanonicalUri() {
     return fs.getCanonicalUri();
   }
-  
+
+  @Override
+  protected URI canonicalizeUri(URI uri) {
+    return fs.canonicalizeUri(uri);
+  }
+
   /** Make sure that a path specifies a FileSystem. */
   public Path makeQualified(Path path) {
     Path fqPath = fs.makeQualified(path);
@@ -158,11 +157,28 @@ public class FilterFileSystem extends FileSystem {
 
   /** {@inheritDoc} */
   @Override
+  public void concat(Path f, Path[] psrcs) throws IOException {
+    fs.concat(f, psrcs);
+  }
+
+  @Override
   public FSDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
     return fs.create(f, permission,
         overwrite, bufferSize, replication, blockSize, progress);
+  }
+  
+
+  
+  @Override
+  @Deprecated
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    
+    return fs.createNonRecursive(f, permission, flags, bufferSize, replication, blockSize,
+        progress);
   }
 
   /**
@@ -414,10 +430,11 @@ public class FilterFileSystem extends FileSystem {
   @Override
   protected FSDataOutputStream primitiveCreate(Path f,
       FsPermission absolutePermission, EnumSet<CreateFlag> flag,
-      int bufferSize, short replication, long blockSize, Progressable progress, int bytesPerChecksum)
+      int bufferSize, short replication, long blockSize,
+      Progressable progress, ChecksumOpt checksumOpt)
       throws IOException {
     return fs.primitiveCreate(f, absolutePermission, flag,
-        bufferSize, replication, blockSize, progress, bytesPerChecksum);
+        bufferSize, replication, blockSize, progress, checksumOpt);
   }
 
   @Override
@@ -428,25 +445,7 @@ public class FilterFileSystem extends FileSystem {
   }
   
   @Override // FileSystem
-  public String getCanonicalServiceName() {
-    return fs.getCanonicalServiceName();
-  }
-  
-  @Override // FileSystem
-  @SuppressWarnings("deprecation")
-  public Token<?> getDelegationToken(String renewer) throws IOException {
-    return fs.getDelegationToken(renewer);
-  }
-  
-  @Override // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    return fs.getDelegationTokens(renewer);
-  }
-  
-  @Override
-  // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer,
-      Credentials credentials) throws IOException {
-    return fs.getDelegationTokens(renewer, credentials);
+  public FileSystem[] getChildFileSystems() {
+    return new FileSystem[]{fs};
   }
 }

@@ -1,7 +1,7 @@
 From b9b8ea266ae4ca72109894076e0cd8e26a4e2f14 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 15 Aug 2012 18:58:51 +0000
-Subject: [PATCH 384/545] HDFS-3797. QJM: add segment txid as a parameter to journal() RPC. Contributed by Todd Lipcon.
+Subject: [PATCH 0384/1612] HDFS-3797. QJM: add segment txid as a parameter to journal() RPC. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1373571 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ee4bb894b74f086c7f29ca5b69141015494b29c7)

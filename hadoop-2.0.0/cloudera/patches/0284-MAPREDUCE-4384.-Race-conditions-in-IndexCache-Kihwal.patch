@@ -1,7 +1,7 @@
 From af1341f81adba85ab1b349918c5cda25daec39b2 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Thu, 5 Jul 2012 21:36:02 +0000
-Subject: [PATCH 284/545] MAPREDUCE-4384. Race conditions in IndexCache (Kihwal Lee via tgraves)
+Subject: [PATCH 0284/1612] MAPREDUCE-4384. Race conditions in IndexCache (Kihwal Lee via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1357937 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0b19f56e072805960bc4eb1917d5960bf268c649)

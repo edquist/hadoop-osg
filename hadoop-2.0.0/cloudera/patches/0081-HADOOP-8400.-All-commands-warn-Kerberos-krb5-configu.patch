@@ -1,7 +1,7 @@
 From f80dc3b854248546d3e6bee459202038f88622c4 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 16 May 2012 18:19:36 +0000
-Subject: [PATCH 081/545] HADOOP-8400. All commands warn 'Kerberos krb5 configuration not found' when security is not enabled. (tucu)
+Subject: [PATCH 0081/1612] HADOOP-8400. All commands warn 'Kerberos krb5 configuration not found' when security is not enabled. (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339298 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f38c833d37d1c1105d14a61d62d92d860a89c90f)

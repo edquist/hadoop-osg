@@ -1,0 +1,25 @@
+From a33135f7ea25c52465cae6c32d30b1a40fc61437 Mon Sep 17 00:00:00 2001
+From: Andrew Wang <wang@apache.org>
+Date: Tue, 15 Oct 2013 18:35:49 +0000
+Subject: [PATCH 1500/1612] HADOOP-10046. Print a log message when SSL is enabled (David S. Wang via wang)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1532477 13f79535-47bb-0310-9956-ffa450edef68
+---
+ .../java/org/apache/hadoop/http/HttpServer.java    |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/http/HttpServer.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/http/HttpServer.java
+index 1c51a9b..15ae0dc 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/http/HttpServer.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/http/HttpServer.java
+@@ -232,6 +232,7 @@ public class HttpServer implements FilterContainer {
+       }
+       listener.setHost(bindAddress);
+       listener.setPort(port);
++      LOG.info("SSL is enabled on " + toString());
+     } else {
+       listenerStartedExternally = true;
+       listener = connector;
+-- 
+1.7.0.4
+

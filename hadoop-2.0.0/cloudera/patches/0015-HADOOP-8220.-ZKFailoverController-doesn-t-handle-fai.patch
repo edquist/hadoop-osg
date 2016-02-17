@@ -1,7 +1,7 @@
 From ba777a94c91ce817f6f9b19404b06ce8fc1f8800 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Fri, 30 Mar 2012 20:23:59 +0000
-Subject: [PATCH 015/545] HADOOP-8220. ZKFailoverController doesn't handle failure to become active correctly. Contributed by Todd Lipcon.
+Subject: [PATCH 0015/1612] HADOOP-8220. ZKFailoverController doesn't handle failure to become active correctly. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1307596 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 06eb2c5522ce6cecc94fa687acd715edc3a5ed40)

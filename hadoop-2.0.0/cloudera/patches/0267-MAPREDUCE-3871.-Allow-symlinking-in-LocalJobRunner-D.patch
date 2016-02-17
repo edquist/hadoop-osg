@@ -1,7 +1,7 @@
 From 99bb8810b5a1ac376269c57429a925dc20bd337c Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Mon, 11 Jun 2012 20:37:03 +0000
-Subject: [PATCH 267/545] MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
+Subject: [PATCH 0267/1612] MAPREDUCE-3871. Allow symlinking in LocalJobRunner DistributedCache.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1348997 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit cede63d6929a8387eeaa13ef889d4ac180144366)

@@ -42,6 +42,7 @@ import org.apache.hadoop.HadoopIllegalArgumentException;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveStandbyElectorCallback;
 import org.apache.hadoop.ha.ActiveStandbyElector.ActiveNotFoundException;
 import org.apache.hadoop.ha.HAZKUtil.ZKAuthInfo;
+import org.apache.hadoop.test.GenericTestUtils;
 
 public class TestActiveStandbyElector {
 
@@ -56,7 +57,8 @@ public class TestActiveStandbyElector {
     private int sleptFor = 0;
     
     ActiveStandbyElectorTester(String hostPort, int timeout, String parent,
-        List<ACL> acl, ActiveStandbyElectorCallback app) throws IOException {
+        List<ACL> acl, ActiveStandbyElectorCallback app) throws IOException,
+        KeeperException {
       super(hostPort, timeout, parent, acl,
           Collections.<ZKAuthInfo>emptyList(), app);
     }
@@ -83,7 +85,7 @@ public class TestActiveStandbyElector {
       ActiveStandbyElector.BREADCRUMB_FILENAME;
 
   @Before
-  public void init() throws IOException {
+  public void init() throws IOException, KeeperException {
     count = 0;
     mockZK = Mockito.mock(ZooKeeper.class);
     mockApp = Mockito.mock(ActiveStandbyElectorCallback.class);
@@ -704,5 +706,37 @@ public class TestActiveStandbyElector {
     Mockito.verify(mockZK, Mockito.times(3)).create(
         Mockito.eq(ZK_PARENT_NAME), Mockito.<byte[]>any(),
         Mockito.eq(Ids.OPEN_ACL_UNSAFE), Mockito.eq(CreateMode.PERSISTENT));
+  }
+
+  /**
+   * verify the zookeeper connection establishment
+   */
+  @Test
+  public void testWithoutZKServer() throws Exception {
+    try {
+      new ActiveStandbyElector("127.0.0.1", 2000, ZK_PARENT_NAME,
+          Ids.OPEN_ACL_UNSAFE, Collections.<ZKAuthInfo> emptyList(), mockApp);
+      Assert.fail("Did not throw zookeeper connection loss exceptions!");
+    } catch (KeeperException ke) {
+      GenericTestUtils.assertExceptionContains( "ConnectionLoss", ke);
+    }
+  }
+
+  /**
+   * joinElection(..) should happen only after SERVICE_HEALTHY.
+   */
+  @Test
+  public void testBecomeActiveBeforeServiceHealthy() throws Exception {
+    mockNoPriorActive();
+    WatchedEvent mockEvent = Mockito.mock(WatchedEvent.class);
+    Mockito.when(mockEvent.getType()).thenReturn(Event.EventType.None);
+    // session expired should enter safe mode
+    // But for first time, before the SERVICE_HEALTY i.e. appData is set,
+    // should not enter the election.
+    Mockito.when(mockEvent.getState()).thenReturn(Event.KeeperState.Expired);
+    elector.processWatchEvent(mockZK, mockEvent);
+    // joinElection should not be called.
+    Mockito.verify(mockZK, Mockito.times(0)).create(ZK_LOCK_NAME, null,
+        Ids.OPEN_ACL_UNSAFE, CreateMode.EPHEMERAL, elector, mockZK);
   }
 }

@@ -1,0 +1,183 @@
+From 1b123520def6c2ba7be888dfdfe713408bcbab51 Mon Sep 17 00:00:00 2001
+From: Kihwal Lee <kihwal@apache.org>
+Date: Fri, 7 Jun 2013 20:05:17 +0000
+Subject: [PATCH 1591/1612] HDFS-4832. Namenode doesn't change the number of missing blocks in safemode when DNs rejoin or leave. Contributed by Ravi Prakash.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1490805 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit d1735438f218cf64b589e5fb44df00f917971de8)
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
+---
+ .../hdfs/server/blockmanagement/BlockManager.java  |    2 +-
+ .../server/blockmanagement/DatanodeManager.java    |    8 ++++-
+ .../server/blockmanagement/HeartbeatManager.java   |    4 +-
+ .../hadoop/hdfs/server/namenode/FSNamesystem.java  |   11 ++++--
+ .../hdfs/server/namenode/TestFSNamesystem.java     |   39 ++++++++++++++++++++
+ 5 files changed, 57 insertions(+), 7 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+index 277a2a8..64f6bcc 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+@@ -2122,7 +2122,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+       return storedBlock;
+     }
+ 
+-    // do not try to handle over/under-replicated blocks during safe mode
++    // do not try to handle over/under-replicated blocks during first safe mode
+     if (!namesystem.isPopulatingReplQueues()) {
+       return storedBlock;
+     }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java
+index 5559a6b..3d6e31c 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java
+@@ -1109,7 +1109,13 @@ public class DatanodeManager {
+ 
+         heartbeatManager.updateHeartbeat(nodeinfo, capacity, dfsUsed,
+             remaining, blockPoolUsed, xceiverCount, failedVolumes);
+-        
++
++        // If we are in safemode, do not send back any recovery / replication
++        // requests. Don't even drain the existing queue of work.
++        if(namesystem.isInSafeMode()) {
++          return new DatanodeCommand[0];
++        }
++
+         //check lease recovery
+         BlockInfoUnderConstruction[] blocks = nodeinfo
+             .getLeaseRecoveryCommand(Integer.MAX_VALUE);
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/HeartbeatManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/HeartbeatManager.java
+index 49f8a93..0cbe96d 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/HeartbeatManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/HeartbeatManager.java
+@@ -224,7 +224,7 @@ class HeartbeatManager implements DatanodeStatistics {
+     final DatanodeManager dm = blockManager.getDatanodeManager();
+     // It's OK to check safe mode w/o taking the lock here, we re-check
+     // for safe mode after taking the lock before removing a datanode.
+-    if (namesystem.isInSafeMode()) {
++    if (namesystem.isInStartupSafeMode()) {
+       return;
+     }
+     boolean allAlive = false;
+@@ -253,7 +253,7 @@ class HeartbeatManager implements DatanodeStatistics {
+         // acquire the fsnamesystem lock, and then remove the dead node.
+         namesystem.writeLock();
+         try {
+-          if (namesystem.isInSafeMode()) {
++          if (namesystem.isInStartupSafeMode()) {
+             return;
+           }
+           synchronized(this) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+index 087d6bd..1df7b94 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+@@ -4079,7 +4079,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+      * 
+      * @see SafeModeInfo
+      */
+-    private SafeModeInfo(boolean resourcesLow) {
++    private SafeModeInfo(boolean resourcesLow, boolean isReplQueuesInited) {
+       this.threshold = 1.5f;  // this threshold can never be reached
+       this.datanodeThreshold = Integer.MAX_VALUE;
+       this.extension = Integer.MAX_VALUE;
+@@ -4088,6 +4088,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       this.blockTotal = -1;
+       this.blockSafe = -1;
+       this.resourcesLow = resourcesLow;
++      this.initializedReplQueues = isReplQueuesInited;
+       enter();
+       reportStatus("STATE* Safe mode is ON.", true);
+     }
+@@ -4132,7 +4133,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+         }
+         if(needUpgrade) {
+           // switch to manual safe mode
+-          safeMode = new SafeModeInfo(false);
++          safeMode = new SafeModeInfo(false, isPopulatingReplQueues());
+           return;
+         }
+       }
+@@ -4536,6 +4537,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       && safeMode.isOn();
+   }
+ 
++  /**
++   * Check if replication queues are to be populated
++   * @return true when node is HAState.Active and not in the very first safemode
++   */
+   @Override
+   public boolean isPopulatingReplQueues() {
+     if (!shouldPopulateReplQueues()) {
+@@ -4666,7 +4671,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+         getEditLog().logSyncAll();
+       }
+       if (!isInSafeMode()) {
+-        safeMode = new SafeModeInfo(resourcesLow);
++        safeMode = new SafeModeInfo(resourcesLow, isPopulatingReplQueues());
+         return;
+       }
+       if (resourcesLow) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
+index 04bdf41..3434621 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
+@@ -30,8 +30,12 @@ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.hdfs.DFSTestUtil;
+ import org.apache.hadoop.hdfs.HdfsConfiguration;
+ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
++import org.apache.hadoop.hdfs.server.namenode.ha.HAContext;
++import org.apache.hadoop.hdfs.server.namenode.ha.HAState;
++import org.junit.After;
+ import org.junit.Test;
+ import org.mockito.Mockito;
++import org.mockito.internal.util.reflection.Whitebox;
+ 
+ public class TestFSNamesystem {
+ 
+@@ -91,4 +95,39 @@ public class TestFSNamesystem {
+     assertTrue("After entering safemode due to low resources FSNamesystem."
+       + "isInSafeMode still returned false",  fsn.isInSafeMode());
+   }
++
++  @Test
++  public void testReplQueuesActiveAfterStartupSafemode() throws IOException, InterruptedException{
++    Configuration conf = new Configuration();
++
++    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
++    FSImage fsImage = Mockito.mock(FSImage.class);
++    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
++
++    FSNamesystem fsNamesystem = new FSNamesystem(conf, fsImage);
++    FSNamesystem fsn = Mockito.spy(fsNamesystem);
++
++    //Make shouldPopulaeReplQueues return true
++    HAContext haContext = Mockito.mock(HAContext.class);
++    HAState haState = Mockito.mock(HAState.class);
++    Mockito.when(haContext.getState()).thenReturn(haState);
++    Mockito.when(haState.shouldPopulateReplQueues()).thenReturn(true);
++    Whitebox.setInternalState(fsn, "haContext", haContext);
++
++    //Make NameNode.getNameNodeMetrics() not return null
++    NameNode.initMetrics(conf, NamenodeRole.NAMENODE);
++
++    fsn.enterSafeMode(false);
++    assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
++    assertTrue("Replication queues were being populated during very first "
++        + "safemode", !fsn.isPopulatingReplQueues());
++    fsn.leaveSafeMode(false);
++    assertTrue("FSNamesystem didn't leave safemode", !fsn.isInSafeMode());
++    assertTrue("Replication queues weren't being populated even after leaving "
++      + "safemode", fsn.isPopulatingReplQueues());
++    fsn.enterSafeMode(false);
++    assertTrue("FSNamesystem didn't enter safemode", fsn.isInSafeMode());
++    assertTrue("Replication queues weren't being populated after entering "
++      + "safemode 2nd time", fsn.isPopulatingReplQueues());
++  }
+ }
+-- 
+1.7.0.4
+

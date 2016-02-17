@@ -1,0 +1,232 @@
+From c02f7871bb1f5f210fb06063c90cebecb4b3755b Mon Sep 17 00:00:00 2001
+From: Yongjun Zhang <yzhang@cloudera.com>
+Date: Tue, 10 Dec 2013 16:21:06 -0800
+Subject: [PATCH 1523/1612] Backport HDFS-4983 to branch-2.3. Numeric usernames do not work with WebHDFS FS. Contributed by Yongjun Zhang.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.3@1549746 13f79535-47bb-0310-9956-ffa450edef68
+
+Reason: Improvement
+Ref: CDH-13074
+Author: Yongjun Zhang
+(cherry picked from commit 29da0c4fd65a219ee404657554ca90f28c282ff4)
+---
+ .../java/org/apache/hadoop/hdfs/DFSConfigKeys.java |    2 +
+ .../hdfs/server/namenode/NameNodeHttpServer.java   |    6 +++-
+ .../apache/hadoop/hdfs/web/WebHdfsFileSystem.java  |    3 ++
+ .../hadoop/hdfs/web/resources/UserParam.java       |   25 ++++++++++++---
+ .../src/main/resources/hdfs-default.xml            |    8 +++++
+ .../org/apache/hadoop/hdfs/web/TestWebHDFS.java    |   32 ++++++++++++++++++++
+ .../hadoop/hdfs/web/resources/TestParam.java       |   15 +++++++++
+ 7 files changed, 85 insertions(+), 6 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+index da57982..b5cc48d 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+@@ -149,6 +149,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
+   public static final int     DFS_NAMENODE_REPLICATION_MAX_STREAMS_DEFAULT = 2;
+   public static final String  DFS_WEBHDFS_ENABLED_KEY = "dfs.webhdfs.enabled";
+   public static final boolean DFS_WEBHDFS_ENABLED_DEFAULT = false;
++  public static final String  DFS_WEBHDFS_USER_PATTERN_KEY = "dfs.webhdfs.user.provider.user.pattern";
++  public static final String  DFS_WEBHDFS_USER_PATTERN_DEFAULT = "^[A-Za-z_][A-Za-z0-9._-]*[$]?$";
+   public static final String  DFS_PERMISSIONS_ENABLED_KEY = "dfs.permissions.enabled";
+   public static final boolean DFS_PERMISSIONS_ENABLED_DEFAULT = true;
+   public static final String  DFS_PERSIST_BLOCKS_KEY = "dfs.persist.blocks";
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNodeHttpServer.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNodeHttpServer.java
+index 966c54f..e8f9854 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNodeHttpServer.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNodeHttpServer.java
+@@ -41,6 +41,7 @@ import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMetho
+ import org.apache.hadoop.hdfs.web.AuthFilter;
+ import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
+ import org.apache.hadoop.hdfs.web.resources.Param;
++import org.apache.hadoop.hdfs.web.resources.UserParam;
+ import org.apache.hadoop.http.HttpServer;
+ import org.apache.hadoop.net.NetUtils;
+ import org.apache.hadoop.security.SecurityUtil;
+@@ -97,7 +98,10 @@ public class NameNodeHttpServer {
+                   DFSConfigKeys.DFS_NAMENODE_KEYTAB_FILE_KEY));
+         }
+         if (WebHdfsFileSystem.isEnabled(conf, LOG)) {
+-          //add SPNEGO authentication filter for webhdfs
++          // set user pattern based on configuration file
++          UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
++
++          // add SPNEGO authentication filter for webhdfs
+           final String name = "SPNEGO";
+           final String classname = AuthFilter.class.getName();
+           final String pathSpec = WebHdfsFileSystem.PATH_PREFIX + "/*";
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/WebHdfsFileSystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/WebHdfsFileSystem.java
+index 8ad2840..ff0fe42 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/WebHdfsFileSystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/WebHdfsFileSystem.java
+@@ -178,6 +178,9 @@ public class WebHdfsFileSystem extends FileSystem
+       ) throws IOException {
+     super.initialize(uri, conf);
+     setConf(conf);
++    /** set user pattern based on configuration file */
++    UserParam.setUserPattern(conf.get(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT));
++
+     try {
+       this.uri = new URI(uri.getScheme(), uri.getAuthority(), null, null, null);
+     } catch (URISyntaxException e) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/resources/UserParam.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/resources/UserParam.java
+index 36e128f..481d8fe 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/resources/UserParam.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/web/resources/UserParam.java
+@@ -17,8 +17,10 @@
+  */
+ package org.apache.hadoop.hdfs.web.resources;
+ 
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_DEFAULT;
+ import org.apache.hadoop.security.UserGroupInformation;
+-
++import com.google.common.annotations.VisibleForTesting;
++ 
+ import java.text.MessageFormat;
+ import java.util.regex.Pattern;
+ 
+@@ -29,8 +31,21 @@ public class UserParam extends StringParam {
+   /** Default parameter value. */
+   public static final String DEFAULT = "";
+ 
+-  private static final Domain DOMAIN = new Domain(NAME,
+-    Pattern.compile("^[A-Za-z_][A-Za-z0-9._-]*[$]?$"));
++  private static Domain domain = new Domain(NAME, Pattern.compile(DFS_WEBHDFS_USER_PATTERN_DEFAULT));
++
++  @VisibleForTesting
++  public static Domain getUserPatternDomain() {
++    return domain;
++  }
++
++  @VisibleForTesting
++  public static void setUserPatternDomain(Domain dm) {
++    domain = dm;
++  }
++
++  public static void setUserPattern(String pattern) {
++    domain = new Domain(NAME, Pattern.compile(pattern));
++  }
+ 
+   private static String validateLength(String str) {
+     if (str == null) {
+@@ -50,7 +65,7 @@ public class UserParam extends StringParam {
+    * @param str a string representation of the parameter value.
+    */
+   public UserParam(final String str) {
+-    super(DOMAIN, str == null || str.equals(DEFAULT)? null : validateLength(str));
++    super(domain, str == null || str.equals(DEFAULT)? null : validateLength(str));
+   }
+ 
+   /**
+@@ -64,4 +79,4 @@ public class UserParam extends StringParam {
+   public String getName() {
+     return NAME;
+   }
+-}
+\ No newline at end of file
++}
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml b/hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml
+index ab06247..8fec543 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/resources/hdfs-default.xml
+@@ -1127,6 +1127,14 @@
+ </property>
+ 
+ <property>
++  <name>dfs.webhdfs.user.provider.user.pattern</name>
++  <value>^[A-Za-z_][A-Za-z0-9._-]*[$]?$</value>
++  <description>
++    Valid pattern for user and group names for webhdfs, it must be a valid java regex.
++  </description>
++</property>
++
++<property>
+   <name>hadoop.fuse.connection.timeout</name>
+   <value>300</value>
+   <description>
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/TestWebHDFS.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/TestWebHDFS.java
+index 969ad5c..5fdccd3 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/TestWebHDFS.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/TestWebHDFS.java
+@@ -19,6 +19,8 @@
+ package org.apache.hadoop.hdfs.web;
+ 
+ import java.io.IOException;
++import java.net.URISyntaxException;
++import java.security.PrivilegedExceptionAction;
+ import java.util.Random;
+ 
+ import org.apache.commons.logging.Log;
+@@ -29,9 +31,13 @@ import org.apache.hadoop.fs.FSDataInputStream;
+ import org.apache.hadoop.fs.FSDataOutputStream;
+ import org.apache.hadoop.fs.FileSystem;
+ import org.apache.hadoop.fs.Path;
++import org.apache.hadoop.fs.permission.FsAction;
++import org.apache.hadoop.fs.permission.FsPermission;
++import org.apache.hadoop.hdfs.DFSConfigKeys;
+ import org.apache.hadoop.hdfs.MiniDFSCluster;
+ import org.apache.hadoop.hdfs.TestDFSClientRetries;
+ import org.apache.hadoop.hdfs.server.namenode.web.resources.NamenodeWebHdfsMethods;
++import org.apache.hadoop.security.UserGroupInformation;
+ import org.apache.log4j.Level;
+ import org.junit.Assert;
+ import org.junit.Test;
+@@ -208,4 +214,30 @@ public class TestWebHDFS {
+     final Configuration conf = WebHdfsTestUtil.createConf();
+     TestDFSClientRetries.namenodeRestartTest(conf, true);
+   }
++
++  @Test(timeout=300000)
++  public void testNumericalUserName() throws Exception {
++    final Configuration conf = WebHdfsTestUtil.createConf();
++    conf.set(DFSConfigKeys.DFS_WEBHDFS_USER_PATTERN_KEY, "^[A-Za-z0-9_][A-Za-z0-9._-]*[$]?$");
++    final MiniDFSCluster cluster =
++        new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
++    try {
++      cluster.waitActive();
++      WebHdfsTestUtil.getWebHdfsFileSystem(conf).setPermission(new Path("/"),
++              new FsPermission(FsAction.ALL, FsAction.ALL, FsAction.ALL));
++
++      UserGroupInformation.createUserForTesting("123", new String[]{"my-group"})
++        .doAs(new PrivilegedExceptionAction<Void>() {
++          @Override
++          public Void run() throws IOException, URISyntaxException {
++            FileSystem fs = WebHdfsTestUtil.getWebHdfsFileSystem(conf);
++            Path d = new Path("/my-dir");
++            Assert.assertTrue(fs.mkdirs(d));
++            return null;
++          }
++        });
++    } finally {
++      cluster.shutdown();
++    }
++  }
+ }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/resources/TestParam.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/resources/TestParam.java
+index 29794f0..7a3c4de 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/resources/TestParam.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/web/resources/TestParam.java
+@@ -255,4 +255,19 @@ public class TestParam {
+     UserParam userParam = new UserParam("a$");
+     assertNotNull(userParam.getValue());
+   }
++
++  @Test
++  public void testUserNameOkAfterResettingPattern() {
++    UserParam.Domain oldDomain = UserParam.getUserPatternDomain();
++
++    String newPattern = "^[A-Za-z0-9_][A-Za-z0-9._-]*[$]?$";
++    UserParam.setUserPattern(newPattern);
++
++    UserParam userParam = new UserParam("1x");
++    assertNotNull(userParam.getValue());
++    userParam = new UserParam("123");
++    assertNotNull(userParam.getValue());
++
++    UserParam.setUserPatternDomain(oldDomain);
++  }
+ }
+-- 
+1.7.0.4
+

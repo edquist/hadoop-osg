@@ -1,7 +1,7 @@
 From 919455d0d6b4b508a495147045c92a1834d62c08 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Tue, 24 Jul 2012 15:27:10 +0000
-Subject: [PATCH 304/545] HDFS-3711. Manually convert remaining tests to JUnit4. Contributed by Andrew Wang.
+Subject: [PATCH 0304/1612] HDFS-3711. Manually convert remaining tests to JUnit4. Contributed by Andrew Wang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1365125 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8ffa31e753bdce5623b13f9f2a707342f61bca0d)

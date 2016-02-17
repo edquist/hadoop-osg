@@ -1,7 +1,7 @@
 From e077a25a04e76d10d3042e0be2379420a1f9ad1e Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Wed, 1 Aug 2012 01:44:03 +0000
-Subject: [PATCH 309/545] HDFS-3667. Add retry support to WebHdfsFileSystem.
+Subject: [PATCH 0309/1612] HDFS-3667. Add retry support to WebHdfsFileSystem.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1367842 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ab44267693db25f33b762c32fc3bcb8be275b077)

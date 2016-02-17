@@ -1,7 +1,7 @@
 From 022b1dcff50af635ee85f03c5e4938a9ef235dcd Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 29 Aug 2012 17:28:02 -0700
-Subject: [PATCH 459/545] HADOOP-8632. Configuration leaking class-loaders (Costin Leau via bobby)
+Subject: [PATCH 0459/1612] HADOOP-8632. Configuration leaking class-loaders (Costin Leau via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1376546 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a8f81311ae835211e20bdc155453f7d68f5af694)

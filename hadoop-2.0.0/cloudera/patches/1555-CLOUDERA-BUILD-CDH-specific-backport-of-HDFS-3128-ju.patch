@@ -1,0 +1,59 @@
+From 4e0bc7865bc46a03306b9f9d1bee8d66dcf12f9b Mon Sep 17 00:00:00 2001
+From: Andrew Wang <andrew.wang@cloudera.com>
+Date: Fri, 14 Feb 2014 13:56:01 -0800
+Subject: [PATCH 1555/1612] CLOUDERA-BUILD: CDH specific backport of HDFS-3128 just for TestResolveHdfsSymlink
+
+---
+ .../apache/hadoop/fs/TestResolveHdfsSymlink.java   |   13 +++++++++----
+ 1 files changed, 9 insertions(+), 4 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/fs/TestResolveHdfsSymlink.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/fs/TestResolveHdfsSymlink.java
+index c48759e..2f07aa8 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/fs/TestResolveHdfsSymlink.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/fs/TestResolveHdfsSymlink.java
+@@ -26,6 +26,7 @@ import java.util.EnumSet;
+ import java.util.List;
+ import java.util.Set;
+ 
++import org.apache.commons.lang.RandomStringUtils;
+ import org.apache.hadoop.conf.Configuration;
+ import org.apache.hadoop.hdfs.DFSClient;
+ import org.apache.hadoop.hdfs.DFSConfigKeys;
+@@ -50,6 +51,10 @@ import org.junit.Test;
+ public class TestResolveHdfsSymlink {
+   private static MiniDFSCluster cluster = null;
+ 
++  private final static String TEST_ROOT =
++      System.getProperty("test.build.data", "target/test/data") +
++      RandomStringUtils.randomAlphanumeric(10);
++
+   @BeforeClass
+   public static void setUp() throws IOException {
+     Configuration conf = new HdfsConfiguration();
+@@ -80,19 +85,19 @@ public class TestResolveHdfsSymlink {
+         .getUri());
+ 
+     Path alphaLocalPath = new Path(fcLocal.getDefaultFileSystem().getUri()
+-        .toString(), "/tmp/alpha");
++        .toString(), TEST_ROOT + "/tmp/alpha");
+     DFSTestUtil.createFile(FileSystem.getLocal(conf), alphaLocalPath, 16,
+         (short) 1, 2);
+ 
+     Path linkTarget = new Path(fcLocal.getDefaultFileSystem().getUri()
+-        .toString(), "/tmp");
++        .toString(), TEST_ROOT + "/tmp");
+     Path hdfsLink = new Path(fcHdfs.getDefaultFileSystem().getUri().toString(),
+-        "/tmp/link");
++        TEST_ROOT + "/tmp/link");
+     fcHdfs.createSymlink(linkTarget, hdfsLink, true);
+ 
+     Path alphaHdfsPathViaLink = new Path(fcHdfs.getDefaultFileSystem().getUri()
+         .toString()
+-        + "/tmp/link/alpha");
++        + TEST_ROOT + "/tmp/link/alpha");
+ 
+     Set<AbstractFileSystem> afsList = fcHdfs
+         .resolveAbstractFileSystems(alphaHdfsPathViaLink);
+-- 
+1.7.0.4
+

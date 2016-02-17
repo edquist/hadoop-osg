@@ -1,7 +1,7 @@
 From 78ff96a526546be9614cb1638fc65bf26c3d1b58 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 13 Aug 2012 15:09:57 -0700
-Subject: [PATCH 319/545] HDFS-3190. Simple refactors in existing NN code to assist QuorumJournalManager extension. Contributed by Todd Lipcon.
+Subject: [PATCH 0319/1612] HDFS-3190. Simple refactors in existing NN code to assist QuorumJournalManager extension. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1372603 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f58d226a4a3a0b8be6867407bce1d785eea5703b)

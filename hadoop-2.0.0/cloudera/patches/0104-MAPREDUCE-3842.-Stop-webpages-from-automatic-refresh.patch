@@ -1,7 +1,7 @@
 From efce70e5626a5d45fd418d4922aa6599b84c6bf1 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Fri, 8 Jun 2012 15:47:50 +0000
-Subject: [PATCH 104/545] MAPREDUCE-3842. Stop webpages from automatic refreshing (tgraves)
+Subject: [PATCH 0104/1612] MAPREDUCE-3842. Stop webpages from automatic refreshing (tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1348123 13f79535-47bb-0310-9956-ffa450edef68
 ---

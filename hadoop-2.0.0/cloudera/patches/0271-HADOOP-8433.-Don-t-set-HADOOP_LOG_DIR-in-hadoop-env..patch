@@ -1,7 +1,7 @@
 From d0de55d7543dcde63b0ba53aa133c2b4b681c236 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 13 Jun 2012 05:37:27 +0000
-Subject: [PATCH 271/545] HADOOP-8433. Don't set HADOOP_LOG_DIR in hadoop-env.sh. Contributed by Brahma Reddy Battula
+Subject: [PATCH 0271/1612] HADOOP-8433. Don't set HADOOP_LOG_DIR in hadoop-env.sh. Contributed by Brahma Reddy Battula
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349641 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f737736527b47b44d3e9b4a73d6c00d48082d021)

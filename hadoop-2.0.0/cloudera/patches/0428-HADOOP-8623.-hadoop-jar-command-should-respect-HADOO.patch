@@ -1,7 +1,7 @@
 From 2eafb9d10facac9cb94a948a298129435ef2e52e Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Thu, 26 Jul 2012 18:21:39 +0000
-Subject: [PATCH 428/545] HADOOP-8623. hadoop jar command should respect HADOOP_OPTS. Contributed by Steven Willis.
+Subject: [PATCH 0428/1612] HADOOP-8623. hadoop jar command should respect HADOOP_OPTS. Contributed by Steven Willis.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1366126 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 36df10178f5628554c8592a62e9bc329d98bd306)

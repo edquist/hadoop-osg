@@ -30,6 +30,7 @@ import java.io.FileDescriptor;
 import java.net.URI;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.StringTokenizer;
 
 import org.apache.hadoop.classification.InterfaceAudience;
@@ -263,6 +264,18 @@ public class RawLocalFileSystem extends FileSystem {
     return new FSDataOutputStream(new BufferedOutputStream(
         new LocalFSFileOutputStream(f, false), bufferSize), statistics);
   }
+  
+  @Override
+  @Deprecated
+  public FSDataOutputStream createNonRecursive(Path f, FsPermission permission,
+      EnumSet<CreateFlag> flags, int bufferSize, short replication, long blockSize,
+      Progressable progress) throws IOException {
+    if (exists(f) && !flags.contains(CreateFlag.OVERWRITE)) {
+      throw new IOException("File already exists: "+f);
+    }
+    return new FSDataOutputStream(new BufferedOutputStream(
+        new LocalFSFileOutputStream(f, false), bufferSize), statistics);
+  }
 
   /** {@inheritDoc} */
   @Override
@@ -325,7 +338,7 @@ public class RawLocalFileSystem extends FileSystem {
         new RawLocalFileStatus(localf, getDefaultBlockSize(f), this) };
     }
 
-    String[] names = localf.list();
+    File[] names = localf.listFiles();
     if (names == null) {
       return null;
     }
@@ -333,7 +346,7 @@ public class RawLocalFileSystem extends FileSystem {
     int j = 0;
     for (int i = 0; i < names.length; i++) {
       try {
-        results[j] = getFileStatus(new Path(f, names[i]));
+        results[j] = getFileStatus(new Path(names[i].getAbsolutePath()));
         j++;
       } catch (FileNotFoundException e) {
         // ignore the files not found since the dir list may have have changed

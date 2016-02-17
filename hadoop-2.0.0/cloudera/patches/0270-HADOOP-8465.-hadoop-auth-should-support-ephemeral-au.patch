@@ -1,7 +1,7 @@
 From 0f8eab20fbfdb05657c33cd6044bc371ecdd52f6 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 13 Jun 2012 02:22:06 +0000
-Subject: [PATCH 270/545] HADOOP-8465. hadoop-auth should support ephemeral authentication (tucu)
+Subject: [PATCH 0270/1612] HADOOP-8465. hadoop-auth should support ephemeral authentication (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349613 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8948e9b15853d86227755ba0702bfc0093d7be44)

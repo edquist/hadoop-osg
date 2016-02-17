@@ -1,7 +1,7 @@
 From 3bdcaacfe5cbba1ba9ac4865458a7183a8931b3a Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 20 Jul 2012 20:50:30 +0000
-Subject: [PATCH 429/545] HADOOP-8609. IPC server logs a useless message when shutting down socket. Contributed by Jon Zuanich.
+Subject: [PATCH 0429/1612] HADOOP-8609. IPC server logs a useless message when shutting down socket. Contributed by Jon Zuanich.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363950 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 1e3d53c58e483e937ee6660db436a77c4db66fe5)

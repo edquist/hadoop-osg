@@ -1,7 +1,7 @@
 From d8e6f39392664fcc2d3a4daefb14e6069b65746c Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Mon, 21 May 2012 09:55:12 -0700
-Subject: [PATCH 072/545] HDFS-3438. BootstrapStandby should not require a rollEdits on active node. Contributed by Todd Lipcon.
+Subject: [PATCH 0072/1612] HDFS-3438. BootstrapStandby should not require a rollEdits on active node. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1340343 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit be031272816764176bbbd5fbc3befdf3767b657f)

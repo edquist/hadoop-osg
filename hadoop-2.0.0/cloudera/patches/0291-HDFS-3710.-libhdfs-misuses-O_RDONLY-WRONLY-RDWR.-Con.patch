@@ -1,7 +1,7 @@
 From fc5b3b3697a4c4c8134a57d8324202a51c51584c Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 8 Aug 2012 19:11:30 +0000
-Subject: [PATCH 291/545] HDFS-3710. libhdfs misuses O_RDONLY/WRONLY/RDWR. Contributed by Andy Isaacson.
+Subject: [PATCH 0291/1612] HDFS-3710. libhdfs misuses O_RDONLY/WRONLY/RDWR. Contributed by Andy Isaacson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1370898 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 16f67c5d0e6b86cce11775eb7655385f7240db80)

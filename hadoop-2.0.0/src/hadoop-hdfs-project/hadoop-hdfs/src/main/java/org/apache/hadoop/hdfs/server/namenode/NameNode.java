@@ -74,10 +74,12 @@ import org.apache.hadoop.security.UserGroupInformation;
 import org.apache.hadoop.security.authorize.RefreshAuthorizationPolicyProtocol;
 import org.apache.hadoop.tools.GetUserMappingsProtocol;
 import org.apache.hadoop.util.ExitUtil.ExitException;
+import org.apache.hadoop.util.JvmPauseMonitor;
 import org.apache.hadoop.util.ServicePlugin;
 import org.apache.hadoop.util.StringUtils;
 
 import com.google.common.annotations.VisibleForTesting;
+import com.google.common.base.Joiner;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 
@@ -226,6 +228,7 @@ public class NameNode {
   public static final int DEFAULT_PORT = 8020;
   public static final Log LOG = LogFactory.getLog(NameNode.class.getName());
   public static final Log stateChangeLog = LogFactory.getLog("org.apache.hadoop.hdfs.StateChange");
+  public static final Log blockStateChangeLog = LogFactory.getLog("BlockStateChange");
   public static final HAState ACTIVE_STATE = new ActiveState();
   public static final HAState STANDBY_STATE = new StandbyState();
   
@@ -249,6 +252,8 @@ public class NameNode {
   private List<ServicePlugin> plugins;
   
   private NameNodeRpcServer rpcServer;
+
+  private JvmPauseMonitor pauseMonitor;
   
   /** Format a new filesystem.  Destroys any filesystem that may already
    * exist at this location.  **/
@@ -425,6 +430,14 @@ public class NameNode {
    * @param conf the configuration
    */
   protected void initialize(Configuration conf) throws IOException {
+    if (conf.get(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS) == null) {
+      String intervals = conf.get(DFS_METRICS_PERCENTILES_INTERVALS_KEY);
+      if (intervals != null) {
+        conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
+          intervals);
+      }
+    }
+
     UserGroupInformation.setConfiguration(conf);
     loginAsNameNodeUser(conf);
 
@@ -439,6 +452,9 @@ public class NameNode {
       LOG.fatal(e.toString());
       throw e;
     }
+    
+    pauseMonitor = new JvmPauseMonitor(conf);
+    pauseMonitor.start();
 
     startCommonServices(conf);
   }
@@ -498,6 +514,7 @@ public class NameNode {
   private void stopCommonServices() {
     if(namesystem != null) namesystem.close();
     if(rpcServer != null) rpcServer.stop();
+    if (pauseMonitor != null) pauseMonitor.stop();
     if (plugins != null) {
       for (ServicePlugin p : plugins) {
         try {
@@ -596,11 +613,7 @@ public class NameNode {
     String nsId = getNameServiceId(conf);
     String namenodeId = HAUtil.getNameNodeId(conf, nsId);
     this.haEnabled = HAUtil.isHAEnabled(conf, nsId);
-    if (!haEnabled) {
-      state = ACTIVE_STATE;
-    } else {
-      state = STANDBY_STATE;
-    }
+    state = createHAState();
     this.allowStaleStandbyReads = HAUtil.shouldAllowStandbyReads(conf);
     this.haContext = createHAContext();
     try {
@@ -615,6 +628,10 @@ public class NameNode {
       this.stop();
       throw e;
     }
+  }
+
+  protected HAState createHAState() {
+    return !haEnabled ? ACTIVE_STATE : STANDBY_STATE;
   }
 
   protected HAContext createHAContext() {
@@ -775,6 +792,26 @@ public class NameNode {
   }
 
   /**
+   * Clone the supplied configuration but remove the shared edits dirs.
+   *
+   * @param conf Supplies the original configuration.
+   * @return Cloned configuration without the shared edit dirs.
+   * @throws IOException on failure to generate the configuration.
+   */
+  private static Configuration getConfigurationWithoutSharedEdits(
+      Configuration conf)
+      throws IOException {
+    List<URI> editsDirs = FSNamesystem.getNamespaceEditsDirs(conf, false);
+    String editsDirsString = Joiner.on(",").join(editsDirs);
+
+    Configuration confWithoutShared = new Configuration(conf);
+    confWithoutShared.unset(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
+    confWithoutShared.setStrings(DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+        editsDirsString);
+    return confWithoutShared;
+  }
+
+  /**
    * Format a new shared edits dir and copy in enough edit log segments so that
    * the standby NN can start up.
    * 
@@ -803,11 +840,8 @@ public class NameNode {
 
     NNStorage existingStorage = null;
     try {
-      Configuration confWithoutShared = new Configuration(conf);
-      confWithoutShared.unset(DFSConfigKeys.DFS_NAMENODE_SHARED_EDITS_DIR_KEY);
-      FSNamesystem fsns = FSNamesystem.loadFromDisk(confWithoutShared,
-          FSNamesystem.getNamespaceDirs(conf),
-          FSNamesystem.getNamespaceEditsDirs(conf, false));
+      FSNamesystem fsns =
+          FSNamesystem.loadFromDisk(getConfigurationWithoutSharedEdits(conf));
       
       existingStorage = fsns.getFSImage().getStorage();
       NamespaceInfo nsInfo = existingStorage.getNamespaceInfo();
@@ -1000,6 +1034,16 @@ public class NameNode {
         return startOpt;
       } else if (StartupOption.INITIALIZESHAREDEDITS.getName().equalsIgnoreCase(cmd)) {
         startOpt = StartupOption.INITIALIZESHAREDEDITS;
+        for (i = i + 1 ; i < argsLen; i++) {
+          if (StartupOption.NONINTERACTIVE.getName().equals(args[i])) {
+            startOpt.setInteractiveFormat(false);
+          } else if (StartupOption.FORCE.getName().equals(args[i])) {
+            startOpt.setForceFormat(true);
+          } else {
+            LOG.fatal("Invalid argument: " + args[i]);
+            return null;
+          }
+        }
         return startOpt;
       } else if (StartupOption.RECOVER.getName().equalsIgnoreCase(cmd)) {
         if (startOpt != StartupOption.REGULAR) {
@@ -1034,6 +1078,9 @@ public class NameNode {
 
   private static void doRecovery(StartupOption startOpt, Configuration conf)
       throws IOException {
+    String nsId = DFSUtil.getNamenodeNameServiceId(conf);
+    String namenodeId = HAUtil.getNameNodeId(conf, nsId);
+    initializeGenericKeys(conf, nsId, namenodeId);
     if (startOpt.getForce() < MetaRecoveryContext.FORCE_ALL) {
       if (!confirmPrompt("You have selected Metadata Recovery mode.  " +
           "This mode is intended to recover lost metadata on a corrupt " +
@@ -1109,7 +1156,9 @@ public class NameNode {
         return null; // avoid warning
       }
       case INITIALIZESHAREDEDITS: {
-        boolean aborted = initializeSharedEdits(conf, false, true);
+        boolean aborted = initializeSharedEdits(conf,
+            startOpt.getForceFormat(),
+            startOpt.getInteractiveFormat());
         terminate(aborted ? 1 : 0);
         return null; // avoid warning
       }
@@ -1273,7 +1322,7 @@ public class NameNode {
    *          before exit.
    * @throws ExitException thrown only for testing.
    */
-  private synchronized void doImmediateShutdown(Throwable t)
+  protected synchronized void doImmediateShutdown(Throwable t)
       throws ExitException {
     String message = "Error encountered requiring NN shutdown. " +
         "Shutting down immediately.";

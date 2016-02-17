@@ -1,0 +1,33 @@
+From a1851c34c4e95993057f1658ca0eeff6cfc4a696 Mon Sep 17 00:00:00 2001
+From: Arpit Agarwal <arp@apache.org>
+Date: Thu, 29 Aug 2013 00:16:16 +0000
+Subject: [PATCH 1571/1612] HADOOP-9894. Merging change rr1518421 from branch-2 to branch-2.1-beta.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.1-beta@1518423 13f79535-47bb-0310-9956-ffa450edef68
+---
+ .../main/java/org/apache/hadoop/util/Shell.java    |    9 +++++++--
+ 1 files changed, 7 insertions(+), 2 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/Shell.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/Shell.java
+index 6c032ea..0c81d55 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/Shell.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/util/Shell.java
+@@ -272,8 +272,13 @@ abstract public class Shell {
+       } catch (IOException ioe) {
+         LOG.warn("Error while closing the input stream", ioe);
+       }
+-      if (!completed.get()) {
+-        errThread.interrupt();
++      try {
++        if (!completed.get()) {
++          errThread.interrupt();
++          errThread.join();
++        }
++      } catch (InterruptedException ie) {
++        LOG.warn("Interrupted while joining errThread");
+       }
+       try {
+         errReader.close();
+-- 
+1.7.0.4
+

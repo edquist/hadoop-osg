@@ -29,12 +29,15 @@ import java.io.IOException;
 import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.AbstractMap.SimpleEntry;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.EnumSet;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Random;
@@ -53,6 +56,8 @@ import org.apache.hadoop.yarn.event.Dispatcher;
 import org.apache.hadoop.yarn.event.DrainDispatcher;
 import org.apache.hadoop.yarn.event.EventHandler;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.application.ApplicationEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.AuxServicesEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.launcher.ContainersLauncherEvent;
@@ -62,6 +67,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.ContainerLocalizationRequestEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizationEventType;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEvent;
+import org.apache.hadoop.yarn.server.nodemanager.containermanager.loghandler.event.LogHandlerEventType;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEvent;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor.ContainersMonitorEventType;
 import org.apache.hadoop.yarn.server.nodemanager.metrics.NodeManagerMetrics;
@@ -111,11 +118,12 @@ public class TestContainer {
       wc = new WrappedContainer(8, 314159265358979L, 4344, "yak");
       assertEquals(ContainerState.NEW, wc.c.getContainerState());
       wc.initContainer();
-      Map<Path, String> localPaths = wc.localizeResources();
+      Map<Path, List<String>> localPaths = wc.localizeResources();
 
       // all resources should be localized
       assertEquals(ContainerState.LOCALIZED, wc.c.getContainerState());
-      for (Entry<Path,String> loc : wc.c.getLocalizedResources().entrySet()) {
+      for (Entry<Path, List<String>> loc : wc.c.getLocalizedResources()
+          .entrySet()) {
         assertEquals(localPaths.remove(loc.getKey()), loc.getValue());
       }
       assertTrue(localPaths.isEmpty());
@@ -196,6 +204,32 @@ public class TestContainer {
       assertEquals(ContainerState.EXITED_WITH_SUCCESS,
           wc.c.getContainerState());
       
+      verifyCleanupCall(wc);
+    }
+    finally {
+      if (wc != null) {
+        wc.finished();
+      }
+    }
+  }
+
+  @Test
+  @SuppressWarnings("unchecked") // mocked generic
+  public void testInitWhileDone() throws Exception {
+    WrappedContainer wc = null;
+    try {
+      wc = new WrappedContainer(6, 314159265358979L, 4344, "yak");
+      wc.initContainer();
+      wc.localizeResources();
+      wc.launchContainer();
+      reset(wc.localizerBus);
+      wc.containerSuccessful();
+      wc.containerResourcesCleanup();
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
+      // Now in DONE, issue INIT
+      wc.initContainer();
+      // Verify still in DONE
+      assertEquals(ContainerState.DONE, wc.c.getContainerState());
       verifyCleanupCall(wc);
     }
     finally {
@@ -502,6 +536,8 @@ public class TestContainer {
     final EventHandler<ContainersLauncherEvent> launcherBus;
     final EventHandler<ContainersMonitorEvent> monitorBus;
     final EventHandler<AuxServicesEvent> auxBus;
+    final EventHandler<ApplicationEvent> appBus;
+    final EventHandler<LogHandlerEvent> LogBus;
 
     final ContainerLaunchContext ctxt;
     final ContainerId cId;
@@ -523,10 +559,14 @@ public class TestContainer {
       launcherBus = mock(EventHandler.class);
       monitorBus = mock(EventHandler.class);
       auxBus = mock(EventHandler.class);
+      appBus = mock(EventHandler.class);
+      LogBus = mock(EventHandler.class);
       dispatcher.register(LocalizationEventType.class, localizerBus);
       dispatcher.register(ContainersLauncherEventType.class, launcherBus);
       dispatcher.register(ContainersMonitorEventType.class, monitorBus);
       dispatcher.register(AuxServicesEventType.class, auxBus);
+      dispatcher.register(ApplicationEventType.class, appBus);
+      dispatcher.register(LogHandlerEventType.class, LogBus);
       this.user = user;
 
       ctxt = mock(ContainerLaunchContext.class);
@@ -534,7 +574,7 @@ public class TestContainer {
       when(ctxt.getUser()).thenReturn(this.user);
       when(ctxt.getContainerId()).thenReturn(cId);
 
-      Resource resource = BuilderUtils.newResource(1024);
+      Resource resource = BuilderUtils.newResource(1024, 1);
       when(ctxt.getResource()).thenReturn(resource);
 
       if (withLocalRes) {
@@ -578,10 +618,12 @@ public class TestContainer {
 
     // Localize resources 
     // Skip some resources so as to consider them failed
-    public Map<Path, String> doLocalizeResources(boolean checkLocalizingState,
-        int skipRsrcCount) throws URISyntaxException {
+    public Map<Path, List<String>> doLocalizeResources(
+        boolean checkLocalizingState, int skipRsrcCount)
+        throws URISyntaxException {
       Path cache = new Path("file:///cache");
-      Map<Path, String> localPaths = new HashMap<Path, String>();
+      Map<Path, List<String>> localPaths =
+          new HashMap<Path, List<String>>();
       int counter = 0;
       for (Entry<String, LocalResource> rsrc : localResources.entrySet()) {
         if (counter++ < skipRsrcCount) {
@@ -592,7 +634,7 @@ public class TestContainer {
         }
         LocalResourceRequest req = new LocalResourceRequest(rsrc.getValue());
         Path p = new Path(cache, rsrc.getKey());
-        localPaths.put(p, rsrc.getKey());
+        localPaths.put(p, Arrays.asList(rsrc.getKey()));
         // rsrc copied to p
         c.handle(new ContainerResourceLocalizedEvent(c.getContainerID(), 
                  req, p));
@@ -602,7 +644,8 @@ public class TestContainer {
     }
     
     
-    public Map<Path, String> localizeResources() throws URISyntaxException {
+    public Map<Path, List<String>> localizeResources()
+        throws URISyntaxException {
       return doLocalizeResources(true, 0);
     }
     
@@ -645,6 +688,11 @@ public class TestContainer {
     public void containerSuccessful() {
       c.handle(new ContainerEvent(cId,
           ContainerEventType.CONTAINER_EXITED_WITH_SUCCESS));
+      drainDispatcherEvents();
+    }
+    public void containerResourcesCleanup() {
+      c.handle(new ContainerEvent(cId,
+          ContainerEventType.CONTAINER_RESOURCES_CLEANEDUP));
       drainDispatcherEvents();
     }
 

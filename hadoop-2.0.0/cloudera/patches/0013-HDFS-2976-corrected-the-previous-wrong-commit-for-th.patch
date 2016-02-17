@@ -1,7 +1,7 @@
 From a649d0272f9dbd603def5f12fe1e841087cc61cf Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@cloudera.com>
 Date: Tue, 3 Apr 2012 15:05:59 -0700
-Subject: [PATCH 013/545] HDFS-2976 corrected the previous wrong commit for this issue.
+Subject: [PATCH 0013/1612] HDFS-2976 corrected the previous wrong commit for this issue.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1298507 13f79535-47bb-0310-9956-ffa450edef68
 ---

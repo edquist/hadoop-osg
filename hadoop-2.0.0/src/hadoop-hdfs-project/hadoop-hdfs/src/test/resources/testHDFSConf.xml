@@ -1182,7 +1182,7 @@
         </comparator>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>^1\.0k\s+hdfs:///dir0/data1k</expected-output>
+          <expected-output>^1\.0 K\s+hdfs:///dir0/data1k</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6228,8 +6228,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^test: `/dir0/file': No such file or directory</expected-output>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6244,8 +6244,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^test: `file': No such file or directory</expected-output>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6260,8 +6260,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^test: `/dir': No such file or directory</expected-output>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6276,8 +6276,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^test: `dir0': No such file or directory</expected-output>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6292,8 +6292,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^test: `hdfs:///dir0/file': No such file or directory</expected-output>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6308,8 +6308,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^test: `hdfs:///dir': No such file or directory</expected-output>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6324,8 +6324,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^test: `hdfs://\w+[-.a-z0-9]*:[0-9]+/dir0/file': No such file or directory</expected-output>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>
@@ -6340,8 +6340,8 @@
       </cleanup-commands>
       <comparators>
         <comparator>
-          <type>RegexpComparator</type>
-          <expected-output>^test: `hdfs://\w+[-.a-z0-9]*:[0-9]+/dir': No such file or directory</expected-output>
+          <type>ExactComparator</type>
+          <expected-output></expected-output>
         </comparator>
       </comparators>
     </test>
@@ -15577,7 +15577,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>put: The DiskSpace quota of /dir1 is exceeded: quota=1.0k diskspace consumed=[0-9.]+[kmg]*</expected-output>
+          <expected-output>put: The DiskSpace quota of /dir1 is exceeded: quota = 1024 B = 1 KB but diskspace consumed = [0-9]+ B = [0-9.]+ [KMG]B*</expected-output>
         </comparator>
       </comparators>
     </test>
@@ -15967,7 +15967,7 @@
       <comparators>
         <comparator>
           <type>RegexpComparator</type>
-          <expected-output>Created file metafile on server hdfs:\/\/[-.a-zA-Z0-9\.:]+</expected-output>
+          <expected-output>Created metasave file metafile in the log directory of namenode hdfs:\/\/[-.a-zA-Z0-9\.:]+</expected-output>
         </comparator>
       </comparators>
     </test>

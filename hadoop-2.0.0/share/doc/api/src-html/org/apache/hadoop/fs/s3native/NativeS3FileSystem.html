@@ -276,7 +276,7 @@
 <FONT color="green">273</FONT>        setConf(conf);<a name="line.273"></a>
 <FONT color="green">274</FONT>        this.uri = URI.create(uri.getScheme() + "://" + uri.getAuthority());<a name="line.274"></a>
 <FONT color="green">275</FONT>        this.workingDir =<a name="line.275"></a>
-<FONT color="green">276</FONT>          new Path("/user", System.getProperty("user.name")).makeQualified(this);<a name="line.276"></a>
+<FONT color="green">276</FONT>          new Path("/user", System.getProperty("user.name")).makeQualified(this.uri, this.getWorkingDirectory());<a name="line.276"></a>
 <FONT color="green">277</FONT>      }<a name="line.277"></a>
 <FONT color="green">278</FONT>      <a name="line.278"></a>
 <FONT color="green">279</FONT>      private static NativeFileSystemStore createDefaultStore(Configuration conf) {<a name="line.279"></a>
@@ -514,11 +514,11 @@
 <FONT color="green">511</FONT>      <a name="line.511"></a>
 <FONT color="green">512</FONT>      private FileStatus newFile(FileMetadata meta, Path path) {<a name="line.512"></a>
 <FONT color="green">513</FONT>        return new FileStatus(meta.getLength(), false, 1, getDefaultBlockSize(),<a name="line.513"></a>
-<FONT color="green">514</FONT>            meta.getLastModified(), path.makeQualified(this));<a name="line.514"></a>
+<FONT color="green">514</FONT>            meta.getLastModified(), path.makeQualified(this.getUri(), this.getWorkingDirectory()));<a name="line.514"></a>
 <FONT color="green">515</FONT>      }<a name="line.515"></a>
 <FONT color="green">516</FONT>      <a name="line.516"></a>
 <FONT color="green">517</FONT>      private FileStatus newDirectory(Path path) {<a name="line.517"></a>
-<FONT color="green">518</FONT>        return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this));<a name="line.518"></a>
+<FONT color="green">518</FONT>        return new FileStatus(0, true, 1, 0, 0, path.makeQualified(this.getUri(), this.getWorkingDirectory()));<a name="line.518"></a>
 <FONT color="green">519</FONT>      }<a name="line.519"></a>
 <FONT color="green">520</FONT>    <a name="line.520"></a>
 <FONT color="green">521</FONT>      @Override<a name="line.521"></a>
@@ -702,7 +702,13 @@
 <FONT color="green">699</FONT>      public Path getWorkingDirectory() {<a name="line.699"></a>
 <FONT color="green">700</FONT>        return workingDir;<a name="line.700"></a>
 <FONT color="green">701</FONT>      }<a name="line.701"></a>
-<FONT color="green">702</FONT>    }<a name="line.702"></a>
+<FONT color="green">702</FONT>    <a name="line.702"></a>
+<FONT color="green">703</FONT>      @Override<a name="line.703"></a>
+<FONT color="green">704</FONT>      public String getCanonicalServiceName() {<a name="line.704"></a>
+<FONT color="green">705</FONT>        // Does not support Token<a name="line.705"></a>
+<FONT color="green">706</FONT>        return null;<a name="line.706"></a>
+<FONT color="green">707</FONT>      }<a name="line.707"></a>
+<FONT color="green">708</FONT>    }<a name="line.708"></a>
 
 
 

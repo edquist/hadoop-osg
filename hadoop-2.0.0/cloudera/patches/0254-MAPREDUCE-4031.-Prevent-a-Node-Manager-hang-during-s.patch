@@ -1,7 +1,7 @@
 From 0b9c645442e18a9018e1749a58d23f69b5297802 Mon Sep 17 00:00:00 2001
 From: Siddharth Seth <sseth@apache.org>
 Date: Fri, 22 Jun 2012 21:40:35 +0000
-Subject: [PATCH 254/545] MAPREDUCE-4031. Prevent a Node Manager hang during shutdown. (Contributed by Devaraj K)
+Subject: [PATCH 0254/1612] MAPREDUCE-4031. Prevent a Node Manager hang during shutdown. (Contributed by Devaraj K)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1353038 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ba579b792a6dc60fe2da8aeebdd23b36bd801743)

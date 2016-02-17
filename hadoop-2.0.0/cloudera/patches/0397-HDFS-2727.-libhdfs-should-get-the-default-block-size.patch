@@ -1,7 +1,7 @@
 From 955bf335cec0c9cbb76f944ea35ee74ab1b2bdba Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 21 Aug 2012 03:48:00 +0000
-Subject: [PATCH 397/545] HDFS-2727. libhdfs should get the default block size from the server. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0397/1612] HDFS-2727. libhdfs should get the default block size from the server. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1375383 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2fe7c6dff8b9d04337a8ffcd2d3426765d9cf629)

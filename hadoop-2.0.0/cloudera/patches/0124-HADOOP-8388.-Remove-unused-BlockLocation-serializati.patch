@@ -1,7 +1,7 @@
 From 5792baeb05091c60affe92f8704643e090483fbd Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 10 May 2012 23:48:12 +0000
-Subject: [PATCH 124/545] HADOOP-8388. Remove unused BlockLocation serialization. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0124/1612] HADOOP-8388. Remove unused BlockLocation serialization. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336966 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 084258e96b18e53f42e1f5b960291e2a5e748ec7)

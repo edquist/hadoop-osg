@@ -1,7 +1,7 @@
 From 08f2b4246b36b78790314b86e739bf6cc2ef02e3 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Fri, 18 May 2012 02:50:48 +0000
-Subject: [PATCH 123/545] MAPREDUCE-4197. Include the hsqldb jar in the hadoop-mapreduce tar file (Ravi Prakash via tgraves)
+Subject: [PATCH 0123/1612] MAPREDUCE-4197. Include the hsqldb jar in the hadoop-mapreduce tar file (Ravi Prakash via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339957 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3214d79f03348ddfbbc94e71366ec02900f9ba1a)

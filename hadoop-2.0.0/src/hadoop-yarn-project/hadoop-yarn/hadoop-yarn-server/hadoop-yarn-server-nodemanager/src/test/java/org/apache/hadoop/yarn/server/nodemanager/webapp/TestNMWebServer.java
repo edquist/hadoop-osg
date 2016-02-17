@@ -76,7 +76,7 @@ public class TestNMWebServer {
   }
   
   private String startNMWebAppServer(String webAddr) {
-    Context nmContext = new NodeManager.NMContext();
+    Context nmContext = new NodeManager.NMContext(null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -85,6 +85,14 @@ public class TestNMWebServer {
       @Override
       public long getPmemAllocatedForContainers() {
         return 0;
+      }
+      @Override
+      public boolean isVmemCheckEnabled() {
+        return true;
+      }
+      @Override
+      public boolean isPmemCheckEnabled() {
+        return true;
       }
     };
     Configuration conf = new Configuration();
@@ -116,7 +124,7 @@ public class TestNMWebServer {
 
   @Test
   public void testNMWebApp() throws IOException {
-    Context nmContext = new NodeManager.NMContext();
+    Context nmContext = new NodeManager.NMContext(null);
     ResourceView resourceView = new ResourceView() {
       @Override
       public long getVmemAllocatedForContainers() {
@@ -125,6 +133,14 @@ public class TestNMWebServer {
       @Override
       public long getPmemAllocatedForContainers() {
         return 0;
+      }
+      @Override
+      public boolean isVmemCheckEnabled() {
+        return true;
+      }
+      @Override
+      public boolean isPmemCheckEnabled() {
+        return true;
       }
     };
     Configuration conf = new Configuration();

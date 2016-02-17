@@ -1,7 +1,7 @@
 From 53a16b5c7292ba6d174eecfdc3697a5b857b028a Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Mon, 4 Jun 2012 17:41:52 +0000
-Subject: [PATCH 245/545] MAPREDUCE-3350. Per-app RM page should have the list of application-attempts like on the app JHS page (Jonathon Eagles via tgraves)
+Subject: [PATCH 0245/1612] MAPREDUCE-3350. Per-app RM page should have the list of application-attempts like on the app JHS page (Jonathon Eagles via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1346047 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ee5952bc73b124d22e14056aac769cb52676959a)

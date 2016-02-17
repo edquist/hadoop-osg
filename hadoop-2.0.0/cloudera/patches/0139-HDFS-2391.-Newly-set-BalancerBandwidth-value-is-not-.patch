@@ -1,7 +1,7 @@
 From 8c0bc9e62e82674de80734cce8a83c020288fa5d Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Fri, 25 May 2012 07:04:35 +0000
-Subject: [PATCH 139/545] HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere. (harsh)
+Subject: [PATCH 0139/1612] HDFS-2391. Newly set BalancerBandwidth value is not displayed anywhere. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1342520 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3dde9ad1bb72db8b0659aaafc1a2fc28fe9fc118)

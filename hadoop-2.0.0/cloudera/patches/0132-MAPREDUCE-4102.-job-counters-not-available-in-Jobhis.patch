@@ -1,7 +1,7 @@
 From 5bc67418ec183234beb3965d04fe437449c4b354 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Wed, 16 May 2012 14:08:08 +0000
-Subject: [PATCH 132/545] MAPREDUCE-4102. job counters not available in Jobhistory webui for killed jobs (Bhallamudi Venkata Siva Kamesh via tgraves)
+Subject: [PATCH 0132/1612] MAPREDUCE-4102. job counters not available in Jobhistory webui for killed jobs (Bhallamudi Venkata Siva Kamesh via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339174 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 848902b7002e6311b1644d82e6533f157590c1ce)

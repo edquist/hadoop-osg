@@ -1,7 +1,7 @@
 From 6b1a316b5edaef8e6eafdef074a40a1c068cc978 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 15 Aug 2012 23:08:40 +0000
-Subject: [PATCH 351/545] MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
+Subject: [PATCH 0351/1612] MAPREDUCE-4511. Add IFile readahead (ahmed via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1373669 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit fbc1fd814cac8b1db0699acdbfb613b1f174321d)

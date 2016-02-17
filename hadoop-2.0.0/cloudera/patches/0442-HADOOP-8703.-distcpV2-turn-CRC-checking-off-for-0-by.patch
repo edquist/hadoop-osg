@@ -1,7 +1,7 @@
 From d90e66a78a57ea026e2b202e66fb599c76fe2a6b Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Wed, 15 Aug 2012 19:16:13 +0000
-Subject: [PATCH 442/545] HADOOP-8703. distcpV2: turn CRC checking off for 0 byte size (Dave Thompson via bobby)
+Subject: [PATCH 0442/1612] HADOOP-8703. distcpV2: turn CRC checking off for 0 byte size (Dave Thompson via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1373581 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5087690faf6277daccc8a5b2437867ff4caabc06)

@@ -1,0 +1,207 @@
+From abf58c39df0cff9c37c596da7050b28629877c84 Mon Sep 17 00:00:00 2001
+From: Arpit Agarwal <arp@apache.org>
+Date: Wed, 18 Sep 2013 20:21:48 +0000
+Subject: [PATCH 1551/1612] HDFS-5031. Merge change r1524553 from trunk to branch-2
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1524556 13f79535-47bb-0310-9956-ffa450edef68
+---
+ .../server/datanode/BlockPoolSliceScanner.java     |   16 ++++++---
+ .../server/datanode/fsdataset/RollingLogs.java     |    6 +++
+ .../datanode/fsdataset/impl/RollingLogsImpl.java   |    7 ++++
+ .../hadoop/hdfs/TestDatanodeBlockScanner.java      |   39 ++++++++++++++++++++
+ .../hdfs/server/datanode/DataNodeTestUtils.java    |   15 +++++++-
+ 5 files changed, 76 insertions(+), 7 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockPoolSliceScanner.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockPoolSliceScanner.java
+index ec4e92f..83c7e7c 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockPoolSliceScanner.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BlockPoolSliceScanner.java
+@@ -100,6 +100,7 @@ class BlockPoolSliceScanner {
+   private long currentPeriodStart = Time.now();
+   private long bytesLeft = 0; // Bytes to scan in this period
+   private long totalBytesToScan = 0;
++  private boolean isNewPeriod = true;
+   
+   private final LogFileHandler verificationLog;
+   
+@@ -126,7 +127,10 @@ class BlockPoolSliceScanner {
+       public int compare(BlockScanInfo left, BlockScanInfo right) {
+         final long l = left.lastScanTime;
+         final long r = right.lastScanTime;
+-        return l < r? -1: l > r? 1: 0; 
++        // compare blocks itself if scantimes are same to avoid.
++        // because TreeMap uses comparator if available to check existence of
++        // the object. 
++        return l < r? -1: l > r? 1: left.compareTo(right); 
+       }
+     };
+ 
+@@ -148,8 +152,6 @@ class BlockPoolSliceScanner {
+     public boolean equals(Object that) {
+       if (this == that) {
+         return true;
+-      } else if (that == null || !(that instanceof BlockScanInfo)) {
+-        return false;
+       }
+       return super.equals(that);
+     }
+@@ -539,10 +541,12 @@ class BlockPoolSliceScanner {
+                   entry.genStamp));
+               if (info != null) {
+                 if (processedBlocks.get(entry.blockId) == null) {
+-                  updateBytesLeft(-info.getNumBytes());
++                  if (isNewPeriod) {
++                    updateBytesLeft(-info.getNumBytes());
++                  }
+                   processedBlocks.put(entry.blockId, 1);
+                 }
+-                if (logIterator.isPrevious()) {
++                if (logIterator.isLastReadFromPrevious()) {
+                   // write the log entry to current file
+                   // so that the entry is preserved for later runs.
+                   verificationLog.append(entry.verificationTime, entry.genStamp,
+@@ -557,6 +561,7 @@ class BlockPoolSliceScanner {
+       } finally {
+         IOUtils.closeStream(logIterator);
+       }
++      isNewPeriod = false;
+     }
+     
+     
+@@ -597,6 +602,7 @@ class BlockPoolSliceScanner {
+     // reset the byte counts :
+     bytesLeft = totalBytesToScan;
+     currentPeriodStart = Time.now();
++    isNewPeriod = true;
+   }
+   
+   private synchronized boolean workRemainingInCurrentPeriod() {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/RollingLogs.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/RollingLogs.java
+index b34bfa5..5d54770 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/RollingLogs.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/RollingLogs.java
+@@ -33,6 +33,12 @@ public interface RollingLogs {
+   public interface LineIterator extends Iterator<String>, Closeable {
+     /** Is the iterator iterating the previous? */
+     public boolean isPrevious();
++
++    /**
++     * Is the last read entry from previous? This should be called after
++     * reading.
++     */
++    public boolean isLastReadFromPrevious();
+   }
+ 
+   /**
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/RollingLogsImpl.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/RollingLogsImpl.java
+index 48a9829..67cf556 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/RollingLogsImpl.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/fsdataset/impl/RollingLogsImpl.java
+@@ -128,6 +128,7 @@ class RollingLogsImpl implements RollingLogs {
+    */
+   private class Reader implements RollingLogs.LineIterator {
+     private File file;
++    private File lastReadFile;
+     private BufferedReader reader;
+     private String line;
+     private boolean closed = false;
+@@ -143,6 +144,11 @@ class RollingLogsImpl implements RollingLogs {
+       return file == prev;
+     }
+ 
++    @Override
++    public boolean isLastReadFromPrevious() {
++      return lastReadFile == prev;
++    }
++
+     private boolean openFile() throws IOException {
+ 
+       for(int i=0; i<2; i++) {
+@@ -196,6 +202,7 @@ class RollingLogsImpl implements RollingLogs {
+     public String next() {
+       String curLine = line;
+       try {
++        lastReadFile = file;
+         readNext();
+       } catch (IOException e) {
+         DataBlockScanner.LOG.warn("Failed to read next line.", e);
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeBlockScanner.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeBlockScanner.java
+index 30cb035..1245c5c 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeBlockScanner.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeBlockScanner.java
+@@ -458,4 +458,43 @@ public class TestDatanodeBlockScanner {
+     assertArrayEquals(expectedSubDirs, ReplicaInfo.parseSubDirs(testFile).subDirs);
+     assertEquals(BASE_PATH, ReplicaInfo.parseSubDirs(testFile).baseDirPath);
+   }
++
++  @Test
++  public void testDuplicateScans() throws Exception {
++    long startTime = Time.now();
++    MiniDFSCluster cluster = new MiniDFSCluster.Builder(new Configuration())
++        .numDataNodes(1).build();
++    FileSystem fs = null;
++    try {
++      fs = cluster.getFileSystem();
++      DataNode dataNode = cluster.getDataNodes().get(0);
++      int infoPort = dataNode.getInfoPort();
++      long scanTimeBefore = 0, scanTimeAfter = 0;
++      for (int i = 1; i < 10; i++) {
++        Path fileName = new Path("/test" + i);
++        DFSTestUtil.createFile(fs, fileName, 1024, (short) 1, 1000L);
++        waitForVerification(infoPort, fs, fileName, i, startTime, TIMEOUT);
++        if (i > 1) {
++          scanTimeAfter = DataNodeTestUtils.getLatestScanTime(dataNode,
++              DFSTestUtil.getFirstBlock(fs, new Path("/test" + (i - 1))));
++          assertFalse("scan time shoud not be 0", scanTimeAfter == 0);
++          assertEquals("There should not be duplicate scan", scanTimeBefore,
++              scanTimeAfter);
++        }
++
++        scanTimeBefore = DataNodeTestUtils.getLatestScanTime(dataNode,
++            DFSTestUtil.getFirstBlock(fs, new Path("/test" + i)));
++      }
++      cluster.restartDataNode(0);
++      Thread.sleep(10000);
++      dataNode = cluster.getDataNodes().get(0);
++      scanTimeAfter = DataNodeTestUtils.getLatestScanTime(dataNode,
++          DFSTestUtil.getFirstBlock(fs, new Path("/test" + (9))));
++      assertEquals("There should not be duplicate scan", scanTimeBefore,
++          scanTimeAfter);
++    } finally {
++      IOUtils.closeStream(fs);
++      cluster.shutdown();
++    }
++  }
+ }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/DataNodeTestUtils.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/DataNodeTestUtils.java
+index 9a66026..2cf8f6d 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/DataNodeTestUtils.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/DataNodeTestUtils.java
+@@ -115,11 +115,22 @@ public class DataNodeTestUtils {
+   }
+   
+   public static void runBlockScannerForBlock(DataNode dn, ExtendedBlock b) {
++    BlockPoolSliceScanner bpScanner = getBlockPoolScanner(dn, b);
++    bpScanner.verifyBlock(b);
++  }
++
++  private static BlockPoolSliceScanner getBlockPoolScanner(DataNode dn,
++      ExtendedBlock b) {
+     DataBlockScanner scanner = dn.getBlockScanner();
+     BlockPoolSliceScanner bpScanner = scanner.getBPScanner(b.getBlockPoolId());
+-    bpScanner.verifyBlock(b);
++    return bpScanner;
+   }
+-  
++
++  public static long getLatestScanTime(DataNode dn, ExtendedBlock b) {
++    BlockPoolSliceScanner scanner = getBlockPoolScanner(dn, b);
++    return scanner.getLastScanTime(b.getLocalBlock());
++  }
++
+   public static void shutdownBlockScanner(DataNode dn) {
+     if (dn.blockScanner != null) {
+       dn.blockScanner.shutdown();
+-- 
+1.7.0.4
+

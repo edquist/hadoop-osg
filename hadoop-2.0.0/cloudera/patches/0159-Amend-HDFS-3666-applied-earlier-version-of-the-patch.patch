@@ -1,7 +1,7 @@
 From cac4f0ff518698dadcafaa2652cd657b7cd5de20 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 16 Jul 2012 21:49:35 +0000
-Subject: [PATCH 159/545] Amend HDFS-3666, applied earlier version of the patch.
+Subject: [PATCH 0159/1612] Amend HDFS-3666, applied earlier version of the patch.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362278 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b9a7f42e45791bb5f013fd2d3622ef2901b51655)

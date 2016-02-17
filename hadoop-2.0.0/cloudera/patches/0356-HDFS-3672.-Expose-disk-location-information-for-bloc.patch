@@ -1,7 +1,7 @@
 From 82eda155c959b889510410cb24c540773ba7d7de Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 17 Aug 2012 17:03:32 +0000
-Subject: [PATCH 356/545] HDFS-3672. Expose disk-location information for blocks to enable better scheduling. Contributed by Andrew Wang.
+Subject: [PATCH 0356/1612] HDFS-3672. Expose disk-location information for blocks to enable better scheduling. Contributed by Andrew Wang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1374359 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4d7d6ae20d5644ad24cd8a863893e127ba8a286b)

@@ -1,7 +1,7 @@
 From 60376734daa682efe0da94c11cb750634fdb9535 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 26 Jun 2012 18:18:19 +0000
-Subject: [PATCH 118/545] HDFS-3535. Audit logging should log denied accesses. Contributed by Andy Isaacson
+Subject: [PATCH 0118/1612] HDFS-3535. Audit logging should log denied accesses. Contributed by Andy Isaacson
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1354147 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4ff76ce8e67d96d73fa735c6fcc31f759e506e73)

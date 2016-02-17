@@ -1,7 +1,7 @@
 From 20215d870ca5ab7c622e01019d7cc45241e08d9c Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 17 Jul 2012 13:50:35 +0000
-Subject: [PATCH 340/545] MAPREDUCE-4449. Incorrect MR_HISTORY_STORAGE property name in JHAdminConfig (Ahmed Radwan via bobby)
+Subject: [PATCH 0340/1612] MAPREDUCE-4449. Incorrect MR_HISTORY_STORAGE property name in JHAdminConfig (Ahmed Radwan via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362495 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 49f4e24197ab22d813d3db19d7e93c6d046a4253)

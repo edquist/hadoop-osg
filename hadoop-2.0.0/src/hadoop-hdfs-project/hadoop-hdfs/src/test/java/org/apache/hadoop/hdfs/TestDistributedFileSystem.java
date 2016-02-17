@@ -28,6 +28,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.security.PrivilegedExceptionAction;
 import java.util.Arrays;
+import java.util.EnumSet;
 import java.util.Random;
 
 import org.apache.commons.lang.ArrayUtils;
@@ -36,16 +37,20 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.BlockLocation;
 import org.apache.hadoop.fs.BlockStorageLocation;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CreateFlag;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileChecksum;
 import org.apache.hadoop.fs.FileStatus;
 import org.apache.hadoop.fs.FileSystem;
+import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.VolumeId;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;
 import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.util.Time;
 import org.apache.log4j.Level;
 import org.junit.Test;
@@ -59,12 +64,21 @@ public class TestDistributedFileSystem {
 
   private boolean dualPortTesting = false;
   
+  private boolean noXmlDefaults = false;
+  
   private HdfsConfiguration getTestConfiguration() {
-    HdfsConfiguration conf = new HdfsConfiguration();
+    HdfsConfiguration conf;
+    if (noXmlDefaults) {
+       conf = new HdfsConfiguration(false);
+    } else {
+       conf = new HdfsConfiguration();
+    }
     if (dualPortTesting) {
       conf.set(DFSConfigKeys.DFS_NAMENODE_SERVICE_RPC_ADDRESS_KEY,
               "localhost:0");
     }
+    conf.setLong(DFSConfigKeys.DFS_NAMENODE_MIN_BLOCK_SIZE_KEY, 0);
+
     return conf;
   }
 
@@ -111,13 +125,8 @@ public class TestDistributedFileSystem {
       DFSTestUtil.createFile(fileSys, p, 1L, (short)1, 0L);
       DFSTestUtil.readFile(fileSys, p);
       
-      DFSClient client = ((DistributedFileSystem)fileSys).dfs;
-      SocketCache cache = client.socketCache;
-      assertEquals(1, cache.size());
-
       fileSys.close();
       
-      assertEquals(0, cache.size());
     } finally {
       if (cluster != null) {cluster.shutdown();}
     }
@@ -447,7 +456,7 @@ public class TestDistributedFileSystem {
       fail("Expecting FileNotFoundException");
     } catch (FileNotFoundException e) {
       assertTrue("Not throwing the intended exception message", e.getMessage()
-          .contains("File does not exist: /test/TestExistingDir"));
+          .contains("Path is not a file: /test/TestExistingDir"));
     }
     
     //hftp
@@ -513,6 +522,21 @@ public class TestDistributedFileSystem {
       final FileChecksum webhdfs_qfoocs = webhdfs.getFileChecksum(webhdfsqualified);
       System.out.println("webhdfs_qfoocs=" + webhdfs_qfoocs);
 
+      //create a zero byte file
+      final Path zeroByteFile = new Path(dir, "zeroByteFile" + n);
+      {
+        final FSDataOutputStream out = hdfs.create(zeroByteFile, false, buffer_size,
+            (short)2, block_size);
+        out.close();
+      }
+
+      // verify the magic val for zero byte files
+      {
+        final FileChecksum zeroChecksum = hdfs.getFileChecksum(zeroByteFile);
+        assertEquals(zeroChecksum.toString(),
+            "MD5-of-0MD5-of-0CRC32:70bc8f4b72a86921468bf8e8441dce51");
+      }
+
       //write another file
       final Path bar = new Path(dir, "bar" + n);
       {
@@ -570,11 +594,32 @@ public class TestDistributedFileSystem {
   public void testAllWithDualPort() throws Exception {
     dualPortTesting = true;
 
-    testFileSystemCloseAll();
-    testDFSClose();
-    testDFSClient();
-    testFileChecksum();
+    try {
+      testFileSystemCloseAll();
+      testDFSClose();
+      testDFSClient();
+      testFileChecksum();
+    } finally {
+      dualPortTesting = false;
+    }
   }
+  
+  @Test
+  public void testAllWithNoXmlDefaults() throws Exception {
+    // Do all the tests with a configuration that ignores the defaults in
+    // the XML files.
+    noXmlDefaults = true;
+
+    try {
+      testFileSystemCloseAll();
+      testDFSClose();
+      testDFSClient();
+      testFileChecksum();
+    } finally {
+     noXmlDefaults = false; 
+    }
+  }
+  
 
   /**
    * Tests the normal path of batching up BlockLocation[]s to be passed to a
@@ -664,4 +709,83 @@ public class TestDistributedFileSystem {
           (l.getVolumeIds()[0].isValid()) ^ (l.getVolumeIds()[1].isValid()));
     }
   }
+
+  @Test
+  public void testCreateWithCustomChecksum() throws Exception {
+    Configuration conf = getTestConfiguration();
+    MiniDFSCluster cluster = null;
+    Path testBasePath = new Path("/test/csum");
+    // create args 
+    Path path1 = new Path(testBasePath, "file_wtih_crc1");
+    Path path2 = new Path(testBasePath, "file_with_crc2");
+    ChecksumOpt opt1 = new ChecksumOpt(DataChecksum.CHECKSUM_CRC32C, 512);
+    ChecksumOpt opt2 = new ChecksumOpt(DataChecksum.CHECKSUM_CRC32, 512);
+
+    // common args
+    FsPermission perm = FsPermission.getDefault().applyUMask(
+        FsPermission.getUMask(conf));
+    EnumSet<CreateFlag> flags = EnumSet.of(CreateFlag.OVERWRITE,
+        CreateFlag.CREATE);
+    short repl = 1;
+
+    try {
+      cluster = new MiniDFSCluster.Builder(conf).numDataNodes(1).build();
+      FileSystem dfs = cluster.getFileSystem();
+
+      dfs.mkdirs(testBasePath);
+
+      // create two files with different checksum types
+      FSDataOutputStream out1 = dfs.create(path1, perm, flags, 4096, repl,
+          131072L, null, opt1);
+      FSDataOutputStream out2 = dfs.create(path2, perm, flags, 4096, repl,
+          131072L, null, opt2);
+
+      for (int i = 0; i < 1024; i++) {
+        out1.write(i);
+        out2.write(i);
+      }
+      out1.close();
+      out2.close();
+
+      // the two checksums must be different.
+      MD5MD5CRC32FileChecksum sum1 =
+          (MD5MD5CRC32FileChecksum)dfs.getFileChecksum(path1);
+      MD5MD5CRC32FileChecksum sum2 =
+          (MD5MD5CRC32FileChecksum)dfs.getFileChecksum(path2);
+      assertFalse(sum1.equals(sum2));
+
+      // check the individual params
+      assertEquals(DataChecksum.CHECKSUM_CRC32C, sum1.getCrcType());
+      assertEquals(DataChecksum.CHECKSUM_CRC32,  sum2.getCrcType());
+
+    } finally {
+      if (cluster != null) {
+        cluster.getFileSystem().delete(testBasePath, true);
+        cluster.shutdown();
+      }
+    }
+  }
+
+  @Test(timeout=60000)
+  public void testFileCloseStatus() throws IOException {
+    Configuration conf = new HdfsConfiguration();
+    MiniDFSCluster cluster = new MiniDFSCluster.Builder(conf).build();
+    DistributedFileSystem fs = cluster.getFileSystem();
+    try {
+      // create a new file.
+      Path file = new Path("/simpleFlush.dat");
+      FSDataOutputStream output = fs.create(file);
+      // write to file
+      output.writeBytes("Some test data");
+      output.flush();
+      assertFalse("File status should be open", fs.isFileClosed(file));
+      output.close();
+      assertTrue("File status should be closed", fs.isFileClosed(file));
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+  
 }

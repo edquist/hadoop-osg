@@ -50,6 +50,7 @@ import static org.apache.hadoop.util.Time.now;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
 import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.StartupOption;
 
+import org.apache.hadoop.hdfs.server.namenode.FSImageStorageInspector.FSImageFile;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeFile;
 import org.apache.hadoop.hdfs.server.protocol.CheckpointCommand;
@@ -60,6 +61,7 @@ import org.apache.hadoop.hdfs.server.protocol.NamespaceInfo;
 import org.apache.hadoop.hdfs.util.Canceler;
 import org.apache.hadoop.hdfs.util.MD5FileUtils;
 import org.apache.hadoop.io.MD5Hash;
+import org.apache.hadoop.util.IdGenerator;
 import org.apache.hadoop.util.Time;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
 import org.apache.hadoop.hdfs.DFSUtil;
@@ -93,6 +95,7 @@ public class FSImage implements Closeable {
   final private Configuration conf;
 
   protected NNStorageRetentionManager archivalManager;
+  protected IdGenerator blockIdGenerator;
 
   /**
    * Construct an FSImage
@@ -140,6 +143,9 @@ public class FSImage implements Closeable {
     Preconditions.checkState(fileCount == 1,
         "FSImage.format should be called with an uninitialized namesystem, has " +
         fileCount + " files");
+    // BlockIdGenerator is defined during formatting
+    // currently there is only one BlockIdGenerator
+    blockIdGenerator = createBlockIdGenerator(fsn);
     NamespaceInfo ns = NNStorage.newNamespaceInfo();
     ns.clusterID = clusterId;
     
@@ -261,6 +267,7 @@ public class FSImage implements Closeable {
       doRollback();
       break;
     case REGULAR:
+    default:
       // just load the image
     }
     
@@ -596,11 +603,11 @@ public class FSImage implements Closeable {
   boolean loadFSImage(FSNamesystem target, MetaRecoveryContext recovery)
       throws IOException {
     FSImageStorageInspector inspector = storage.readAndInspectDirs();
+    FSImageFile imageFile = null;
     
     isUpgradeFinalized = inspector.isUpgradeFinalized();
  
-    FSImageStorageInspector.FSImageFile imageFile 
-      = inspector.getLatestImage();   
+    List<FSImageFile> imageFiles = inspector.getLatestImages();
     boolean needToSave = inspector.needToSave();
 
     Iterable<EditLogInputStream> editStreams = null;
@@ -613,14 +620,20 @@ public class FSImage implements Closeable {
       // we better be able to load all the edits. If we're the standby NN, it's
       // OK to not be able to read all of edits right now.
       long toAtLeastTxId = editLog.isOpenForWrite() ? inspector.getMaxSeenTxId() : 0;
-      editStreams = editLog.selectInputStreams(imageFile.getCheckpointTxId() + 1,
+      editStreams = editLog.selectInputStreams(
+          imageFiles.get(0).getCheckpointTxId() + 1,
           toAtLeastTxId, recovery, false);
     } else {
       editStreams = FSImagePreTransactionalStorageInspector
         .getEditLogStreams(storage);
     }
+    int maxOpSize = conf.getInt(DFSConfigKeys.
+          DFS_NAMENODE_MAX_OP_SIZE_KEY,
+        DFSConfigKeys.DFS_NAMENODE_MAX_OP_SIZE_DEFAULT);
+    for (EditLogInputStream elis : editStreams) {
+      elis.setMaxOpSize(maxOpSize);
+    }
  
-    LOG.debug("Planning to load image :\n" + imageFile);
     for (EditLogInputStream l : editStreams) {
       LOG.debug("Planning to load edit log stream: " + l);
     }
@@ -628,40 +641,56 @@ public class FSImage implements Closeable {
       LOG.info("No edit log streams selected.");
     }
     
-    try {
-      StorageDirectory sdForProperties = imageFile.sd;
-      storage.readProperties(sdForProperties);
-
-      if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT,
-                                 getLayoutVersion())) {
-        // For txid-based layout, we should have a .md5 file
-        // next to the image file
-        loadFSImage(imageFile.getFile(), target, recovery);
-      } else if (LayoutVersion.supports(Feature.FSIMAGE_CHECKSUM,
-                                        getLayoutVersion())) {
-        // In 0.22, we have the checksum stored in the VERSION file.
-        String md5 = storage.getDeprecatedProperty(
-            NNStorage.DEPRECATED_MESSAGE_DIGEST_PROPERTY);
-        if (md5 == null) {
-          throw new InconsistentFSStateException(sdForProperties.getRoot(),
-              "Message digest property " +
-              NNStorage.DEPRECATED_MESSAGE_DIGEST_PROPERTY +
-              " not set for storage directory " + sdForProperties.getRoot());
-        }
-        loadFSImage(imageFile.getFile(), new MD5Hash(md5), target, recovery);
-      } else {
-        // We don't have any record of the md5sum
-        loadFSImage(imageFile.getFile(), null, target, recovery);
+    for (int i = 0; i < imageFiles.size(); i++) {
+      try {
+        imageFile = imageFiles.get(i);
+        loadFSImageFile(target, recovery, imageFile);
+        break;
+      } catch (IOException ioe) {
+        LOG.error("Failed to load image from " + imageFile, ioe);
+        target.clear();
+        imageFile = null;
       }
-    } catch (IOException ioe) {
+    }
+    // Failed to load any images, error out
+    if (imageFile == null) {
       FSEditLog.closeAllStreams(editStreams);
-      throw new IOException("Failed to load image from " + imageFile, ioe);
+      throw new IOException("Failed to load an FSImage file!");
     }
     long txnsAdvanced = loadEdits(editStreams, target, recovery);
     needToSave |= needsResaveBasedOnStaleCheckpoint(imageFile.getFile(),
                                                     txnsAdvanced);
     editLog.setNextTxId(lastAppliedTxId + 1);
     return needToSave;
+  }
+
+  void loadFSImageFile(FSNamesystem target, MetaRecoveryContext recovery,
+      FSImageFile imageFile) throws IOException {
+    LOG.debug("Planning to load image :\n" + imageFile);
+    StorageDirectory sdForProperties = imageFile.sd;
+    storage.readProperties(sdForProperties);
+
+    if (LayoutVersion.supports(Feature.TXID_BASED_LAYOUT,
+                               getLayoutVersion())) {
+      // For txid-based layout, we should have a .md5 file
+      // next to the image file
+      loadFSImage(imageFile.getFile(), target, recovery);
+    } else if (LayoutVersion.supports(Feature.FSIMAGE_CHECKSUM,
+                                      getLayoutVersion())) {
+      // In 0.22, we have the checksum stored in the VERSION file.
+      String md5 = storage.getDeprecatedProperty(
+          NNStorage.DEPRECATED_MESSAGE_DIGEST_PROPERTY);
+      if (md5 == null) {
+        throw new InconsistentFSStateException(sdForProperties.getRoot(),
+            "Message digest property " +
+            NNStorage.DEPRECATED_MESSAGE_DIGEST_PROPERTY +
+            " not set for storage directory " + sdForProperties.getRoot());
+      }
+      loadFSImage(imageFile.getFile(), new MD5Hash(md5), target, recovery);
+    } else {
+      // We don't have any record of the md5sum
+      loadFSImage(imageFile.getFile(), null, target, recovery);
+    }
   }
 
   public void initEditLog() {
@@ -755,6 +784,9 @@ public class FSImage implements Closeable {
     FSImageFormat.Loader loader = new FSImageFormat.Loader(
         conf, target);
     loader.load(curFile);
+    // BlockIdGenerator is determined after loading image
+    // currently there is only one BlockIdGenerator
+    blockIdGenerator = createBlockIdGenerator(target);
     target.setBlockPoolId(this.getBlockPoolID());
 
     // Check that the image digest we loaded matches up with what
@@ -1087,7 +1119,7 @@ public class FSImage implements Closeable {
    */
   public synchronized void saveDigestAndRenameCheckpointImage(
       long txid, MD5Hash digest) throws IOException {
-    renameCheckpoint(txid);
+    // Write and rename MD5 file
     List<StorageDirectory> badSds = Lists.newArrayList();
     
     for (StorageDirectory sd : storage.dirIterable(NameNodeDirType.IMAGE)) {
@@ -1100,6 +1132,10 @@ public class FSImage implements Closeable {
     }
     storage.reportErrorsOnDirectories(badSds);
     
+    CheckpointFaultInjector.getInstance().afterMD5Rename();
+    
+    // Rename image from tmp file
+    renameCheckpoint(txid);
     // So long as this is the newest image available,
     // advertise it as such to other checkpointers
     // from now on
@@ -1178,7 +1214,19 @@ public class FSImage implements Closeable {
     this.lastAppliedTxId = editLog.getLastWrittenTxId();
   }
 
-  public synchronized long getMostRecentCheckpointTxId() {
+  // Should be OK for this to not be synchronized since all of the places which
+  // mutate this value are themselves synchronized so it shouldn't be possible
+  // to see this flop back and forth. In the worst case this will just return an
+  // old value.
+  public long getMostRecentCheckpointTxId() {
     return storage.getMostRecentCheckpointTxId();
+  }
+
+  public long getUniqueBlockId() {
+    return blockIdGenerator.nextValue();
+  }
+
+  public IdGenerator createBlockIdGenerator(FSNamesystem fsn) {
+    return new RandomBlockIdGenerator(fsn);
   }
 }

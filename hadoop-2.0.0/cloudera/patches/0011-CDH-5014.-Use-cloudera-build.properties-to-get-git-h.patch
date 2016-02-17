@@ -1,7 +1,7 @@
 From 97de8c326c5560acace092a5003e0d206cd6a2d3 Mon Sep 17 00:00:00 2001
 From: Andrew Bayer <andrew@cloudera.com>
 Date: Mon, 2 Apr 2012 10:16:26 -0700
-Subject: [PATCH 011/545] CDH-5014. Use cloudera/build.properties to get git hash for saveVersion.sh call.
+Subject: [PATCH 0011/1612] CDH-5014. Use cloudera/build.properties to get git hash for saveVersion.sh call.
 
 ---
  .../hadoop-common/dev-support/saveVersion.sh       |   41 ++++++++++++-------

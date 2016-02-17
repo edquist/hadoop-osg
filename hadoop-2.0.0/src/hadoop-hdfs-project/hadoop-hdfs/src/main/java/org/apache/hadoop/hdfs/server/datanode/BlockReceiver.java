@@ -51,6 +51,7 @@ import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.io.nativeio.NativeIO;
 import org.apache.hadoop.util.Daemon;
 import org.apache.hadoop.util.DataChecksum;
+import org.apache.hadoop.util.StringUtils;
 
 /** A class that receives a block and writes to its own disk, meanwhile
  * may copies it to another site. If a throttler is provided,
@@ -357,7 +358,7 @@ class BlockReceiver implements Closeable {
   private void handleMirrorOutError(IOException ioe) throws IOException {
     String bpid = block.getBlockPoolId();
     LOG.info(datanode.getDNRegistrationForBP(bpid)
-        + ":Exception writing block " + block + " to mirror " + mirrorAddr, ioe);
+        + ":Exception writing " + block + " to mirror " + mirrorAddr, ioe);
     if (Thread.interrupted()) { // shut down if the thread is interrupted
       throw ioe;
     } else { // encounter an error while writing to mirror
@@ -377,18 +378,19 @@ class BlockReceiver implements Closeable {
       clientChecksum.verifyChunkedSums(dataBuf, checksumBuf, clientname, 0);
     } catch (ChecksumException ce) {
       LOG.warn("Checksum error in block " + block + " from " + inAddr, ce);
-      if (srcDataNode != null) {
+      // No need to report to namenode when client is writing.
+      if (srcDataNode != null && isDatanode) {
         try {
-          LOG.info("report corrupt block " + block + " from datanode " +
+          LOG.info("report corrupt " + block + " from datanode " +
                     srcDataNode + " to namenode");
           datanode.reportRemoteBadBlock(srcDataNode, block);
         } catch (IOException e) {
-          LOG.warn("Failed to report bad block " + block + 
+          LOG.warn("Failed to report bad " + block + 
                     " from datanode " + srcDataNode + " to namenode");
         }
       }
-      throw new IOException("Unexpected checksum mismatch " + 
-                            "while writing " + block + " from " + inAddr);
+      throw new IOException("Unexpected checksum mismatch while writing "
+          + block + " from " + inAddr);
     }
   }
   
@@ -404,6 +406,19 @@ class BlockReceiver implements Closeable {
     diskChecksum.calculateChunkedSums(dataBuf, checksumBuf);
   }
 
+  /** 
+   * Check whether checksum needs to be verified.
+   * Skip verifying checksum iff this is not the last one in the 
+   * pipeline and clientName is non-null. i.e. Checksum is verified
+   * on all the datanodes when the data is being written by a 
+   * datanode rather than a client. Whe client is writing the data, 
+   * protocol includes acks and only the last datanode needs to verify 
+   * checksum.
+   * @return true if checksum verification is needed, otherwise false.
+   */
+  private boolean shouldVerifyChecksum() {
+    return (mirrorOut == null || isDatanode || needsChecksumTranslation);
+  }
 
   /** 
    * Receives and processes a packet. It can contain many chunks.
@@ -448,11 +463,11 @@ class BlockReceiver implements Closeable {
       replicaInfo.setNumBytes(offsetInBlock);
     }
     
-    // put in queue for pending acks
-    if (responder != null) {
-      ((PacketResponder)responder.getRunnable()).enqueue(seqno,
-                                      lastPacketInBlock, offsetInBlock); 
-    }  
+    // put in queue for pending acks, unless sync was requested
+    if (responder != null && !syncBlock && !shouldVerifyChecksum()) {
+      ((PacketResponder) responder.getRunnable()).enqueue(seqno,
+          lastPacketInBlock, offsetInBlock, Status.SUCCESS);
+    }
 
     //First write the packet to the mirror:
     if (mirrorOut != null && !mirrorError) {
@@ -483,17 +498,26 @@ class BlockReceiver implements Closeable {
         throw new IOException("Length of checksums in packet " +
             checksumBuf.capacity() + " does not match calculated checksum " +
             "length " + checksumLen);
-     }
+      }
 
-      /* skip verifying checksum iff this is not the last one in the 
-       * pipeline and clientName is non-null. i.e. Checksum is verified
-       * on all the datanodes when the data is being written by a 
-       * datanode rather than a client. Whe client is writing the data, 
-       * protocol includes acks and only the last datanode needs to verify 
-       * checksum.
-       */
-      if (mirrorOut == null || isDatanode || needsChecksumTranslation) {
-        verifyChunks(dataBuf, checksumBuf);
+      if (shouldVerifyChecksum()) {
+        try {
+          verifyChunks(dataBuf, checksumBuf);
+        } catch (IOException ioe) {
+          // checksum error detected locally. there is no reason to continue.
+          if (responder != null) {
+            try {
+              ((PacketResponder) responder.getRunnable()).enqueue(seqno,
+                  lastPacketInBlock, offsetInBlock,
+                  Status.ERROR_CHECKSUM);
+              // Wait until the responder sends back the response
+              // and interrupt this thread.
+              Thread.sleep(3000);
+            } catch (InterruptedException e) { }
+          }
+          throw new IOException("Terminating due to a checksum error." + ioe);
+        }
+ 
         if (needsChecksumTranslation) {
           // overwrite the checksums in the packet buffer with the
           // appropriate polynomial for the disk storage.
@@ -518,7 +542,7 @@ class BlockReceiver implements Closeable {
           // If this is a partial chunk, then read in pre-existing checksum
           if (firstByteInBlock % bytesPerChecksum != 0) {
             LOG.info("Packet starts at " + firstByteInBlock +
-                     " for block " + block +
+                     " for " + block +
                      " which is not a multiple of bytesPerChecksum " +
                      bytesPerChecksum);
             long offsetInChecksum = BlockMetadataHeader.getHeaderSize() +
@@ -578,6 +602,13 @@ class BlockReceiver implements Closeable {
         datanode.checkDiskError(iex);
         throw iex;
       }
+    }
+
+    // if sync was requested, put in queue for pending acks here
+    // (after the fsync finished)
+    if (responder != null && (syncBlock || shouldVerifyChecksum())) {
+      ((PacketResponder) responder.getRunnable()).enqueue(seqno,
+          lastPacketInBlock, offsetInBlock, Status.SUCCESS);
     }
 
     if (throttler != null) { // throttle I/O
@@ -662,7 +693,7 @@ class BlockReceiver implements Closeable {
       }
 
     } catch (IOException ioe) {
-      LOG.info("Exception in receiveBlock for " + block, ioe);
+      LOG.info("Exception for " + block, ioe);
       throw ioe;
     } finally {
       if (!responderClosed) { // Abnormal termination of the flow above
@@ -674,7 +705,13 @@ class BlockReceiver implements Closeable {
       }
       if (responder != null) {
         try {
-          responder.join();
+          responder.join(datanode.getDnConf().getXceiverStopTimeout());
+          if (responder.isAlive()) {
+            String msg = "Join on responder thread " + responder
+                + " timed out";
+            LOG.warn(msg + "\n" + StringUtils.getStackTrace(responder));
+            throw new IOException(msg);
+          }
         } catch (InterruptedException e) {
           responder.interrupt();
           throw new IOException("Interrupted receiveBlock");
@@ -733,10 +770,9 @@ class BlockReceiver implements Closeable {
     int checksumSize = diskChecksum.getChecksumSize();
     blkoff = blkoff - sizePartialChunk;
     LOG.info("computePartialChunkCrc sizePartialChunk " + 
-              sizePartialChunk +
-              " block " + block +
-              " offset in block " + blkoff +
-              " offset in metafile " + ckoff);
+              sizePartialChunk + " " + block +
+              " block offset " + blkoff +
+              " metafile offset " + ckoff);
 
     // create an input stream from the block file
     // and read in partial crc chunk into temporary buffer
@@ -758,7 +794,7 @@ class BlockReceiver implements Closeable {
     partialCrc = DataChecksum.newDataChecksum(
         diskChecksum.getChecksumType(), diskChecksum.getBytesPerChecksum());
     partialCrc.update(buf, 0, sizePartialChunk);
-    LOG.info("Read in partial CRC chunk from disk for block " + block);
+    LOG.info("Read in partial CRC chunk from disk for " + block);
 
     // paranoia! verify that the pre-computed crc matches what we
     // recalculated just now
@@ -776,7 +812,7 @@ class BlockReceiver implements Closeable {
   }
   
   /**
-   * Processed responses from downstream datanodes in the pipeline
+   * Processes responses from downstream datanodes in the pipeline
    * and sends back replies to the originator.
    */
   class PacketResponder implements Runnable, Closeable {   
@@ -829,10 +865,11 @@ class BlockReceiver implements Closeable {
      * @param offsetInBlock
      */
     synchronized void enqueue(final long seqno,
-        final boolean lastPacketInBlock, final long offsetInBlock) {
+        final boolean lastPacketInBlock,
+        final long offsetInBlock, final Status ackStatus) {
       if (running) {
         final Packet p = new Packet(seqno, lastPacketInBlock, offsetInBlock,
-            System.nanoTime());
+            System.nanoTime(), ackStatus);
         if(LOG.isDebugEnabled()) {
           LOG.debug(myString + ": enqueue " + p);
         }
@@ -973,24 +1010,35 @@ class BlockReceiver implements Closeable {
                       "HDFS_WRITE", clientname, offset,
                       dnR.getStorageID(), block, endTime-startTime));
               } else {
-                LOG.info("Received block " + block + " of size "
+                LOG.info("Received " + block + " size "
                     + block.getNumBytes() + " from " + inAddr);
               }
             }
 
+            Status myStatus = pkt == null ? Status.SUCCESS : pkt.ackStatus;
             // construct my ack message
             Status[] replies = null;
             if (mirrorError) { // ack read error
               replies = new Status[2];
-              replies[0] = Status.SUCCESS;
+              replies[0] = myStatus;
               replies[1] = Status.ERROR;
             } else {
               short ackLen = type == PacketResponderType.LAST_IN_PIPELINE? 0
                   : ack.getNumOfReplies();
               replies = new Status[1+ackLen];
-              replies[0] = Status.SUCCESS;
+              replies[0] = myStatus;
               for (int i=0; i<ackLen; i++) {
                 replies[i+1] = ack.getReply(i);
+              }
+              // If the mirror has reported that it received a corrupt packet,
+              // do self-destruct to mark myself bad, instead of the mirror node.
+              // The mirror is guaranteed to be good without corrupt data.
+              if (ackLen > 0 && replies[1] == Status.ERROR_CHECKSUM) {
+                running = false;
+                removeAckHead();
+                LOG.warn("Shutting down writer and responder due to a checksum error.");
+                receiverThread.interrupt();
+                continue;
               }
             }
             PipelineAck replyAck = new PipelineAck(expected, replies, totalAckTimeNanos);
@@ -1009,6 +1057,14 @@ class BlockReceiver implements Closeable {
               // remove the packet from the ack queue
               removeAckHead();
               // update bytes acked
+            }
+            // terminate after sending response if this node detected 
+            // a checksum error
+            if (myStatus == Status.ERROR_CHECKSUM) {
+              running = false;
+              LOG.warn("Shutting down writer and responder due to a checksum error.");
+              receiverThread.interrupt();
+              continue;
             }
         } catch (IOException e) {
           LOG.warn("IOException in BlockReceiver.run(): ", e);
@@ -1054,13 +1110,15 @@ class BlockReceiver implements Closeable {
     final boolean lastPacketInBlock;
     final long offsetInBlock;
     final long ackEnqueueNanoTime;
+    final Status ackStatus;
 
     Packet(long seqno, boolean lastPacketInBlock, long offsetInBlock,
-        long ackEnqueueNanoTime) {
+        long ackEnqueueNanoTime, Status ackStatus) {
       this.seqno = seqno;
       this.lastPacketInBlock = lastPacketInBlock;
       this.offsetInBlock = offsetInBlock;
       this.ackEnqueueNanoTime = ackEnqueueNanoTime;
+      this.ackStatus = ackStatus;
     }
 
     @Override
@@ -1069,6 +1127,7 @@ class BlockReceiver implements Closeable {
         + ", lastPacketInBlock=" + lastPacketInBlock
         + ", offsetInBlock=" + offsetInBlock
         + ", ackEnqueueNanoTime=" + ackEnqueueNanoTime
+        + ", ackStatus=" + ackStatus
         + ")";
     }
   }

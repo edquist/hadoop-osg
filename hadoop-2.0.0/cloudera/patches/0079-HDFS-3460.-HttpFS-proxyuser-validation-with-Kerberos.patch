@@ -1,7 +1,7 @@
 From c5a49cdee577e92cab6d546ca775f54fb7c41a6f Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 24 May 2012 16:51:04 +0000
-Subject: [PATCH 079/545] HDFS-3460. HttpFS proxyuser validation with Kerberos ON uses full principal name. (tucu)
+Subject: [PATCH 0079/1612] HDFS-3460. HttpFS proxyuser validation with Kerberos ON uses full principal name. (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1342334 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e616aa9d2835466ac15018f19bc0a8597a919167)

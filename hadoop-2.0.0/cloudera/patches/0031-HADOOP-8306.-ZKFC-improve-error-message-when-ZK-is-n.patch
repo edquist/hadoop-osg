@@ -1,7 +1,7 @@
 From 51e13be7d9860510f75dbf6001b4f42cd53237c3 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 2 May 2012 19:41:18 -0700
-Subject: [PATCH 031/545] HADOOP-8306. ZKFC: improve error message when ZK is not running. Contributed by Todd Lipcon.
+Subject: [PATCH 0031/1612] HADOOP-8306. ZKFC: improve error message when ZK is not running. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1329960 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 66f98228e048dc20bbfe0891697c5fe70598ddd6)

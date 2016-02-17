@@ -1,7 +1,7 @@
 From f5eaedf48ab532218c70c9e0e58c2609a42f3326 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sun, 8 Jul 2012 19:53:14 +0000
-Subject: [PATCH 395/545] HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049. Contributed by Arun Murthy
+Subject: [PATCH 0395/1612] HDFS-3614. Revert unused MiniDFSCluster constructor from HDFS-3049. Contributed by Arun Murthy
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1358825 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 9ec1c06cbb683f0bce0dbc23ccd4511bab2663e2)

@@ -1,7 +1,7 @@
 From d431cb175d16c5d5a7bebfa519557f6a0105d182 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Wed, 27 Jun 2012 14:28:08 +0000
-Subject: [PATCH 403/545] MAPREDUCE-4372. Deadlock in Resource Manager (Devaraj K via bobby)
+Subject: [PATCH 0403/1612] MAPREDUCE-4372. Deadlock in Resource Manager (Devaraj K via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1354531 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7e01d2e06cd11bb0ea472ca192ca9496a77e4847)

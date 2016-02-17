@@ -1,7 +1,7 @@
 From 6b092bbdc7b978bd95b05516ce4621ee39f691d5 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 1 Aug 2012 23:16:48 +0000
-Subject: [PATCH 311/545] HDFS-3724. add InterfaceAudience annotations to HttpFS classes and making inner enum static. (tucu)
+Subject: [PATCH 0311/1612] HDFS-3724. add InterfaceAudience annotations to HttpFS classes and making inner enum static. (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1368310 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e7710ced3f68da9806de6b6efe8d0485160ae03a)

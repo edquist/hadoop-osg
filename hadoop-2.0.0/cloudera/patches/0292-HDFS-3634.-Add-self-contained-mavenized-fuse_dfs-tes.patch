@@ -1,7 +1,7 @@
 From e19df5b87267ea28e02b9f558ac09393c4dabc53 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Thu, 9 Aug 2012 14:44:05 +0000
-Subject: [PATCH 292/545] HDFS-3634. Add self-contained, mavenized fuse_dfs test. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0292/1612] HDFS-3634. Add self-contained, mavenized fuse_dfs test. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1371231 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 612314e7ea6c765bf0613babaf8104c858b56f34)

@@ -1,7 +1,7 @@
 From f0c3d677ebe124ff8b168253d3d69879a5cc023d Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 8 Aug 2012 17:21:27 +0000
-Subject: [PATCH 379/545] HDFS-3773. TestNNWithQJM fails after HDFS-3741. Contributed by Aaron T. Myers.
+Subject: [PATCH 0379/1612] HDFS-3773. TestNNWithQJM fails after HDFS-3741. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1370846 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 58ce6213466db4777a2e48a3655352491c5e39f1)

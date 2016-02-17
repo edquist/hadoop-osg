@@ -21,7 +21,7 @@
 <FONT color="green">018</FONT>    package org.apache.hadoop.lib.service;<a name="line.18"></a>
 <FONT color="green">019</FONT>    <a name="line.19"></a>
 <FONT color="green">020</FONT>    import org.apache.hadoop.classification.InterfaceAudience;<a name="line.20"></a>
-<FONT color="green">021</FONT>    import org.apache.hadoop.fs.http.client.HttpFSKerberosAuthenticator;<a name="line.21"></a>
+<FONT color="green">021</FONT>    import org.apache.hadoop.hdfs.web.WebHdfsFileSystem;<a name="line.21"></a>
 <FONT color="green">022</FONT>    import org.apache.hadoop.io.Text;<a name="line.22"></a>
 <FONT color="green">023</FONT>    import org.apache.hadoop.security.token.delegation.AbstractDelegationTokenIdentifier;<a name="line.23"></a>
 <FONT color="green">024</FONT>    <a name="line.24"></a>
@@ -32,34 +32,33 @@
 <FONT color="green">029</FONT>    public class DelegationTokenIdentifier<a name="line.29"></a>
 <FONT color="green">030</FONT>      extends AbstractDelegationTokenIdentifier {<a name="line.30"></a>
 <FONT color="green">031</FONT>    <a name="line.31"></a>
-<FONT color="green">032</FONT>      public static final Text KIND_NAME =<a name="line.32"></a>
-<FONT color="green">033</FONT>        new Text(HttpFSKerberosAuthenticator.TOKEN_KIND);<a name="line.33"></a>
-<FONT color="green">034</FONT>    <a name="line.34"></a>
-<FONT color="green">035</FONT>      public DelegationTokenIdentifier() {<a name="line.35"></a>
-<FONT color="green">036</FONT>      }<a name="line.36"></a>
-<FONT color="green">037</FONT>    <a name="line.37"></a>
-<FONT color="green">038</FONT>      /**<a name="line.38"></a>
-<FONT color="green">039</FONT>       * Create a new delegation token identifier<a name="line.39"></a>
-<FONT color="green">040</FONT>       *<a name="line.40"></a>
-<FONT color="green">041</FONT>       * @param owner the effective username of the token owner<a name="line.41"></a>
-<FONT color="green">042</FONT>       * @param renewer the username of the renewer<a name="line.42"></a>
-<FONT color="green">043</FONT>       * @param realUser the real username of the token owner<a name="line.43"></a>
-<FONT color="green">044</FONT>       */<a name="line.44"></a>
-<FONT color="green">045</FONT>      public DelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {<a name="line.45"></a>
-<FONT color="green">046</FONT>        super(owner, renewer, realUser);<a name="line.46"></a>
-<FONT color="green">047</FONT>      }<a name="line.47"></a>
+<FONT color="green">032</FONT>      public static final Text KIND_NAME = WebHdfsFileSystem.TOKEN_KIND;<a name="line.32"></a>
+<FONT color="green">033</FONT>    <a name="line.33"></a>
+<FONT color="green">034</FONT>      public DelegationTokenIdentifier() {<a name="line.34"></a>
+<FONT color="green">035</FONT>      }<a name="line.35"></a>
+<FONT color="green">036</FONT>    <a name="line.36"></a>
+<FONT color="green">037</FONT>      /**<a name="line.37"></a>
+<FONT color="green">038</FONT>       * Create a new delegation token identifier<a name="line.38"></a>
+<FONT color="green">039</FONT>       *<a name="line.39"></a>
+<FONT color="green">040</FONT>       * @param owner the effective username of the token owner<a name="line.40"></a>
+<FONT color="green">041</FONT>       * @param renewer the username of the renewer<a name="line.41"></a>
+<FONT color="green">042</FONT>       * @param realUser the real username of the token owner<a name="line.42"></a>
+<FONT color="green">043</FONT>       */<a name="line.43"></a>
+<FONT color="green">044</FONT>      public DelegationTokenIdentifier(Text owner, Text renewer, Text realUser) {<a name="line.44"></a>
+<FONT color="green">045</FONT>        super(owner, renewer, realUser);<a name="line.45"></a>
+<FONT color="green">046</FONT>      }<a name="line.46"></a>
+<FONT color="green">047</FONT>    <a name="line.47"></a>
 <FONT color="green">048</FONT>    <a name="line.48"></a>
-<FONT color="green">049</FONT>    <a name="line.49"></a>
-<FONT color="green">050</FONT>      /**<a name="line.50"></a>
-<FONT color="green">051</FONT>       * Returns the kind, &lt;code&gt;TOKEN_KIND&lt;/code&gt;.<a name="line.51"></a>
-<FONT color="green">052</FONT>       * @return returns &lt;code&gt;TOKEN_KIND&lt;/code&gt;.<a name="line.52"></a>
-<FONT color="green">053</FONT>       */<a name="line.53"></a>
-<FONT color="green">054</FONT>      @Override<a name="line.54"></a>
-<FONT color="green">055</FONT>      public Text getKind() {<a name="line.55"></a>
-<FONT color="green">056</FONT>        return KIND_NAME;<a name="line.56"></a>
-<FONT color="green">057</FONT>      }<a name="line.57"></a>
-<FONT color="green">058</FONT>    <a name="line.58"></a>
-<FONT color="green">059</FONT>    }<a name="line.59"></a>
+<FONT color="green">049</FONT>      /**<a name="line.49"></a>
+<FONT color="green">050</FONT>       * Returns the kind, &lt;code&gt;TOKEN_KIND&lt;/code&gt;.<a name="line.50"></a>
+<FONT color="green">051</FONT>       * @return returns &lt;code&gt;TOKEN_KIND&lt;/code&gt;.<a name="line.51"></a>
+<FONT color="green">052</FONT>       */<a name="line.52"></a>
+<FONT color="green">053</FONT>      @Override<a name="line.53"></a>
+<FONT color="green">054</FONT>      public Text getKind() {<a name="line.54"></a>
+<FONT color="green">055</FONT>        return KIND_NAME;<a name="line.55"></a>
+<FONT color="green">056</FONT>      }<a name="line.56"></a>
+<FONT color="green">057</FONT>    <a name="line.57"></a>
+<FONT color="green">058</FONT>    }<a name="line.58"></a>
 
 
 

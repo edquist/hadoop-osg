@@ -33,6 +33,8 @@ import java.util.concurrent.locks.ReentrantLock;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.apache.hadoop.classification.InterfaceAudience;
+import org.apache.hadoop.classification.InterfaceStability;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -53,6 +55,7 @@ import org.apache.hadoop.io.serializer.Serializer;
 import org.apache.hadoop.mapred.IFile.Writer;
 import org.apache.hadoop.mapred.Merger.Segment;
 import org.apache.hadoop.mapred.SortedRanges.SkipRangeIterator;
+import org.apache.hadoop.mapreduce.JobContext;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TaskAttemptContext;
 import org.apache.hadoop.mapreduce.TaskCounter;
@@ -66,10 +69,13 @@ import org.apache.hadoop.util.IndexedSorter;
 import org.apache.hadoop.util.Progress;
 import org.apache.hadoop.util.QuickSort;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.apache.hadoop.util.StringInterner;
 import org.apache.hadoop.util.StringUtils;
 
 /** A Map task. */
-class MapTask extends Task {
+@InterfaceAudience.LimitedPrivate({"MapReduce"})
+@InterfaceStability.Unstable
+public class MapTask extends Task {
   /**
    * The size of each record in the index file for the map-outputs.
    */
@@ -336,13 +342,17 @@ class MapTask extends Task {
     done(umbilical, reporter);
   }
 
+  public Progress getSortPhase() {
+    return sortPhase;
+  }
+
  @SuppressWarnings("unchecked")
  private <T> T getSplitDetails(Path file, long offset) 
   throws IOException {
    FileSystem fs = file.getFileSystem(conf);
    FSDataInputStream inFile = fs.open(file);
    inFile.seek(offset);
-   String className = Text.readString(inFile);
+   String className = StringInterner.weakIntern(Text.readString(inFile));
    Class<T> cls;
    try {
      cls = (Class<T>) conf.getClassByName(className);
@@ -365,6 +375,22 @@ class MapTask extends Task {
  }
   
   @SuppressWarnings("unchecked")
+  private <KEY, VALUE> MapOutputCollector<KEY, VALUE>
+          createSortingCollector(JobConf job, TaskReporter reporter)
+    throws IOException, ClassNotFoundException {
+    MapOutputCollector<KEY, VALUE> collector
+      = (MapOutputCollector<KEY, VALUE>)
+       ReflectionUtils.newInstance(
+                        job.getClass(JobContext.MAP_OUTPUT_COLLECTOR_CLASS_ATTR,
+                        MapOutputBuffer.class, MapOutputCollector.class), job);
+    LOG.info("Map output collector class = " + collector.getClass().getName());
+    MapOutputCollector.Context context =
+                           new MapOutputCollector.Context(this, job, reporter);
+    collector.init(context);
+    return collector;
+  }
+
+  @SuppressWarnings("unchecked")
   private <INKEY,INVALUE,OUTKEY,OUTVALUE>
   void runOldMapper(final JobConf job,
                     final TaskSplitIndex splitIndex,
@@ -386,11 +412,14 @@ class MapTask extends Task {
 
     int numReduceTasks = conf.getNumReduceTasks();
     LOG.info("numReduceTasks: " + numReduceTasks);
-    MapOutputCollector collector = null;
+    MapOutputCollector<OUTKEY, OUTVALUE> collector = null;
     if (numReduceTasks > 0) {
-      collector = new MapOutputBuffer(umbilical, job, reporter);
+      collector = createSortingCollector(job, reporter);
     } else { 
-      collector = new DirectMapOutputCollector(umbilical, job, reporter);
+      collector = new DirectMapOutputCollector<OUTKEY, OUTVALUE>();
+       MapOutputCollector.Context context =
+                           new MapOutputCollector.Context(this, job, reporter);
+      collector.init(context);
     }
     MapRunnable<INKEY,INVALUE,OUTKEY,OUTVALUE> runner =
       ReflectionUtils.newInstance(job.getMapRunnerClass(), job);
@@ -423,6 +452,7 @@ class MapTask extends Task {
       job.setLong(JobContext.MAP_INPUT_START, fileSplit.getStart());
       job.setLong(JobContext.MAP_INPUT_PATH, fileSplit.getLength());
     }
+    LOG.info("Processing split: " + inputSplit);
   }
 
   static class NewTrackingRecordReader<K,V> 
@@ -635,7 +665,7 @@ class MapTask extends Task {
                        TaskUmbilicalProtocol umbilical,
                        TaskReporter reporter
                        ) throws IOException, ClassNotFoundException {
-      collector = new MapOutputBuffer<K,V>(umbilical, job, reporter);
+      collector = createSortingCollector(job, reporter);
       partitions = jobContext.getNumReduceTasks();
       if (partitions > 1) {
         partitioner = (org.apache.hadoop.mapreduce.Partitioner<K,V>)
@@ -693,6 +723,7 @@ class MapTask extends Task {
     org.apache.hadoop.mapreduce.InputSplit split = null;
     split = getSplitDetails(new Path(splitIndex.getSplitLocation()),
         splitIndex.getStartOffset());
+    LOG.info("Processing split: " + split);
 
     org.apache.hadoop.mapreduce.RecordReader<INKEY,INVALUE> input =
       new NewTrackingRecordReader<INKEY,INVALUE>
@@ -730,17 +761,6 @@ class MapTask extends Task {
     output.close(mapperContext);
   }
 
-  interface MapOutputCollector<K, V> {
-
-    public void collect(K key, V value, int partition
-                        ) throws IOException, InterruptedException;
-    public void close() throws IOException, InterruptedException;
-    
-    public void flush() throws IOException, InterruptedException, 
-                               ClassNotFoundException;
-        
-  }
-
   class DirectMapOutputCollector<K, V>
     implements MapOutputCollector<K, V> {
  
@@ -748,14 +768,18 @@ class MapTask extends Task {
 
     private TaskReporter reporter = null;
 
-    private final Counters.Counter mapOutputRecordCounter;
-    private final Counters.Counter fileOutputByteCounter;
-    private final List<Statistics> fsStats;
+    private Counters.Counter mapOutputRecordCounter;
+    private Counters.Counter fileOutputByteCounter;
+    private List<Statistics> fsStats;
+
+    public DirectMapOutputCollector() {
+    }
 
     @SuppressWarnings("unchecked")
-    public DirectMapOutputCollector(TaskUmbilicalProtocol umbilical,
-        JobConf job, TaskReporter reporter) throws IOException {
-      this.reporter = reporter;
+    public void init(MapOutputCollector.Context context
+                    ) throws IOException, ClassNotFoundException {
+      this.reporter = context.getReporter();
+      JobConf job = context.getJobConf();
       String finalName = getOutputName(getPartition());
       FileSystem fs = FileSystem.get(job);
 
@@ -810,25 +834,27 @@ class MapTask extends Task {
     }
   }
 
-  private class MapOutputBuffer<K extends Object, V extends Object>
+  @InterfaceAudience.LimitedPrivate({"MapReduce"})
+  @InterfaceStability.Unstable
+  public static class MapOutputBuffer<K extends Object, V extends Object>
       implements MapOutputCollector<K, V>, IndexedSortable {
-    final int partitions;
-    final JobConf job;
-    final TaskReporter reporter;
-    final Class<K> keyClass;
-    final Class<V> valClass;
-    final RawComparator<K> comparator;
-    final SerializationFactory serializationFactory;
-    final Serializer<K> keySerializer;
-    final Serializer<V> valSerializer;
-    final CombinerRunner<K,V> combinerRunner;
-    final CombineOutputCollector<K, V> combineCollector;
+    private int partitions;
+    private JobConf job;
+    private TaskReporter reporter;
+    private Class<K> keyClass;
+    private Class<V> valClass;
+    private RawComparator<K> comparator;
+    private SerializationFactory serializationFactory;
+    private Serializer<K> keySerializer;
+    private Serializer<V> valSerializer;
+    private CombinerRunner<K,V> combinerRunner;
+    private CombineOutputCollector<K, V> combineCollector;
 
     // Compression for map-outputs
-    final CompressionCodec codec;
+    private CompressionCodec codec;
 
     // k/v accounting
-    final IntBuffer kvmeta; // metadata overlay on backing store
+    private IntBuffer kvmeta; // metadata overlay on backing store
     int kvstart;            // marks origin of spill metadata
     int kvend;              // marks end of spill metadata
     int kvindex;            // marks end of fully serialized records
@@ -844,23 +870,23 @@ class MapTask extends Task {
     byte[] kvbuffer;        // main output buffer
     private final byte[] b0 = new byte[0];
 
-    private static final int INDEX = 0;            // index offset in acct
-    private static final int VALSTART = 1;         // val offset in acct
-    private static final int KEYSTART = 2;         // key offset in acct
-    private static final int PARTITION = 3;        // partition offset in acct
+    private static final int VALSTART = 0;         // val offset in acct
+    private static final int KEYSTART = 1;         // key offset in acct
+    private static final int PARTITION = 2;        // partition offset in acct
+    private static final int VALLEN = 3;           // length of value
     private static final int NMETA = 4;            // num meta ints
     private static final int METASIZE = NMETA * 4; // size in bytes
 
     // spill accounting
-    final int maxRec;
-    final int softLimit;
+    private int maxRec;
+    private int softLimit;
     boolean spillInProgress;;
     int bufferRemaining;
     volatile Throwable sortSpillException = null;
 
     int numSpills = 0;
-    final int minSpillsForCombine;
-    final IndexedSorter sorter;
+    private int minSpillsForCombine;
+    private IndexedSorter sorter;
     final ReentrantLock spillLock = new ReentrantLock();
     final Condition spillDone = spillLock.newCondition();
     final Condition spillReady = spillLock.newCondition();
@@ -868,12 +894,12 @@ class MapTask extends Task {
     volatile boolean spillThreadRunning = false;
     final SpillThread spillThread = new SpillThread();
 
-    final FileSystem rfs;
+    private FileSystem rfs;
 
     // Counters
-    final Counters.Counter mapOutputByteCounter;
-    final Counters.Counter mapOutputRecordCounter;
-    final Counters.Counter fileOutputByteCounter;
+    private Counters.Counter mapOutputByteCounter;
+    private Counters.Counter mapOutputRecordCounter;
+    private Counters.Counter fileOutputByteCounter;
 
     final ArrayList<SpillRecord> indexCacheList =
       new ArrayList<SpillRecord>();
@@ -881,12 +907,23 @@ class MapTask extends Task {
     private int indexCacheMemoryLimit;
     private static final int INDEX_CACHE_MEMORY_LIMIT_DEFAULT = 1024 * 1024;
 
+    private MapTask mapTask;
+    private MapOutputFile mapOutputFile;
+    private Progress sortPhase;
+    private Counters.Counter spilledRecordsCounter;
+
+    public MapOutputBuffer() {
+    }
+
     @SuppressWarnings("unchecked")
-    public MapOutputBuffer(TaskUmbilicalProtocol umbilical, JobConf job,
-                           TaskReporter reporter
-                           ) throws IOException, ClassNotFoundException {
-      this.job = job;
-      this.reporter = reporter;
+    public void init(MapOutputCollector.Context context
+                    ) throws IOException, ClassNotFoundException {
+      job = context.getJobConf();
+      reporter = context.getReporter();
+      mapTask = context.getMapTask();
+      mapOutputFile = mapTask.getMapOutputFile();
+      sortPhase = mapTask.getSortPhase();
+      spilledRecordsCounter = reporter.getCounter(TaskCounter.SPILLED_RECORDS);
       partitions = job.getNumReduceTasks();
       rfs = ((LocalFileSystem)FileSystem.getLocal(job)).getRaw();
 
@@ -961,7 +998,7 @@ class MapTask extends Task {
       if (combinerRunner != null) {
         final Counters.Counter combineOutputCounter =
           reporter.getCounter(TaskCounter.COMBINE_OUTPUT_RECORDS);
-        combineCollector= new CombineOutputCollector<K,V>(combineOutputCounter, reporter, conf);
+        combineCollector= new CombineOutputCollector<K,V>(combineOutputCounter, reporter, job);
       } else {
         combineCollector = null;
       }
@@ -1098,10 +1135,10 @@ class MapTask extends Task {
             distanceTo(keystart, valend, bufvoid));
 
         // write accounting info
-        kvmeta.put(kvindex + INDEX, kvindex);
         kvmeta.put(kvindex + PARTITION, partition);
         kvmeta.put(kvindex + KEYSTART, keystart);
         kvmeta.put(kvindex + VALSTART, valstart);
+        kvmeta.put(kvindex + VALLEN, distanceTo(valstart, valend));
         // advance kvindex
         kvindex = (kvindex - NMETA + kvmeta.capacity()) % kvmeta.capacity();
       } catch (MapBufferTooSmallException e) {
@@ -1110,6 +1147,10 @@ class MapTask extends Task {
         mapOutputRecordCounter.increment(1);
         return;
       }
+    }
+
+    private TaskAttemptID getTaskID() {
+      return mapTask.getTaskID();
     }
 
     /**
@@ -1167,17 +1208,11 @@ class MapTask extends Task {
     }
 
     /**
-     * For the given meta position, return the dereferenced position in the
-     * integer array. Each meta block contains several integers describing
-     * record data in its serialized form, but the INDEX is not necessarily
-     * related to the proximate metadata. The index value at the referenced int
-     * position is the start offset of the associated metadata block. So the
-     * metadata INDEX at metapos may point to the metadata described by the
-     * metadata block at metapos + k, which contains information about that
-     * serialized record.
+     * For the given meta position, return the offset into the int-sized
+     * kvmeta buffer.
      */
     int offsetFor(int metapos) {
-      return kvmeta.get(metapos * NMETA + INDEX);
+      return metapos * NMETA;
     }
 
     /**
@@ -1203,16 +1238,17 @@ class MapTask extends Task {
           kvmeta.get(kvj + VALSTART) - kvmeta.get(kvj + KEYSTART));
     }
 
+    final byte META_BUFFER_TMP[] = new byte[METASIZE];
     /**
-     * Swap logical indices st i, j MOD offset capacity.
+     * Swap metadata for items i, j
      * @see IndexedSortable#swap
      */
     public void swap(final int mi, final int mj) {
-      final int kvi = (mi % maxRec) * NMETA + INDEX;
-      final int kvj = (mj % maxRec) * NMETA + INDEX;
-      int tmp = kvmeta.get(kvi);
-      kvmeta.put(kvi, kvmeta.get(kvj));
-      kvmeta.put(kvj, tmp);
+      int iOff = (mi % maxRec) * METASIZE;
+      int jOff = (mj % maxRec) * METASIZE;
+      System.arraycopy(kvbuffer, iOff, META_BUFFER_TMP, 0, METASIZE);
+      System.arraycopy(kvbuffer, jOff, kvbuffer, iOff, METASIZE);
+      System.arraycopy(META_BUFFER_TMP, 0, kvbuffer, jOff, METASIZE);
     }
 
     /**
@@ -1484,7 +1520,7 @@ class MapTask extends Task {
         if (lspillException instanceof Error) {
           final String logMsg = "Task " + getTaskID() + " failed : " +
             StringUtils.stringifyException(lspillException);
-          reportFatalError(getTaskID(), lspillException, logMsg);
+          mapTask.reportFatalError(getTaskID(), lspillException, logMsg);
         }
         throw new IOException("Spill failed", lspillException);
       }
@@ -1544,9 +1580,9 @@ class MapTask extends Task {
               while (spindex < mend &&
                   kvmeta.get(offsetFor(spindex % maxRec) + PARTITION) == i) {
                 final int kvoff = offsetFor(spindex % maxRec);
-                key.reset(kvbuffer, kvmeta.get(kvoff + KEYSTART),
-                          (kvmeta.get(kvoff + VALSTART) -
-                           kvmeta.get(kvoff + KEYSTART)));
+                int keystart = kvmeta.get(kvoff + KEYSTART);
+                int valstart = kvmeta.get(kvoff + VALSTART);
+                key.reset(kvbuffer, keystart, valstart - keystart);
                 getVBytesForOffset(kvoff, value);
                 writer.append(key, value);
                 ++spindex;
@@ -1672,14 +1708,8 @@ class MapTask extends Task {
     private void getVBytesForOffset(int kvoff, InMemValBytes vbytes) {
       // get the keystart for the next serialized value to be the end
       // of this value. If this is the last value in the buffer, use bufend
-      final int nextindex = kvoff == kvend
-        ? bufend
-        : kvmeta.get(
-            (kvoff - NMETA + kvmeta.capacity() + KEYSTART) % kvmeta.capacity());
-      // calculate the length of the value
-      int vallen = (nextindex >= kvmeta.get(kvoff + VALSTART))
-        ? nextindex - kvmeta.get(kvoff + VALSTART)
-        : (bufvoid - kvmeta.get(kvoff + VALSTART)) + nextindex;
+      final int vallen = kvmeta.get(kvoff + VALLEN);
+      assert vallen >= 0;
       vbytes.reset(kvbuffer, kvmeta.get(kvoff + VALSTART), vallen);
     }
 

@@ -1,7 +1,7 @@
 From 2fa533e541fbd67a9d3c296fe458aead9e299e30 Mon Sep 17 00:00:00 2001
 From: Siddharth Seth <sseth@apache.org>
 Date: Tue, 19 Jun 2012 21:51:15 +0000
-Subject: [PATCH 260/545] MAPREDUCE-4270. Move the data_join test classes to the correct path. (Contributed by Thomas Graves)
+Subject: [PATCH 0260/1612] MAPREDUCE-4270. Move the data_join test classes to the correct path. (Contributed by Thomas Graves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1351869 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0a18589197c3c556c2465493094d5b243738a805)

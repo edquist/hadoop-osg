@@ -1,0 +1,26 @@
+From ef26dc3a38abe8915330514b2b0736ca2a110fc1 Mon Sep 17 00:00:00 2001
+From: Arpit Agarwal <arp@apache.org>
+Date: Fri, 14 Feb 2014 22:00:13 +0000
+Subject: [PATCH 1556/1612] HDFS-5948. Merging r1568532 from trunk to branch-2.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1568533 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 2d6020f2863bafee09f271e88a1ff3eaf1025f6b)
+---
+ .../hdfs/server/namenode/TestBackupNode.java       |    1 +
+ 1 files changed, 1 insertions(+), 0 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestBackupNode.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestBackupNode.java
+index 72acf9d..721a1aa 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestBackupNode.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestBackupNode.java
+@@ -262,6 +262,7 @@ public class TestBackupNode {
+     HAUtil.setAllowStandbyReads(conf, true);
+     short replication = (short)conf.getInt("dfs.replication", 3);
+     int numDatanodes = Math.max(3, replication);
++    conf.set(DFSConfigKeys.DFS_NAMENODE_BACKUP_HTTP_ADDRESS_KEY, "localhost:0");
+     conf.set(DFSConfigKeys.DFS_BLOCKREPORT_INITIAL_DELAY_KEY, "0");
+     conf.setInt(DFSConfigKeys.DFS_DATANODE_SCAN_PERIOD_HOURS_KEY, -1); // disable block scanner
+     conf.setInt(DFSConfigKeys.DFS_NAMENODE_CHECKPOINT_TXNS_KEY, 1);
+-- 
+1.7.0.4
+

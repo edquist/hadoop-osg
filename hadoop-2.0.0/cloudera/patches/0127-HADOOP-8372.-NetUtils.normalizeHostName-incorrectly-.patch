@@ -1,7 +1,7 @@
 From 0ee4a7bf2c649df4f3ce153982cb0248bc9b63db Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Wed, 9 May 2012 23:18:15 +0000
-Subject: [PATCH 127/545] HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname starting with a numeric character. Contributed by Junping Du.
+Subject: [PATCH 0127/1612] HADOOP-8372. NetUtils.normalizeHostName() incorrectly handles hostname starting with a numeric character. Contributed by Junping Du.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336446 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 97b0458f4f7df24dc9cb4e9b029cdcfc37dd623c)

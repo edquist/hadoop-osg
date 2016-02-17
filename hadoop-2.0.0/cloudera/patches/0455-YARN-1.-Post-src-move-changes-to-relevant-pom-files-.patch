@@ -1,7 +1,7 @@
 From d98c72abe3007b1a726e3ca356d35e85658a0611 Mon Sep 17 00:00:00 2001
 From: Karthik Kambatla <kasha@cloudera.com>
 Date: Tue, 28 Aug 2012 18:39:51 -0700
-Subject: [PATCH 455/545] YARN-1. Post src move changes to relevant pom files, including our internal version changes
+Subject: [PATCH 0455/1612] YARN-1. Post src move changes to relevant pom files, including our internal version changes
 
 ---
  dev-support/smart-apply-patch.sh                   |    6 +-

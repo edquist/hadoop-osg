@@ -1,7 +1,7 @@
 From 26ece2309e4962116c88499e1757c2eee411dd67 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 10 May 2012 00:30:53 +0000
-Subject: [PATCH 074/545] HDFS-3341, HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual release. Contributed by Todd Lipcon.
+Subject: [PATCH 0074/1612] HDFS-3341, HADOOP-8340. SNAPSHOT build versions should compare as less than their eventual release. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336459 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 66329d64a68527f195043c83199194a9614e7791)

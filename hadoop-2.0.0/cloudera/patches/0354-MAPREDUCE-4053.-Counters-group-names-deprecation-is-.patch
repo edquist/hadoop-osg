@@ -1,7 +1,7 @@
 From 873fa73d1c13007f54f594d00c8f584cb0feb7df Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Mon, 13 Aug 2012 21:48:33 +0000
-Subject: [PATCH 354/545] MAPREDUCE-4053. Counters group names deprecation is wrong, iterating over group names deprecated names don't show up  (Robert Evans via tgraves)
+Subject: [PATCH 0354/1612] MAPREDUCE-4053. Counters group names deprecation is wrong, iterating over group names deprecated names don't show up  (Robert Evans via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1372636 13f79535-47bb-0310-9956-ffa450edef68
 ---

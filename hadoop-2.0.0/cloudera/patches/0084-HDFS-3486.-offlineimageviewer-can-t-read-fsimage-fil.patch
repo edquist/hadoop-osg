@@ -1,7 +1,7 @@
 From 244f994b0a998de885416eecdb56a7dfdddb980f Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 1 Jun 2012 02:31:29 +0000
-Subject: [PATCH 084/545] HDFS-3486. offlineimageviewer can't read fsimage files that contain persistent delegation tokens. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0084/1612] HDFS-3486. offlineimageviewer can't read fsimage files that contain persistent delegation tokens. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1344970 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit c3aeaf327ef1752f9ff04854e04591006ee22937)

@@ -1,0 +1,38 @@
+From d3403de47bbfd260834e4c73d2521bf6f0ccf360 Mon Sep 17 00:00:00 2001
+From: Charles Lamb <clamb@cloudera.com>
+Date: Fri, 11 Apr 2014 16:44:36 -0400
+Subject: [PATCH 1577/1612] HDFS-5276. Remove volatile from LightWeightHashSet. (Junping Du via llu)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1531224 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 46a9e6095eda168c204d1ebd50e8dde033737575)
+
+Conflicts:
+
+	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
+---
+ .../hadoop/hdfs/util/LightWeightHashSet.java       |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/LightWeightHashSet.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/LightWeightHashSet.java
+index f2800e4..8c0fc93 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/LightWeightHashSet.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/util/LightWeightHashSet.java
+@@ -88,7 +88,7 @@ public class LightWeightHashSet<T> implements Collection<T> {
+    *
+    * @see ConcurrentModificationException
+    */
+-  protected volatile int modification = 0;
++  protected int modification = 0;
+ 
+   private float maxLoadFactor;
+   private float minLoadFactor;
+@@ -634,4 +634,4 @@ public class LightWeightHashSet<T> implements Collection<T> {
+   public boolean retainAll(Collection<?> c) {
+     throw new UnsupportedOperationException("retainAll is not supported.");
+   }
+-}
+\ No newline at end of file
++}
+-- 
+1.7.0.4
+

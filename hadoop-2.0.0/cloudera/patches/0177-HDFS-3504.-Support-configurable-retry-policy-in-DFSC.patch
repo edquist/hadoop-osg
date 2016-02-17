@@ -1,7 +1,7 @@
 From 6919ac9722bbd9ee76787629985969a4c2a39f6d Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Tue, 12 Jun 2012 05:27:15 +0000
-Subject: [PATCH 177/545] HDFS-3504. Support configurable retry policy in DFSClient for RPC connections and RPC calls, and add MultipleLinearRandomRetry, a new retry policy.
+Subject: [PATCH 0177/1612] HDFS-3504. Support configurable retry policy in DFSClient for RPC connections and RPC calls, and add MultipleLinearRandomRetry, a new retry policy.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349124 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 76dd6b0830b4c0a87767adc6c6d077637579082b)

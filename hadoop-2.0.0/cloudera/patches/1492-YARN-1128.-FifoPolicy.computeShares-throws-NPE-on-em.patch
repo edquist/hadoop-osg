@@ -1,0 +1,102 @@
+From 89ef5d9aa6b373493ae23fab7fef1e3a59929f32 Mon Sep 17 00:00:00 2001
+From: Sanford Ryza <sandy@apache.org>
+Date: Sun, 22 Sep 2013 01:46:58 +0000
+Subject: [PATCH 1492/1612] YARN-1128. FifoPolicy.computeShares throws NPE on empty list of Schedulables (Karthik Kambatla via Sandy Ryza)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1525313 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 8157dac63eab6756110ed1d4e65552a9ac98bb4d)
+---
+ .../scheduler/fair/policies/FifoPolicy.java        |    5 ++
+ .../scheduler/fair/policies/TestEmptyQueues.java   |   57 ++++++++++++++++++++
+ 2 files changed, 62 insertions(+), 0 deletions(-)
+ create mode 100644 hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/policies/TestEmptyQueues.java
+
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/policies/FifoPolicy.java b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/policies/FifoPolicy.java
+index 75cac92..9b50898 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/policies/FifoPolicy.java
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/policies/FifoPolicy.java
+@@ -20,6 +20,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies;
+ import java.io.Serializable;
+ import java.util.Collection;
+ import java.util.Comparator;
++import java.util.Iterator;
+ 
+ import org.apache.hadoop.classification.InterfaceAudience.Private;
+ import org.apache.hadoop.classification.InterfaceStability.Unstable;
+@@ -73,6 +74,10 @@ public class FifoPolicy extends SchedulingPolicy {
+   @Override
+   public void computeShares(Collection<? extends Schedulable> schedulables,
+       Resource totalResources) {
++    if (schedulables.isEmpty()) {
++      return;
++    }
++
+     Schedulable earliest = null;
+     for (Schedulable schedulable : schedulables) {
+       if (earliest == null ||
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/policies/TestEmptyQueues.java b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/policies/TestEmptyQueues.java
+new file mode 100644
+index 0000000..fe458d3
+--- /dev/null
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/test/java/org/apache/hadoop/yarn/server/resourcemanager/scheduler/fair/policies/TestEmptyQueues.java
+@@ -0,0 +1,57 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.policies;
++
++import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
++import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.Schedulable;
++import org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair.SchedulingPolicy;
++import org.junit.Before;
++import org.junit.Test;
++
++import java.util.ArrayList;
++import java.util.Collection;
++
++public class TestEmptyQueues {
++  private Collection<? extends Schedulable> schedulables;
++
++  @Before
++  public void setup() {
++    schedulables = new ArrayList<Schedulable>();
++  }
++
++  private void testComputeShares(SchedulingPolicy policy) {
++    policy.computeShares(schedulables, Resources.none());
++  }
++
++  @Test (timeout = 1000)
++  public void testFifoPolicy() {
++    testComputeShares(SchedulingPolicy.getInstance(FifoPolicy.class));
++  }
++
++  @Test (timeout = 1000)
++  public void testFairSharePolicy() {
++    testComputeShares(SchedulingPolicy.getInstance(FairSharePolicy.class));
++  }
++
++  @Test (timeout = 1000)
++  public void testDRFPolicy() {
++    testComputeShares(
++        SchedulingPolicy.getInstance(DominantResourceFairnessPolicy.class));
++  }
++}
+-- 
+1.7.0.4
+

@@ -19,13 +19,20 @@ package org.apache.hadoop.fs;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem.Statistics;
+import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.util.Shell;
+import org.apache.hadoop.util.StringUtils;
 
 import static org.apache.hadoop.fs.FileSystemTestHelper.*;
 
 import java.io.*;
+import java.util.Arrays;
+import java.util.Random;
 
 import static org.junit.Assert.*;
+import static org.junit.Assume.assumeTrue;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -36,8 +43,10 @@ public class TestLocalFileSystem {
   private static String TEST_ROOT_DIR
     = System.getProperty("test.build.data","build/test/data/work-dir/localfs");
 
+  private final File base = new File(TEST_ROOT_DIR);
+  private final Path TEST_PATH = new Path(TEST_ROOT_DIR, "test-file");
   private Configuration conf;
-  private FileSystem fileSys;
+  private LocalFileSystem fileSys;
 
   private void cleanupFile(FileSystem fs, Path name) throws IOException {
     assertTrue(fs.exists(name));
@@ -50,6 +59,13 @@ public class TestLocalFileSystem {
     conf = new Configuration();
     fileSys = FileSystem.getLocal(conf);
     fileSys.delete(new Path(TEST_ROOT_DIR), true);
+  }
+  
+  @After
+  public void after() throws IOException {
+    base.setWritable(true);
+    FileUtil.fullyDelete(base);
+    assertTrue(!base.exists());
   }
 
   /**
@@ -249,13 +265,173 @@ public class TestLocalFileSystem {
     assertEquals(1, fileSchemeCount);
   }
 
+  @Test
   public void testHasFileDescriptor() throws IOException {
     Configuration conf = new Configuration();
     LocalFileSystem fs = FileSystem.getLocal(conf);
     Path path = new Path(TEST_ROOT_DIR, "test-file");
     writeFile(fs, path, 1);
-    BufferedFSInputStream bis = new BufferedFSInputStream(
-        new RawLocalFileSystem().new LocalFSFileInputStream(path), 1024);
-    assertNotNull(bis.getFileDescriptor());
+    BufferedFSInputStream bis = null;
+    try {
+      bis = new BufferedFSInputStream(new RawLocalFileSystem()
+        .new LocalFSFileInputStream(path), 1024);
+      assertNotNull(bis.getFileDescriptor());
+    } finally {
+      IOUtils.cleanup(null, bis);
+    }
+  }
+
+  @Test
+  public void testListStatusWithColons() throws IOException {
+    assumeTrue(!Shell.WINDOWS);
+    Configuration conf = new Configuration();
+    LocalFileSystem fs = FileSystem.getLocal(conf);
+    File colonFile = new File(TEST_ROOT_DIR, "foo:bar");
+    colonFile.mkdirs();
+    FileStatus[] stats = fs.listStatus(new Path(TEST_ROOT_DIR));
+    assertEquals("Unexpected number of stats", 1, stats.length);
+    assertEquals("Bad path from stat", colonFile.getAbsolutePath(),
+        stats[0].getPath().toUri().getPath());
+  }
+  
+  @Test
+  public void testReportChecksumFailure() throws IOException {
+    base.mkdirs();
+    assertTrue(base.exists() && base.isDirectory());
+    
+    final File dir1 = new File(base, "dir1");
+    final File dir2 = new File(dir1, "dir2");
+    dir2.mkdirs();
+    assertTrue(dir2.exists() && dir2.canWrite());
+    
+    final String dataFileName = "corruptedData";
+    final Path dataPath = new Path(new File(dir2, dataFileName).toURI());
+    final Path checksumPath = fileSys.getChecksumFile(dataPath);
+    final FSDataOutputStream fsdos = fileSys.create(dataPath);
+    try {
+      fsdos.writeUTF("foo");
+    } finally {
+      fsdos.close();
+    }
+    assertTrue(fileSys.pathToFile(dataPath).exists());
+    final long dataFileLength = fileSys.getFileStatus(dataPath).getLen();
+    assertTrue(dataFileLength > 0);
+    
+    // check the the checksum file is created and not empty:
+    assertTrue(fileSys.pathToFile(checksumPath).exists());
+    final long checksumFileLength = fileSys.getFileStatus(checksumPath).getLen();
+    assertTrue(checksumFileLength > 0);
+    
+    // this is a hack to force the #reportChecksumFailure() method to stop
+    // climbing up at the 'base' directory and use 'dir1/bad_files' as the 
+    // corrupted files storage:
+    base.setWritable(false);
+    
+    FSDataInputStream dataFsdis = fileSys.open(dataPath);
+    FSDataInputStream checksumFsdis = fileSys.open(checksumPath);
+    
+    boolean retryIsNecessary = fileSys.reportChecksumFailure(dataPath, dataFsdis, 0, checksumFsdis, 0);
+    assertTrue(!retryIsNecessary);
+    
+    // the data file should be moved:
+    assertTrue(!fileSys.pathToFile(dataPath).exists());
+    // the checksum file should be moved:
+    assertTrue(!fileSys.pathToFile(checksumPath).exists());
+    
+    // check that the files exist in the new location where they were moved:
+    File[] dir1files = dir1.listFiles(new FileFilter() {
+      @Override
+      public boolean accept(File pathname) {
+        return pathname != null && !pathname.getName().equals("dir2");
+      }
+    });
+    assertTrue(dir1files != null);
+    assertTrue(dir1files.length == 1);
+    File badFilesDir = dir1files[0];
+    
+    File[] badFiles = badFilesDir.listFiles();
+    assertTrue(badFiles != null);
+    assertTrue(badFiles.length == 2);
+    boolean dataFileFound = false;
+    boolean checksumFileFound = false;
+    for (File badFile: badFiles) {
+      if (badFile.getName().startsWith(dataFileName)) {
+        assertTrue(dataFileLength == badFile.length());
+        dataFileFound = true;
+      } else if (badFile.getName().contains(dataFileName + ".crc")) {
+        assertTrue(checksumFileLength == badFile.length());
+        checksumFileFound = true;
+      }
+    }
+    assertTrue(dataFileFound);
+    assertTrue(checksumFileFound);
+  }
+  
+  /**
+   * Regression test for HADOOP-9307: BufferedFSInputStream returning
+   * wrong results after certain sequences of seeks and reads.
+   */
+  @Test
+  public void testBufferedFSInputStream() throws IOException {
+    Configuration conf = new Configuration();
+    conf.setClass("fs.file.impl", RawLocalFileSystem.class, FileSystem.class);
+    conf.setInt(CommonConfigurationKeysPublic.IO_FILE_BUFFER_SIZE_KEY, 4096);
+    FileSystem fs = FileSystem.newInstance(conf);
+    
+    byte[] buf = new byte[10*1024];
+    new Random().nextBytes(buf);
+    
+    // Write random bytes to file
+    FSDataOutputStream stream = fs.create(TEST_PATH);
+    try {
+      stream.write(buf);
+    } finally {
+      stream.close();
+    }
+    
+    Random r = new Random();
+
+    FSDataInputStream stm = fs.open(TEST_PATH);
+    // Record the sequence of seeks and reads which trigger a failure.
+    int seeks[] = new int[10];
+    int reads[] = new int[10];
+    try {
+      for (int i = 0; i < 1000; i++) {
+        int seekOff = r.nextInt(buf.length); 
+        int toRead = r.nextInt(Math.min(buf.length - seekOff, 32000));
+        
+        seeks[i % seeks.length] = seekOff;
+        reads[i % reads.length] = toRead;
+        verifyRead(stm, buf, seekOff, toRead);
+        
+      }
+    } catch (AssertionError afe) {
+      StringBuilder sb = new StringBuilder();
+      sb.append("Sequence of actions:\n");
+      for (int j = 0; j < seeks.length; j++) {
+        sb.append("seek @ ").append(seeks[j]).append("  ")
+          .append("read ").append(reads[j]).append("\n");
+      }
+      System.err.println(sb.toString());
+      throw afe;
+    } finally {
+      stm.close();
+    }
+  }
+  
+  private void verifyRead(FSDataInputStream stm, byte[] fileContents,
+       int seekOff, int toRead) throws IOException {
+    byte[] out = new byte[toRead];
+    stm.seek(seekOff);
+    stm.readFully(out);
+    byte[] expected = Arrays.copyOfRange(fileContents, seekOff, seekOff+toRead);
+    if (!Arrays.equals(out, expected)) {
+      String s ="\nExpected: " +
+          StringUtils.byteToHexString(expected) +
+          "\ngot:      " +
+          StringUtils.byteToHexString(out) + 
+          "\noff=" + seekOff + " len=" + toRead;
+      fail(s);
+    }
   }
 }

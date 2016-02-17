@@ -32,6 +32,8 @@ import org.apache.hadoop.tools.util.DistCpUtils;
 import org.apache.hadoop.mapreduce.security.TokenCache;
 import org.apache.hadoop.security.Credentials;
 
+import com.google.common.annotations.VisibleForTesting;
+
 import java.io.*;
 import java.util.Stack;
 
@@ -107,12 +109,30 @@ public class SimpleCopyListing extends CopyListing {
   /** {@inheritDoc} */
   @Override
   public void doBuildListing(Path pathToListingFile, DistCpOptions options) throws IOException {
-
-    SequenceFile.Writer fileListWriter = null;
-
+    doBuildListing(getWriter(pathToListingFile), options);
+  }
+  /**
+   * Collect the list of 
+   *   <sourceRelativePath, sourceFileStatus>
+   * to be copied and write to the sequence file. In essence, any file or
+   * directory that need to be copied or sync-ed is written as an entry to the
+   * sequence file, with the possible exception of the source root:
+   *     when either -update (sync) or -overwrite switch is specified, and if
+   *     the the source root is a directory, then the source root entry is not 
+   *     written to the sequence file, because only the contents of the source
+   *     directory need to be copied in this case.
+   * See {@link org.apache.hadoop.tools.util.DistCpUtils.getRelativePath} for
+   *     how relative path is computed.
+   * See computeSourceRootPath method for how the root path of the source is
+   *     computed.
+   * @param fileListWriter
+   * @param options
+   * @throws IOException
+   */
+  @VisibleForTesting
+  public void doBuildListing(SequenceFile.Writer fileListWriter,
+      DistCpOptions options) throws IOException {
     try {
-      fileListWriter = getWriter(pathToListingFile);
-
       for (Path path: options.getSourcePaths()) {
         FileSystem sourceFS = path.getFileSystem(getConf());
         path = makeQualified(path);
@@ -122,26 +142,33 @@ public class SimpleCopyListing extends CopyListing {
         boolean localFile = (rootStatus.getClass() != FileStatus.class);
 
         FileStatus[] sourceFiles = sourceFS.listStatus(path);
-        if (sourceFiles != null && sourceFiles.length > 0) {
+        boolean explore = (sourceFiles != null && sourceFiles.length > 0);
+        if (!explore || rootStatus.isDirectory()) {
+          writeToFileListingRoot(fileListWriter, rootStatus, sourcePathRoot,
+              localFile, options);
+        }
+        if (explore) {
           for (FileStatus sourceStatus: sourceFiles) {
             if (LOG.isDebugEnabled()) {
               LOG.debug("Recording source-path: " + sourceStatus.getPath() + " for copy.");
             }
-            writeToFileListing(fileListWriter, sourceStatus, sourcePathRoot, localFile);
+            writeToFileListing(fileListWriter, sourceStatus, sourcePathRoot,
+                localFile, options);
 
             if (isDirectoryAndNotEmpty(sourceFS, sourceStatus)) {
               if (LOG.isDebugEnabled()) {
                 LOG.debug("Traversing non-empty source dir: " + sourceStatus.getPath());
               }
-              traverseNonEmptyDirectory(fileListWriter, sourceStatus, sourcePathRoot, localFile);
+              traverseNonEmptyDirectory(fileListWriter, sourceStatus, sourcePathRoot,
+                  localFile, options);
             }
           }
-        } else {
-          writeToFileListing(fileListWriter, rootStatus, sourcePathRoot, localFile);
         }
       }
+      fileListWriter.close();
+      fileListWriter = null;
     } finally {
-      IOUtils.closeStream(fileListWriter);
+      IOUtils.cleanup(LOG, fileListWriter);
     }
   }
 
@@ -150,23 +177,35 @@ public class SimpleCopyListing extends CopyListing {
 
     Path target = options.getTargetPath();
     FileSystem targetFS = target.getFileSystem(getConf());
+    final boolean targetPathExists = options.getTargetPathExists();
 
     boolean solitaryFile = options.getSourcePaths().size() == 1
                                                 && !sourceStatus.isDirectory();
 
     if (solitaryFile) {
-      if (targetFS.isFile(target) || !targetFS.exists(target)) {
+      if (targetFS.isFile(target) || !targetPathExists) {
         return sourceStatus.getPath();
       } else {
         return sourceStatus.getPath().getParent();
       }
     } else {
-      boolean specialHandling = (options.getSourcePaths().size() == 1 && !targetFS.exists(target)) ||
+      boolean specialHandling = (options.getSourcePaths().size() == 1 && !targetPathExists) ||
           options.shouldSyncFolder() || options.shouldOverwrite();
 
       return specialHandling && sourceStatus.isDirectory() ? sourceStatus.getPath() :
           sourceStatus.getPath().getParent();
     }
+  }
+
+  /**
+   * Provide an option to skip copy of a path, Allows for exclusion
+   * of files such as {@link org.apache.hadoop.mapreduce.lib.output.FileOutputCommitter#SUCCEEDED_FILE_NAME}
+   * @param path - Path being considered for copy while building the file listing
+   * @param options - Input options passed during DistCp invocation
+   * @return - True if the path should be considered for copy, false otherwise
+   */
+  protected boolean shouldCopy(Path path, DistCpOptions options) {
+    return true;
   }
 
   /** {@inheritDoc} */
@@ -210,7 +249,9 @@ public class SimpleCopyListing extends CopyListing {
 
   private void traverseNonEmptyDirectory(SequenceFile.Writer fileListWriter,
                                          FileStatus sourceStatus,
-                                         Path sourcePathRoot, boolean localFile)
+                                         Path sourcePathRoot,
+                                         boolean localFile,
+                                         DistCpOptions options)
                                          throws IOException {
     FileSystem sourceFS = sourcePathRoot.getFileSystem(getConf());
     Stack<FileStatus> pathStack = new Stack<FileStatus>();
@@ -221,7 +262,8 @@ public class SimpleCopyListing extends CopyListing {
         if (LOG.isDebugEnabled())
           LOG.debug("Recording source-path: "
                     + sourceStatus.getPath() + " for copy.");
-        writeToFileListing(fileListWriter, child, sourcePathRoot, localFile);
+        writeToFileListing(fileListWriter, child, sourcePathRoot,
+             localFile, options);
         if (isDirectoryAndNotEmpty(sourceFS, child)) {
           if (LOG.isDebugEnabled())
             LOG.debug("Traversing non-empty source dir: "
@@ -231,13 +273,30 @@ public class SimpleCopyListing extends CopyListing {
       }
     }
   }
+  
+  private void writeToFileListingRoot(SequenceFile.Writer fileListWriter,
+      FileStatus fileStatus, Path sourcePathRoot,
+      boolean localFile,
+      DistCpOptions options) throws IOException {
+    boolean syncOrOverwrite = options.shouldSyncFolder() ||
+        options.shouldOverwrite();
+    if (fileStatus.getPath().equals(sourcePathRoot) && 
+        fileStatus.isDirectory() && syncOrOverwrite) {
+      // Skip the root-paths when syncOrOverwrite
+      if (LOG.isDebugEnabled()) {
+        LOG.debug("Skip " + fileStatus.getPath());
+      }      
+      return;
+    }
+    writeToFileListing(fileListWriter, fileStatus, sourcePathRoot, localFile,
+        options);
+  }
 
   private void writeToFileListing(SequenceFile.Writer fileListWriter,
-                                  FileStatus fileStatus, Path sourcePathRoot,
-                                  boolean localFile) throws IOException {
-    if (fileStatus.getPath().equals(sourcePathRoot) && fileStatus.isDirectory())
-      return; // Skip the root-paths.
-
+                                  FileStatus fileStatus,
+                                  Path sourcePathRoot,
+                                  boolean localFile,
+                                  DistCpOptions options) throws IOException {
     if (LOG.isDebugEnabled()) {
       LOG.debug("REL PATH: " + DistCpUtils.getRelativePath(sourcePathRoot,
         fileStatus.getPath()) + ", FULL PATH: " + fileStatus.getPath());
@@ -246,6 +305,10 @@ public class SimpleCopyListing extends CopyListing {
     FileStatus status = fileStatus;
     if (localFile) {
       status = getFileStatus(fileStatus);
+    }
+
+    if (!shouldCopy(fileStatus.getPath(), options)) {
+      return;
     }
 
     fileListWriter.append(new Text(DistCpUtils.getRelativePath(sourcePathRoot,

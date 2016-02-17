@@ -1,7 +1,7 @@
 From 306bc6cf9e2b0432a4d297b0aea230e15d3fb215 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 24 Aug 2012 22:10:38 +0000
-Subject: [PATCH 456/545] HDFS-3731. 2.0 release upgrade must handle blocks being written from 1.0. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0456/1612] HDFS-3731. 2.0 release upgrade must handle blocks being written from 1.0. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1377137 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit cac709fb2a32960c74196510dae41b6fbc475a35)

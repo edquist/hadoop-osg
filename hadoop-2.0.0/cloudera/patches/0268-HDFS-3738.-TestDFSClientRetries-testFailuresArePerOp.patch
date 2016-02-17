@@ -1,7 +1,7 @@
 From 6a9c91195fe8561f9b49378b8b86650af35a1e86 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 1 Aug 2012 02:22:30 +0000
-Subject: [PATCH 268/545] HDFS-3738. TestDFSClientRetries#testFailuresArePerOperation sets incorrect timeout config. Contributed by Aaron T. Myers.
+Subject: [PATCH 0268/1612] HDFS-3738. TestDFSClientRetries#testFailuresArePerOperation sets incorrect timeout config. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1367845 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d22eabcd8b542a7d03de54a536b359a581581746)

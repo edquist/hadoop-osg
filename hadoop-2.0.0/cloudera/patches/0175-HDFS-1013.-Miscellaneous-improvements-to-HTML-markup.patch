@@ -1,7 +1,7 @@
 From 763f6d0016fa520b1c1bc9970fc1ec4bb17ffdcf Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 24 May 2012 00:27:51 +0000
-Subject: [PATCH 175/545] HDFS-1013. Miscellaneous improvements to HTML markup for web UIs. Contributed by Eugene Koontz.
+Subject: [PATCH 0175/1612] HDFS-1013. Miscellaneous improvements to HTML markup for web UIs. Contributed by Eugene Koontz.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1342102 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b889a0ebba466c587511512be95f2d19cc6e6ea7)

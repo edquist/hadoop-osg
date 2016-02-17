@@ -1,7 +1,7 @@
 From f75234c7a3ebe0ca17d39103e7f82a2dbce5d265 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@cloudera.com>
 Date: Mon, 13 Aug 2012 15:12:37 -0700
-Subject: [PATCH 322/545] HADOOP-8581. add support for HTTPS to the web UIs. (tucu)
+Subject: [PATCH 0322/1612] HADOOP-8581. add support for HTTPS to the web UIs. (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1372642 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit bbb2d973e8409ad804dbfe7fbac3b0b630faa3d6)

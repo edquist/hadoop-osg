@@ -1,7 +1,7 @@
 From b676ab2ce47a873bf3d1109be73bdcba4ce307bd Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 16 May 2012 04:12:46 +0000
-Subject: [PATCH 053/545] HADOOP-8393. hadoop-config.sh missing variable exports, causes Yarn jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
+Subject: [PATCH 0053/1612] HADOOP-8393. hadoop-config.sh missing variable exports, causes Yarn jobs to fail with ClassNotFoundException MRAppMaster. (phunt via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1338998 13f79535-47bb-0310-9956-ffa450edef68
 ---

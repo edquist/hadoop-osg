@@ -1,7 +1,7 @@
 From 05e047c94fd76371fcceabb2c11b93b670facee5 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 24 Aug 2012 23:36:55 +0000
-Subject: [PATCH 424/545] MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached (rkanter via tucu)
+Subject: [PATCH 0424/1612] MAPREDUCE-4408. allow jobs to set a JAR that is in the distributed cached (rkanter via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1377149 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 566878c7e58e06220632b382e62d1905565f3815)

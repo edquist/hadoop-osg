@@ -1,0 +1,107 @@
+From 63b7145fb5b6ac5684282e5876786ec3c6e02aee Mon Sep 17 00:00:00 2001
+From: Alejandro Abdelnur <tucu@apache.org>
+Date: Mon, 16 Sep 2013 12:20:30 +0000
+Subject: [PATCH 1485/1612] MAPREDUCE-5379. Include token tracking ids in jobconf. (kkambatl via tucu)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1523607 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 286716f5fd7cca66460c6cd9f11b068a416aa273)
+(cherry picked from commit 27c45af88a11298c42cd86b61d684af5d4d084ce)
+
+Conflicts:
+	hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/JobSubmitter.java
+---
+ .../org/apache/hadoop/mapreduce/JobSubmitter.java  |   16 ++++++++++++++++
+ .../org/apache/hadoop/mapreduce/MRJobConfig.java   |    7 +++++++
+ .../src/main/resources/mapred-default.xml          |   17 +++++++++++++++++
+ 3 files changed, 40 insertions(+), 0 deletions(-)
+
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/JobSubmitter.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/JobSubmitter.java
+index 1f95d19..e76fde3 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/JobSubmitter.java
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/JobSubmitter.java
+@@ -23,6 +23,8 @@ import java.net.InetAddress;
+ import java.net.URI;
+ import java.net.URISyntaxException;
+ import java.net.UnknownHostException;
++import java.security.NoSuchAlgorithmException;
++import java.util.ArrayList;
+ import java.util.Arrays;
+ import java.util.Comparator;
+ import java.util.List;
+@@ -51,6 +53,7 @@ import org.apache.hadoop.mapreduce.split.JobSplitWriter;
+ import org.apache.hadoop.security.Credentials;
+ import org.apache.hadoop.security.authorize.AccessControlList;
+ import org.apache.hadoop.security.token.Token;
++import org.apache.hadoop.security.token.TokenIdentifier;
+ import org.apache.hadoop.util.ReflectionUtils;
+ import org.codehaus.jackson.JsonParseException;
+ import org.codehaus.jackson.map.JsonMappingException;
+@@ -381,6 +384,19 @@ class JobSubmitter {
+       // different job.
+       TokenCache.cleanUpTokenReferral(conf);
+ 
++      if (conf.getBoolean(
++          MRJobConfig.JOB_TOKEN_TRACKING_IDS_ENABLED,
++          MRJobConfig.DEFAULT_JOB_TOKEN_TRACKING_IDS_ENABLED)) {
++        // Add HDFS tracking ids
++        ArrayList<String> trackingIds = new ArrayList<String>();
++        for (Token<? extends TokenIdentifier> t :
++            job.getCredentials().getAllTokens()) {
++          trackingIds.add(t.decodeIdentifier().getTrackingId());
++        }
++        conf.setStrings(MRJobConfig.JOB_TOKEN_TRACKING_IDS,
++            trackingIds.toArray(new String[trackingIds.size()]));
++      }
++
+       // Write job file to submit dir
+       writeConf(conf, submitJobFile);
+       
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/MRJobConfig.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/MRJobConfig.java
+index f64b21f..6ac3a0b 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/MRJobConfig.java
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/java/org/apache/hadoop/mapreduce/MRJobConfig.java
+@@ -302,6 +302,13 @@ public interface MRJobConfig {
+   public static final String MAPREDUCE_JOB_CREDENTIALS_BINARY = 
+       "mapreduce.job.credentials.binary";
+ 
++  /* Configs for tracking ids of tokens used by a job */
++  public static final String JOB_TOKEN_TRACKING_IDS_ENABLED =
++      "mapreduce.job.token.tracking.ids.enabled";
++  public static final boolean DEFAULT_JOB_TOKEN_TRACKING_IDS_ENABLED = false;
++  public static final String JOB_TOKEN_TRACKING_IDS =
++      "mapreduce.job.token.tracking.ids";
++
+   public static final String JOB_SUBMITHOST =
+     "mapreduce.job.submithostname";
+   public static final String JOB_SUBMITHOSTADDR =
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/resources/mapred-default.xml b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/resources/mapred-default.xml
+index 728ccb9..8c5c472 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/resources/mapred-default.xml
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-core/src/main/resources/mapred-default.xml
+@@ -1140,6 +1140,23 @@
+ </property>
+ 
+ <property>
++  <name>mapreduce.job.token.tracking.ids.enabled</name>
++  <value>false</value>
++  <description>Whether to write tracking ids of tokens to
++    job-conf. When true, the configuration property
++    "mapreduce.job.token.tracking.ids" is set to the token-tracking-ids of
++    the job</description>
++</property>
++
++<property>
++  <name>mapreduce.job.token.tracking.ids</name>
++  <value></value>
++  <description>When mapreduce.job.token.tracking.ids.enabled is
++    set to true, this is set by the framework to the
++    token-tracking-ids used by the job.</description>
++</property>
++
++<property>
+   <name>mapreduce.task.merge.progress.records</name>
+   <value>10000</value>
+   <description> The number of records to process during merge before
+-- 
+1.7.0.4
+

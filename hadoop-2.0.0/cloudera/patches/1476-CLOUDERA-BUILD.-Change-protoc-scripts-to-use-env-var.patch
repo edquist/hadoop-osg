@@ -1,0 +1,619 @@
+From fa27dab1b765c426829e46f381a2c7e07abe1a79 Mon Sep 17 00:00:00 2001
+From: Alejandro Abdelnur <tucu@cloudera.com>
+Date: Thu, 15 Aug 2013 06:25:13 -0700
+Subject: [PATCH 1476/1612] CLOUDERA-BUILD. Change protoc scripts to use env variable for protoc to be CDH4 specific
+
+---
+ hadoop-common-project/hadoop-common/pom.xml        |   32 ++++++++--
+ hadoop-hdfs-project/hadoop-hdfs/pom.xml            |   16 ++++-
+ .../hadoop-hdfs/src/contrib/bkjournal/pom.xml      |   16 ++++-
+ .../hadoop-mapreduce-client-common/pom.xml         |   64 +++++++++++++------
+ hadoop-project/pom.xml                             |    5 +-
+ .../hadoop-yarn/hadoop-yarn-api/pom.xml            |   65 ++++++++++++-------
+ .../hadoop-yarn/hadoop-yarn-common/pom.xml         |   62 +++++++++++++------
+ .../hadoop-yarn-server-common/pom.xml              |   64 +++++++++++++------
+ .../hadoop-yarn-server-nodemanager/pom.xml         |   63 +++++++++++++------
+ 9 files changed, 269 insertions(+), 118 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/pom.xml b/hadoop-common-project/hadoop-common/pom.xml
+index b56e3b1..20d7aac 100644
+--- a/hadoop-common-project/hadoop-common/pom.xml
++++ b/hadoop-common-project/hadoop-common/pom.xml
+@@ -274,6 +274,16 @@
+             <configuration>
+               <target>
+                 <echo file="target/compile-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
+                     PROTO_DIR=src/main/proto
+                     JAVA_DIR=target/generated-sources/java
+                     which cygpath 2> /dev/null
+@@ -288,13 +298,13 @@
+                     for PROTO_FILE in `ls $PROTO_DIR/*.proto 2> /dev/null`
+                     do
+                         if [ "$IS_WIN" = "true" ]; then
+-                          protoc -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                          ${PROTOC} -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
+                         else
+-                          protoc -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                          ${PROTOC} -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
+                         fi
+                     done
+                 </echo>
+-                <exec executable="sh" dir="${basedir}" failonerror="true">
++                <exec executable="bash" dir="${basedir}" failonerror="true">
+                   <arg line="target/compile-proto.sh"/>
+                 </exec>
+               </target>
+@@ -309,6 +319,16 @@
+             <configuration>
+               <target>
+                 <echo file="target/compile-test-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
+                     PROTO_DIR=src/test/proto
+                     JAVA_DIR=target/generated-test-sources/java
+                     which cygpath 2> /dev/null
+@@ -323,13 +343,13 @@
+                     for PROTO_FILE in `ls $PROTO_DIR/*.proto 2> /dev/null`
+                     do
+                         if [ "$IS_WIN" = "true" ]; then
+-                          protoc -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                          ${PROTOC} -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
+                         else
+-                          protoc -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                          ${PROTOC} -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
+                         fi
+                     done
+                 </echo>
+-                <exec executable="sh" dir="${basedir}" failonerror="true">
++                <exec executable="bash" dir="${basedir}" failonerror="true">
+                   <arg line="target/compile-test-proto.sh"/>
+                 </exec>
+               </target>
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/pom.xml b/hadoop-hdfs-project/hadoop-hdfs/pom.xml
+index 123dcb2..6d9ee02 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/pom.xml
++++ b/hadoop-hdfs-project/hadoop-hdfs/pom.xml
+@@ -330,6 +330,16 @@
+             <configuration>
+               <target>
+                 <echo file="target/compile-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
+                     PROTO_DIR=src/main/proto
+                     JAVA_DIR=target/generated-sources/java
+                     which cygpath 2> /dev/null
+@@ -344,13 +354,13 @@
+                     for PROTO_FILE in `ls $PROTO_DIR/*.proto 2> /dev/null`
+                     do
+                         if [ "$IS_WIN" = "true" ]; then
+-                          protoc -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                          ${PROTOC} -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
+                         else
+-                          protoc -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                          ${PROTOC} -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
+                         fi
+                     done
+                 </echo>
+-                <exec executable="sh" dir="${basedir}" failonerror="true">
++                <exec executable="bash" dir="${basedir}" failonerror="true">
+                   <arg line="target/compile-proto.sh"/>
+                 </exec>
+               </target>
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/contrib/bkjournal/pom.xml b/hadoop-hdfs-project/hadoop-hdfs/src/contrib/bkjournal/pom.xml
+index debf492..d07102b 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/contrib/bkjournal/pom.xml
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/contrib/bkjournal/pom.xml
+@@ -122,6 +122,16 @@
+             <configuration>
+               <target>
+                 <echo file="target/compile-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
+                     PROTO_DIR=src/main/proto
+                     INCLUDE_DIR=../../main/proto
+                     JAVA_DIR=target/generated-sources/java
+@@ -138,13 +148,13 @@
+                     for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
+                     do
+                         if [ "$IS_WIN" = "true" ]; then
+-                          protoc -I$WIN_PROTO_DIR -I$WIN_INCLUDE_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                          ${PROTOC} -I$WIN_PROTO_DIR -I$WIN_INCLUDE_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
+                         else
+-                          protoc -I$PROTO_DIR -I$INCLUDE_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                          ${PROTOC} -I$PROTO_DIR -I$INCLUDE_DIR --java_out=$JAVA_DIR $PROTO_FILE
+                         fi
+                     done
+                 </echo>
+-                <exec executable="sh" dir="${basedir}" failonerror="true">
++                <exec executable="bash" dir="${basedir}" failonerror="true">
+                   <arg line="target/compile-proto.sh"/>
+                 </exec>
+               </target>
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-common/pom.xml b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-common/pom.xml
+index 7965196..2c91f57 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-common/pom.xml
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-common/pom.xml
+@@ -65,30 +65,52 @@
+               <goal>run</goal>
+             </goals>
+           </execution>
+-        </executions>
+-      </plugin>
+-
+-      <plugin>
+-        <groupId>org.codehaus.mojo</groupId>
+-        <artifactId>exec-maven-plugin</artifactId>
+-        <executions>
+           <execution>
+-            <id>generate-sources</id>
++            <id>compile-proto</id>
+             <phase>generate-sources</phase>
+-            <configuration>
+-              <executable>protoc</executable>
+-              <arguments>
+-                <argument>-I../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto/</argument>
+-                <argument>-Isrc/main/proto/</argument>
+-                <argument>--java_out=target/generated-sources/proto</argument>
+-                <argument>src/main/proto/mr_protos.proto</argument>
+-                <argument>src/main/proto/mr_service_protos.proto</argument>
+-                <argument>src/main/proto/MRClientProtocol.proto</argument>
+-              </arguments>
+-            </configuration>
+             <goals>
+-              <goal>exec</goal>
++              <goal>run</goal>
+             </goals>
++            <configuration>
++              <target>
++                <echo file="target/compile-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
++                    PROTO_DIR=src/main/proto
++                    INCLUDE_DIR=../../../hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/src/main/proto/
++                    JAVA_DIR=target/generated-sources/java
++                    which cygpath 2&gt; /dev/null
++                    if [ $? = 1 ]; then
++                      IS_WIN=false
++                    else
++                      IS_WIN=true
++                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
++                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
++                      WIN_INCLUDE_DIR=`cygpath --windows $INCLUDE_DIR`
++                    fi
++                    mkdir -p $JAVA_DIR 2&gt; /dev/null
++                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
++                    do
++                        if [ "$IS_WIN" = "true" ]; then
++                          ${PROTOC} -I$WIN_PROTO_DIR -I$WIN_INCLUDE_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                        else
++                          ${PROTOC} -I$PROTO_DIR -I$INCLUDE_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                        fi
++                    done
++                </echo>
++                <exec executable="bash" dir="${basedir}" failonerror="true">
++                  <arg line="target/compile-proto.sh"/>
++                </exec>
++              </target>
++            </configuration>
+           </execution>
+         </executions>
+       </plugin>
+@@ -105,7 +127,7 @@
+             </goals>
+             <configuration>
+               <sources>
+-                <source>target/generated-sources/proto</source>
++                <source>target/generated-sources/java</source>
+               </sources>
+             </configuration>
+           </execution>
+diff --git a/hadoop-project/pom.xml b/hadoop-project/pom.xml
+index ae0dc24..07f7a70 100644
+--- a/hadoop-project/pom.xml
++++ b/hadoop-project/pom.xml
+@@ -50,6 +50,9 @@
+     
+     <test.build.dir>${project.build.directory}/test-dir</test.build.dir>
+     <test.build.data>${test.build.dir}</test.build.data>
++    <protobuf.version>2.4.0a</protobuf.version>
++    <protoc.path>HADOOP_PROTOC_CDH4_PATH</protoc.path>
++    <protoc.version>2.4</protoc.version>
+   </properties>
+ 
+   <dependencyManagement>
+@@ -595,7 +598,7 @@
+       <dependency>
+         <groupId>com.google.protobuf</groupId>
+         <artifactId>protobuf-java</artifactId>
+-        <version>2.4.0a</version>
++        <version>${protobuf.version}</version>
+       </dependency>
+       <dependency>
+         <groupId>commons-daemon</groupId>
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/pom.xml b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/pom.xml
+index d6e72f9..a1487a2 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/pom.xml
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-api/pom.xml
+@@ -46,33 +46,50 @@
+               <goal>run</goal>
+             </goals>
+           </execution>
+-        </executions>
+-      </plugin>
+-
+-      <plugin>
+-        <groupId>org.codehaus.mojo</groupId>
+-        <artifactId>exec-maven-plugin</artifactId>
+-        <executions>
+           <execution>
+-            <id>generate-sources</id>
++            <id>compile-proto</id>
+             <phase>generate-sources</phase>
+-            <configuration>
+-              <executable>protoc</executable>
+-              <arguments>
+-                <argument>-Isrc/main/proto/</argument>
+-                <argument>--java_out=target/generated-sources/proto</argument>
+-                <argument>src/main/proto/yarn_protos.proto</argument>
+-                <argument>src/main/proto/yarn_service_protos.proto</argument>
+-                <argument>src/main/proto/AM_RM_protocol.proto</argument>
+-                <argument>src/main/proto/client_RM_protocol.proto</argument>
+-                <argument>src/main/proto/container_manager.proto</argument>
+-                <argument>src/main/proto/yarn_server_resourcemanager_service_protos.proto</argument>
+-                <argument>src/main/proto/RMAdminProtocol.proto</argument>
+-              </arguments>
+-            </configuration>
+             <goals>
+-              <goal>exec</goal>
++              <goal>run</goal>
+             </goals>
++            <configuration>
++              <target>
++                <echo file="target/compile-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
++                    PROTO_DIR=src/main/proto
++                    JAVA_DIR=target/generated-sources/java
++                    which cygpath 2&gt; /dev/null
++                    if [ $? = 1 ]; then
++                      IS_WIN=false
++                    else
++                      IS_WIN=true
++                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
++                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
++                    fi
++                    mkdir -p $JAVA_DIR 2&gt; /dev/null
++                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
++                    do
++                        if [ "$IS_WIN" = "true" ]; then
++                          ${PROTOC} -I$WIN_PROTO_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                        else
++                          ${PROTOC} -I$PROTO_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                        fi
++                    done
++                </echo>
++                <exec executable="bash" dir="${basedir}" failonerror="true">
++                  <arg line="target/compile-proto.sh"/>
++                </exec>
++              </target>
++            </configuration>
+           </execution>
+         </executions>
+       </plugin>
+@@ -89,7 +106,7 @@
+             </goals>
+             <configuration>
+               <sources>
+-                <source>target/generated-sources/proto</source>
++                <source>target/generated-sources/java</source>
+               </sources>
+             </configuration>
+           </execution>
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/pom.xml b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/pom.xml
+index 9fc0124..a29de90 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/pom.xml
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-common/pom.xml
+@@ -100,28 +100,52 @@
+               </tasks>
+             </configuration>
+           </execution>
+-        </executions>
+-      </plugin>
+-
+-      <plugin>
+-        <groupId>org.codehaus.mojo</groupId>
+-        <artifactId>exec-maven-plugin</artifactId>
+-        <executions>
+           <execution>
+-            <id>generate-sources</id>
++            <id>compile-proto</id>
+             <phase>generate-sources</phase>
+-            <configuration>
+-              <executable>protoc</executable>
+-              <arguments>
+-                <argument>-I../hadoop-yarn-api/src/main/proto/</argument>
+-                <argument>-Isrc/main/proto/</argument>
+-                <argument>--java_out=target/generated-sources/proto</argument>
+-                <argument>src/main/proto/yarnprototunnelrpc.proto</argument>
+-              </arguments>
+-            </configuration>
+             <goals>
+-              <goal>exec</goal>
++              <goal>run</goal>
+             </goals>
++            <configuration>
++              <target>
++                <echo file="target/compile-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
++                    PROTO_DIR=src/main/proto
++                    INCLUDE_DIR=../hadoop-yarn-api/src/main/proto/
++                    JAVA_DIR=target/generated-sources/java
++                    which cygpath 2&gt; /dev/null
++                    if [ $? = 1 ]; then
++                      IS_WIN=false
++                    else
++                      IS_WIN=true
++                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
++                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
++                      WIN_INCLUDE_DIR=`cygpath --windows $INCLUDE_DIR`
++                    fi
++                    mkdir -p $JAVA_DIR 2&gt; /dev/null
++                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
++                    do
++                        if [ "$IS_WIN" = "true" ]; then
++                          ${PROTOC} -I$WIN_PROTO_DIR -I$WIN_INCLUDE_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                        else
++                          ${PROTOC} -I$PROTO_DIR -I$INCLUDE_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                        fi
++                    done
++                </echo>
++                <exec executable="bash" dir="${basedir}" failonerror="true">
++                  <arg line="target/compile-proto.sh"/>
++                </exec>
++              </target>
++            </configuration>
+           </execution>
+         </executions>
+       </plugin>
+@@ -138,7 +162,7 @@
+             </goals>
+             <configuration>
+               <sources>
+-                <source>target/generated-sources/proto</source>
++                <source>target/generated-sources/java</source>
+                 <source>target/generated-sources/version</source>
+               </sources>
+             </configuration>
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-common/pom.xml b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-common/pom.xml
+index 0f6aeaa..bf67537 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-common/pom.xml
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-common/pom.xml
+@@ -68,30 +68,52 @@
+               </tasks>
+             </configuration>
+           </execution>
+-        </executions>
+-      </plugin>
+-
+-      <plugin>
+-        <groupId>org.codehaus.mojo</groupId>
+-        <artifactId>exec-maven-plugin</artifactId>
+-        <executions>
+           <execution>
+-            <id>generate-sources</id>
++            <id>compile-proto</id>
+             <phase>generate-sources</phase>
+-            <configuration>
+-              <executable>protoc</executable>
+-              <arguments>
+-                <argument>-I../../hadoop-yarn-api/src/main/proto/</argument>
+-                <argument>-Isrc/main/proto/</argument>
+-                <argument>--java_out=target/generated-sources/proto</argument>
+-                <argument>src/main/proto/yarn_server_common_protos.proto</argument>
+-                <argument>src/main/proto/yarn_server_common_service_protos.proto</argument>
+-                <argument>src/main/proto/ResourceTracker.proto</argument>
+-              </arguments>
+-            </configuration>
+             <goals>
+-              <goal>exec</goal>
++              <goal>run</goal>
+             </goals>
++            <configuration>
++              <target>
++                <echo file="target/compile-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
++                    PROTO_DIR=src/main/proto
++                    INCLUDE_DIR=../../hadoop-yarn-api/src/main/proto/
++                    JAVA_DIR=target/generated-sources/java
++                    which cygpath 2&gt; /dev/null
++                    if [ $? = 1 ]; then
++                      IS_WIN=false
++                    else
++                      IS_WIN=true
++                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
++                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
++                      WIN_INCLUDE_DIR=`cygpath --windows $INCLUDE_DIR`
++                    fi
++                    mkdir -p $JAVA_DIR 2&gt; /dev/null
++                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
++                    do
++                        if [ "$IS_WIN" = "true" ]; then
++                          ${PROTOC} -I$WIN_PROTO_DIR -I$WIN_INCLUDE_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                        else
++                          ${PROTOC} -I$PROTO_DIR -I$INCLUDE_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                        fi
++                    done
++                </echo>
++                <exec executable="bash" dir="${basedir}" failonerror="true">
++                  <arg line="target/compile-proto.sh"/>
++                </exec>
++              </target>
++            </configuration>
+           </execution>
+         </executions>
+       </plugin>
+@@ -108,7 +130,7 @@
+             </goals>
+             <configuration>
+               <sources>
+-                <source>target/generated-sources/proto</source>
++                <source>target/generated-sources/java</source>
+               </sources>
+             </configuration>
+           </execution>
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/pom.xml b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/pom.xml
+index 4a2d52c..76fdc38 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/pom.xml
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-nodemanager/pom.xml
+@@ -173,29 +173,52 @@
+               <goal>run</goal>
+             </goals>
+           </execution>
+-        </executions>
+-      </plugin>
+-
+-      <plugin>
+-        <groupId>org.codehaus.mojo</groupId>
+-        <artifactId>exec-maven-plugin</artifactId>
+-        <executions>
+           <execution>
+-            <id>generate-sources</id>
++            <id>compile-proto</id>
+             <phase>generate-sources</phase>
+-            <configuration>
+-              <executable>protoc</executable>
+-              <arguments>
+-                <argument>-I../../hadoop-yarn-api/src/main/proto/</argument>
+-                <argument>-Isrc/main/proto/</argument>
+-                <argument>--java_out=target/generated-sources/proto</argument>
+-                <argument>src/main/proto/yarn_server_nodemanager_service_protos.proto</argument>
+-                <argument>src/main/proto/LocalizationProtocol.proto</argument>
+-              </arguments>
+-            </configuration>
+             <goals>
+-              <goal>exec</goal>
++              <goal>run</goal>
+             </goals>
++            <configuration>
++              <target>
++                <echo file="target/compile-proto.sh">
++                    #!/bin/bash
++                    PROTOC="$${protoc.path}"
++                    if [ "${PROTOC}X" = "X" ]; then
++                      PROTOC="protoc"
++                    fi
++                    PROTOC_VERSION=`${PROTOC} --version`
++                    if [[ "${PROTOC_VERSION}" != *${protoc.version}* ]]; then
++                      echo "Required version of 'protoc' is ${protobuf.version}, reported ${PROTOC_VERSION}"
++                      exit 1
++                    fi
++                    PROTO_DIR=src/main/proto
++                    INCLUDE_DIR=../../hadoop-yarn-api/src/main/proto/
++                    JAVA_DIR=target/generated-sources/java
++                    which cygpath 2&gt; /dev/null
++                    if [ $? = 1 ]; then
++                      IS_WIN=false
++                    else
++                      IS_WIN=true
++                      WIN_PROTO_DIR=`cygpath --windows $PROTO_DIR`
++                      WIN_JAVA_DIR=`cygpath --windows $JAVA_DIR`
++                      WIN_INCLUDE_DIR=`cygpath --windows $INCLUDE_DIR`
++                    fi
++                    mkdir -p $JAVA_DIR 2&gt; /dev/null
++                    for PROTO_FILE in `ls $PROTO_DIR/*.proto 2&gt; /dev/null`
++                    do
++                        if [ "$IS_WIN" = "true" ]; then
++                          ${PROTOC} -I$WIN_PROTO_DIR -I$WIN_INCLUDE_DIR --java_out=$WIN_JAVA_DIR $PROTO_FILE
++                        else
++                          ${PROTOC} -I$PROTO_DIR -I$INCLUDE_DIR --java_out=$JAVA_DIR $PROTO_FILE
++                        fi
++                    done
++                </echo>
++                <exec executable="bash" dir="${basedir}" failonerror="true">
++                  <arg line="target/compile-proto.sh"/>
++                </exec>
++              </target>
++            </configuration>
+           </execution>
+         </executions>
+       </plugin>
+@@ -212,7 +235,7 @@
+             </goals>
+             <configuration>
+               <sources>
+-                <source>target/generated-sources/proto</source>
++                <source>target/generated-sources/java</source>
+               </sources>
+             </configuration>
+           </execution>
+-- 
+1.7.0.4
+

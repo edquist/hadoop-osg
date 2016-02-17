@@ -1,7 +1,7 @@
 From 9c3fa7abc1c18a7a0a1281a4924302de75197d8a Mon Sep 17 00:00:00 2001
 From: Jonathan Turner Eagles <jeagles@apache.org>
 Date: Mon, 20 Aug 2012 18:32:13 +0000
-Subject: [PATCH 461/545] MAPREDUCE-4323. NM leaks filesystems (Jason Lowe via jeagles)
+Subject: [PATCH 0461/1612] MAPREDUCE-4323. NM leaks filesystems (Jason Lowe via jeagles)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1375164 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 558f55be8d7a70d196306241a2e126de8c01c896)

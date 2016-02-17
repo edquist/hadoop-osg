@@ -1,7 +1,7 @@
 From 5458605b065888a34978bf8c9c56e98236d41b38 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Tue, 28 Aug 2012 22:09:27 +0000
-Subject: [PATCH 447/545] HDFS-3849. When re-loading the FSImage, we should clear the existing genStamp and leases. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0447/1612] HDFS-3849. When re-loading the FSImage, we should clear the existing genStamp and leases. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1378364 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0cfd0a246eec39d3346d73e40fbc9a52335a26c9)

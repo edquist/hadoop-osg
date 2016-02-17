@@ -1,7 +1,7 @@
 From 5055b37e1ffe2e00497ae22ebb7fe044702ee448 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 17 May 2012 22:47:41 +0000
-Subject: [PATCH 066/545] HADOOP-8287. etc/hadoop is missing hadoop-env.sh. Contributed by Eli Collins
+Subject: [PATCH 0066/1612] HADOOP-8287. etc/hadoop is missing hadoop-env.sh. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339906 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 54be655791a1e0bfc0640aa8f16cb5fb03cf742f)

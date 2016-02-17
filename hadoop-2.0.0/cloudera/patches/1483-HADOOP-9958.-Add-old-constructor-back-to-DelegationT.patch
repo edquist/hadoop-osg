@@ -1,0 +1,29 @@
+From 6c5adeeea08f27def899c8a028616a6725944dde Mon Sep 17 00:00:00 2001
+From: Andrew Wang <wang@apache.org>
+Date: Thu, 12 Sep 2013 20:05:08 +0000
+Subject: [PATCH 1483/1612] HADOOP-9958. Add old constructor back to DelegationTokenInformation to unbreak downstream builds. (Andrew Wang)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1522707 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 33e3b928b320668e10e9728ad71cbe8a80c8ce1e)
+---
+ .../AbstractDelegationTokenSecretManager.java      |    4 ++++
+ 1 files changed, 4 insertions(+), 0 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java
+index 2d1677c..d720309 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java
+@@ -378,6 +378,10 @@ extends AbstractDelegationTokenIdentifier>
+     byte[] password;
+     String trackingId;
+ 
++    public DelegationTokenInformation(long renewDate, byte[] password) {
++      this(renewDate, password, null);
++    }
++
+     public DelegationTokenInformation(long renewDate, byte[] password,
+         String trackingId) {
+       this.renewDate = renewDate;
+-- 
+1.7.0.4
+

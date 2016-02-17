@@ -1,7 +1,7 @@
 From 1589bf6752d040667222c4f6052369002ba74956 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 31 Jul 2012 20:52:41 +0000
-Subject: [PATCH 450/545] MAPREDUCE-4457. mr job invalid transition TA_TOO_MANY_FETCH_FAILURE at FAILED  (Robert Evans via tgraves)
+Subject: [PATCH 0450/1612] MAPREDUCE-4457. mr job invalid transition TA_TOO_MANY_FETCH_FAILURE at FAILED  (Robert Evans via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367771 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ecf1d36f8636afdd2a71a23be3d1fbf52cdbf218)

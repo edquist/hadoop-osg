@@ -1,7 +1,7 @@
 From a0363e58eda8e5859d22ba01a6de3cf93ab62603 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 6 Aug 2012 22:22:32 +0000
-Subject: [PATCH 289/545] HADOOP-8644. AuthenticatedURL should be able to use SSLFactory. (tucu)
+Subject: [PATCH 0289/1612] HADOOP-8644. AuthenticatedURL should be able to use SSLFactory. (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1370045 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7d5d064d5ca795cec5fe584a308a275f2d628594)

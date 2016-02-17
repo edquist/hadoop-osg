@@ -1,7 +1,7 @@
 From 5b75ba6819acaf659b5bd0b72dfad7189dec3280 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 29 Jun 2012 21:05:43 +0000
-Subject: [PATCH 183/545] HDFS-3491. HttpFs does not set permissions correctly.
+Subject: [PATCH 0183/1612] HDFS-3491. HttpFs does not set permissions correctly.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1355558 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 68084f14acea5078e62e8f5e593388bfbb33ae0c)

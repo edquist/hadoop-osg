@@ -1,0 +1,37 @@
+From 5d404fb2406389107885368e40bbede0383905e4 Mon Sep 17 00:00:00 2001
+From: Andrew Wang <wang@apache.org>
+Date: Mon, 12 Aug 2013 20:44:23 +0000
+Subject: [PATCH 1475/1612] TestGlobPath symlink tests fail to cleanup properly. (cmccabe via wang)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1513251 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit e1df5cccd544ce41364f50981ddae749a79272c7)
+---
+ .../java/org/apache/hadoop/fs/TestGlobPaths.java   |    5 +++--
+ 1 files changed, 3 insertions(+), 2 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/fs/TestGlobPaths.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/fs/TestGlobPaths.java
+index df92a2e..595c287 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/fs/TestGlobPaths.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/fs/TestGlobPaths.java
+@@ -401,6 +401,8 @@ public class TestGlobPaths {
+ 
+     status = fs.globStatus(new Path("/x/x"), falseFilter);
+     assertNull(status);
++
++    cleanupDFS();
+   }
+   
+   private void checkStatus(FileStatus[] status, Path ... expectedMatches) {
+@@ -779,8 +781,7 @@ public class TestGlobPaths {
+     return globResults;
+   }
+   
+-  @After
+-  public void cleanupDFS() throws IOException {
++  private void cleanupDFS() throws IOException {
+     fs.delete(new Path(USER_DIR), true);
+   }
+   
+-- 
+1.7.0.4
+

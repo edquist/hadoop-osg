@@ -264,6 +264,7 @@ enum SafeModeActionProto {
 
 message SetSafeModeRequestProto {
   required SafeModeActionProto action = 1;
+  optional bool checked = 2 [default = false];
 }
 
 message SetSafeModeResponseProto {
@@ -338,6 +339,14 @@ message GetFileInfoRequestProto {
 
 message GetFileInfoResponseProto {
   optional HdfsFileStatusProto fs = 1;
+}
+
+message IsFileClosedRequestProto {
+  required string src = 1;
+}
+
+message IsFileClosedResponseProto {
+  required bool result = 1;
 }
 
 message GetFileLinkInfoRequestProto {
@@ -530,4 +539,6 @@ service ClientNamenodeProtocol {
       returns(SetBalancerBandwidthResponseProto);
   rpc getDataEncryptionKey(GetDataEncryptionKeyRequestProto)
       returns(GetDataEncryptionKeyResponseProto);
+  rpc isFileClosed(IsFileClosedRequestProto)
+      returns(IsFileClosedResponseProto);
 }

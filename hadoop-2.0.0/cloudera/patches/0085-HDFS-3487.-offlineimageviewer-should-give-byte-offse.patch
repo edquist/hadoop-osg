@@ -1,7 +1,7 @@
 From efa1606f3ee3486af7b4745b635129b6ca736927 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 1 Jun 2012 02:37:09 +0000
-Subject: [PATCH 085/545] HDFS-3487. offlineimageviewer should give byte offset information when it encounters an exception. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0085/1612] HDFS-3487. offlineimageviewer should give byte offset information when it encounters an exception. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1344972 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 1cec5c9ebc9fa4234ad80504ccb8d3ee8d7950db)

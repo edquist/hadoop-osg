@@ -1,7 +1,7 @@
 From 0f84ee942a274ed717980232e09bf408c37ad15d Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Mon, 16 Jul 2012 03:07:49 +0000
-Subject: [PATCH 212/545] HDFS-3659. Add missing @Override to methods across the hadoop-hdfs project.
+Subject: [PATCH 0212/1612] HDFS-3659. Add missing @Override to methods across the hadoop-hdfs project.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1361895 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 1a5718449ffa51f3f9cd031b0594d05780f7c673)

@@ -1,7 +1,7 @@
 From a9d83e467ff8a93fea49769451904c76a5dbbb6b Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 31 Jul 2012 19:43:51 +0000
-Subject: [PATCH 446/545] MAPREDUCE-4483. 2.0 build does not work (John George via bobby)
+Subject: [PATCH 0446/1612] MAPREDUCE-4483. 2.0 build does not work (John George via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367726 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f50666bfc1021a9e0ca39fe7dda0f453b8398162)

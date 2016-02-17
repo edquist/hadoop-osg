@@ -41,28 +41,85 @@ public class Resources {
     }
 
     @Override
+    public int getVirtualCores() {
+      return 0;
+    }
+
+    @Override
+    public void setVirtualCores(int cores) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
     public int compareTo(Resource o) {
-      return (0 - o.getMemory());
+      int diff = 0 - o.getMemory();
+      if (diff == 0) {
+        diff = 0 - o.getVirtualCores();
+      }
+      return diff;
+    }
+    
+  };
+  
+  private static final Resource UNBOUNDED = new Resource() {
+
+    @Override
+    public int getMemory() {
+      return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public void setMemory(int memory) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
+    public int getVirtualCores() {
+      return Integer.MAX_VALUE;
+    }
+
+    @Override
+    public void setVirtualCores(int cores) {
+      throw new RuntimeException("NONE cannot be modified!");
+    }
+
+    @Override
+    public int compareTo(Resource o) {
+      int diff = 0 - o.getMemory();
+      if (diff == 0) {
+        diff = (int)Math.signum(o.getVirtualCores());
+      }
+      return diff;
     }
     
   };
 
   public static Resource createResource(int memory) {
+    return createResource(memory, (memory > 0) ? 1 : 0);
+  }
+
+  public static Resource createResource(int memory, int cores) {
     Resource resource = Records.newRecord(Resource.class);
     resource.setMemory(memory);
+    resource.setVirtualCores(cores);
     return resource;
   }
 
   public static Resource none() {
     return NONE;
   }
+  
+  public static Resource unbounded() {
+    return UNBOUNDED;
+  }
 
   public static Resource clone(Resource res) {
-    return createResource(res.getMemory());
+    return createResource(res.getMemory(), res.getVirtualCores());
   }
 
   public static Resource addTo(Resource lhs, Resource rhs) {
     lhs.setMemory(lhs.getMemory() + rhs.getMemory());
+    lhs.setVirtualCores(lhs.getVirtualCores() + rhs.getVirtualCores());
     return lhs;
   }
 
@@ -72,6 +129,7 @@ public class Resources {
 
   public static Resource subtractFrom(Resource lhs, Resource rhs) {
     lhs.setMemory(lhs.getMemory() - rhs.getMemory());
+    lhs.setVirtualCores(lhs.getVirtualCores() - rhs.getVirtualCores());
     return lhs;
   }
 
@@ -83,50 +141,117 @@ public class Resources {
     return subtract(NONE, resource);
   }
 
-  public static Resource multiplyTo(Resource lhs, int by) {
-    lhs.setMemory(lhs.getMemory() * by);
+  public static Resource multiplyTo(Resource lhs, double by) {
+    lhs.setMemory((int)(lhs.getMemory() * by));
+    lhs.setVirtualCores((int)(lhs.getVirtualCores() * by));
     return lhs;
   }
 
-  public static Resource multiply(Resource lhs, int by) {
+  public static Resource multiply(Resource lhs, double by) {
     return multiplyTo(clone(lhs), by);
   }
   
-  /**
-   * Mutliply a resource by a {@code double}. Note that integral 
-   * resource quantites are subject to rounding during cast.
-   */
-  public static Resource multiply(Resource lhs, double by) {
-    Resource out = clone(lhs);
-    out.setMemory((int) (lhs.getMemory() * by));
-    return out;
-  }
-
-  public static boolean equals(Resource lhs, Resource rhs) {
-    return lhs.getMemory() == rhs.getMemory();
-  }
-
-  public static boolean lessThan(Resource lhs, Resource rhs) {
-    return lhs.getMemory() < rhs.getMemory();
-  }
-
-  public static boolean lessThanOrEqual(Resource lhs, Resource rhs) {
-    return lhs.getMemory() <= rhs.getMemory();
-  }
-
-  public static boolean greaterThan(Resource lhs, Resource rhs) {
-    return lhs.getMemory() > rhs.getMemory();
-  }
-
-  public static boolean greaterThanOrEqual(Resource lhs, Resource rhs) {
-    return lhs.getMemory() >= rhs.getMemory();
+  public static Resource multiplyAndNormalizeUp(
+      ResourceCalculator calculator,Resource lhs, double by, Resource factor) {
+    return calculator.multiplyAndNormalizeUp(lhs, by, factor);
   }
   
-  public static Resource min(Resource lhs, Resource rhs) {
-    return (lhs.getMemory() < rhs.getMemory()) ? lhs : rhs;
+  public static Resource multiplyAndNormalizeDown(
+      ResourceCalculator calculator,Resource lhs, double by, Resource factor) {
+    return calculator.multiplyAndNormalizeDown(lhs, by, factor);
+  }
+  
+  public static Resource multiplyAndRoundDown(Resource lhs, double by) {
+    Resource out = clone(lhs);
+    out.setMemory((int)(lhs.getMemory() * by));
+    out.setVirtualCores((int)(lhs.getVirtualCores() * by));
+    return out;
+  }
+  
+  public static Resource normalize(
+      ResourceCalculator calculator, Resource lhs, Resource factor) {
+    return calculator.normalize(lhs, factor);
+  }
+  
+  public static Resource roundUp(
+      ResourceCalculator calculator, Resource lhs, Resource factor) {
+    return calculator.roundUp(lhs, factor);
+  }
+  
+  public static Resource roundDown(
+      ResourceCalculator calculator, Resource lhs, Resource factor) {
+    return calculator.roundDown(lhs, factor);
+  }
+  
+  public static float ratio(
+      ResourceCalculator resourceCalculator, Resource lhs, Resource rhs) {
+    return resourceCalculator.ratio(lhs, rhs);
+  }
+  
+  public static float divide(
+      ResourceCalculator resourceCalculator,
+      Resource clusterResource, Resource lhs, Resource rhs) {
+    return resourceCalculator.divide(clusterResource, lhs, rhs);
+  }
+  
+  public static Resource divideAndCeil(
+      ResourceCalculator resourceCalculator, Resource lhs, int rhs) {
+    return resourceCalculator.divideAndCeil(lhs, rhs);
+  }
+  
+  public static boolean equals(Resource lhs, Resource rhs) {
+    return lhs.equals(rhs);
   }
 
-  public static Resource max(Resource lhs, Resource rhs) {
-    return (lhs.getMemory() > rhs.getMemory()) ? lhs : rhs;
+  public static boolean lessThan(
+      ResourceCalculator resourceCalculator, 
+      Resource clusterResource,
+      Resource lhs, Resource rhs) {
+    return (resourceCalculator.compare(clusterResource, lhs, rhs) < 0);
+  }
+
+  public static boolean lessThanOrEqual(
+      ResourceCalculator resourceCalculator, 
+      Resource clusterResource,
+      Resource lhs, Resource rhs) {
+    return (resourceCalculator.compare(clusterResource, lhs, rhs) <= 0);
+  }
+
+  public static boolean greaterThan(
+      ResourceCalculator resourceCalculator,
+      Resource clusterResource,
+      Resource lhs, Resource rhs) {
+    return resourceCalculator.compare(clusterResource, lhs, rhs) > 0;
+  }
+
+  public static boolean greaterThanOrEqual(
+      ResourceCalculator resourceCalculator, 
+      Resource clusterResource,
+      Resource lhs, Resource rhs) {
+    return resourceCalculator.compare(clusterResource, lhs, rhs) >= 0;
+  }
+  
+  public static Resource min(
+      ResourceCalculator resourceCalculator, 
+      Resource clusterResource,
+      Resource lhs, Resource rhs) {
+    return resourceCalculator.compare(clusterResource, lhs, rhs) <= 0 ? lhs : rhs;
+  }
+
+  public static Resource max(
+      ResourceCalculator resourceCalculator, 
+      Resource clusterResource,
+      Resource lhs, Resource rhs) {
+    return resourceCalculator.compare(clusterResource, lhs, rhs) >= 0 ? lhs : rhs;
+  }
+  
+  public static boolean fitsIn(Resource smaller, Resource bigger) {
+    return smaller.getMemory() <= bigger.getMemory() &&
+        smaller.getVirtualCores() <= bigger.getVirtualCores();
+  }
+  
+  public static Resource componentwiseMin(Resource lhs, Resource rhs) {
+    return createResource(Math.min(lhs.getMemory(), rhs.getMemory()),
+        Math.min(lhs.getVirtualCores(), rhs.getVirtualCores()));
   }
 }

@@ -1,7 +1,7 @@
 From d5fc63aab391755dfb07dd52e1f65e94c16a9fff Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Sat, 2 Jun 2012 00:42:09 +0000
-Subject: [PATCH 223/545] HDFS-3442. Incorrect count for Missing Replicas in FSCK report. Contributed by Andrew Wang.
+Subject: [PATCH 0223/1612] HDFS-3442. Incorrect count for Missing Replicas in FSCK report. Contributed by Andrew Wang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1345410 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit da1e6cded0a0c971c9dce46ff9a93e6401871443)

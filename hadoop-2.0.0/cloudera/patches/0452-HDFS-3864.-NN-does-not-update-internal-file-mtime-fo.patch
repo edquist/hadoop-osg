@@ -1,7 +1,7 @@
 From d648ee6e49204930b27a2c52a9631a6a434fff5a Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 29 Aug 2012 01:22:38 +0000
-Subject: [PATCH 452/545] HDFS-3864. NN does not update internal file mtime for OP_CLOSE when reading from the edit log. Contributed by Aaron T. Myers.
+Subject: [PATCH 0452/1612] HDFS-3864. NN does not update internal file mtime for OP_CLOSE when reading from the edit log. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1378414 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 628e64d71fa6100e9e1427c0ac15cea29ad18f83)

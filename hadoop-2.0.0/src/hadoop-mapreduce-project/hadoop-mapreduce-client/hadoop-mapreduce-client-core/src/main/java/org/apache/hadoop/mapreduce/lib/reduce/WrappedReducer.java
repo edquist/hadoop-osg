@@ -162,6 +162,11 @@ public class WrappedReducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     }
 
     @Override
+    public RawComparator<?> getCombinerKeyGroupingComparator() {
+      return reduceContext.getCombinerKeyGroupingComparator();
+    }
+
+    @Override
     public RawComparator<?> getGroupingComparator() {
       return reduceContext.getGroupingComparator();
     }
@@ -185,6 +190,11 @@ public class WrappedReducer<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     @Override
     public String getJobName() {
       return reduceContext.getJobName();
+    }
+
+    @Override
+    public boolean userClassesTakesPrecedence() {
+      return reduceContext.userClassesTakesPrecedence();
     }
 
     @Override

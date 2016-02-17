@@ -1,7 +1,7 @@
 From e14fa537e62e63ddf4a90ab5486c76719181797a Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Fri, 6 Apr 2012 06:31:10 +0000
-Subject: [PATCH 100/545] HDFS-3110. Use directRead API to reduce the number of buffer copies in libhdfs. Contributed by Henry Robinson.
+Subject: [PATCH 0100/1612] HDFS-3110. Use directRead API to reduce the number of buffer copies in libhdfs. Contributed by Henry Robinson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1310185 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 467acd14b821cc28529f854c062ad3472a0e17dd)

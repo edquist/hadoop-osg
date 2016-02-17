@@ -1,7 +1,7 @@
 From 09a0e743ae3d929fb885e7e579e694305f3aa9df Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Wed, 18 Jul 2012 19:40:36 +0000
-Subject: [PATCH 358/545] MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved (Jason Lowe via bobby)
+Subject: [PATCH 0358/1612] MAPREDUCE-4157. ResourceManager should not kill apps that are well behaved (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363067 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 833103d74b2dfc0f0fe428f0e442b2d4aa937f45)

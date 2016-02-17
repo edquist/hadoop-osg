@@ -1,7 +1,7 @@
 From a2ab89372f80fadb8a9b4ee004d25e58a13534a1 Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Thu, 16 Aug 2012 13:26:12 +0000
-Subject: [PATCH 355/545] MAPREDUCE-4562. Support for "FileSystemCounter" legacy counter group name for compatibility reasons is creating incorrect counter name. Contributed by Jarek Jarcec Cecho.
+Subject: [PATCH 0355/1612] MAPREDUCE-4562. Support for "FileSystemCounter" legacy counter group name for compatibility reasons is creating incorrect counter name. Contributed by Jarek Jarcec Cecho.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1373823 13f79535-47bb-0310-9956-ffa450edef68
 ---

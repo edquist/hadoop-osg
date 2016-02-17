@@ -1,7 +1,7 @@
 From 3069e2192ed04768e6c829f4e6038e817ad1583e Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Tue, 15 May 2012 21:53:01 -0700
-Subject: [PATCH 055/545] HDFS-3335. check for edit log corruption at the end of the log. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0055/1612] HDFS-3335. check for edit log corruption at the end of the log. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1338492 13f79535-47bb-0310-9956-ffa450edef68
 

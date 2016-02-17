@@ -1,7 +1,7 @@
 From 4e255917830c55400c6a634e67cbf4537e98a4fc Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 10 May 2012 06:28:56 +0000
-Subject: [PATCH 036/545] HDFS-3396. FUSE build fails on Ubuntu 12.04. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0036/1612] HDFS-3396. FUSE build fails on Ubuntu 12.04. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336495 13f79535-47bb-0310-9956-ffa450edef68
 ---

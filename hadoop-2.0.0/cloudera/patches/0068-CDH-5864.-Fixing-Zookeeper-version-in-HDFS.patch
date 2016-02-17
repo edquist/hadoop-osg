@@ -1,7 +1,7 @@
 From b155bd8e15026d22eea280599fa980616ffb30f8 Mon Sep 17 00:00:00 2001
 From: Andrew Bayer <andrew@cloudera.com>
 Date: Thu, 17 May 2012 13:02:15 -0700
-Subject: [PATCH 068/545] CDH-5864. Fixing Zookeeper version in HDFS.
+Subject: [PATCH 0068/1612] CDH-5864. Fixing Zookeeper version in HDFS.
  (cherry picked from commit 92f7ab3ffd74470319b381edc4e53419ebae217d)
 
 ---

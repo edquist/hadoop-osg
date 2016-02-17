@@ -1,7 +1,7 @@
 From 808e3369da7532fc9675facd0a1ff92ef3bf5e07 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 29 Mar 2012 21:49:37 +0000
-Subject: [PATCH 014/545] Amend HADOOP-8212 (Improve ActiveStandbyElector's behavior when session expires)
+Subject: [PATCH 0014/1612] Amend HADOOP-8212 (Improve ActiveStandbyElector's behavior when session expires)
 
 Amendment patch incorporates following feedback from Bikas Saha:
 - adds a new functional test for session expiration while in the standby state

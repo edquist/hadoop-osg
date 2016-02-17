@@ -1,7 +1,7 @@
 From a41e24632248fb61aac8f14eb93dcf61daff63b3 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sat, 14 Jul 2012 00:53:07 +0000
-Subject: [PATCH 209/545] HDFS-3539. libhdfs code cleanups. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0209/1612] HDFS-3539. libhdfs code cleanups. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1361461 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 7baabd7992702bc7703679b7048b8dc18800078a)

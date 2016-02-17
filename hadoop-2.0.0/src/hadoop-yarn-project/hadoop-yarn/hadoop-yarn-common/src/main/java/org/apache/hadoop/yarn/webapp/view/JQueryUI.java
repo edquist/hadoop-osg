@@ -19,11 +19,8 @@
 package org.apache.hadoop.yarn.webapp.view;
 
 import com.google.common.collect.Lists;
-import com.google.inject.Inject;
 
 import java.util.List;
-import java.util.Locale;
-import javax.servlet.http.Cookie;
 
 import static org.apache.commons.lang.StringEscapeUtils.*;
 import static org.apache.hadoop.yarn.util.StringHelper.*;
@@ -31,17 +28,6 @@ import static org.apache.hadoop.yarn.util.StringHelper.*;
 import org.apache.hadoop.yarn.webapp.hamlet.HamletSpec.HTML;
 
 public class JQueryUI extends HtmlBlock {
-  // Render choices (mostly for dataTables)
-  public enum Render {
-    /** small (<~100 rows) table as html, most gracefully degradable */
-    HTML,
-    /** medium (<~2000 rows) table as js array */
-    JS_ARRAY,
-    /** large (<~10000 rows) table loading from server */
-    JS_LOAD,
-    /** huge (>~10000 rows) table processing from server */
-    JS_SERVER
-  };
 
   // UI params
   public static final String ACCORDION = "ui.accordion";
@@ -54,10 +40,7 @@ public class JQueryUI extends HtmlBlock {
   public static final String DIALOG_SELECTOR = DIALOG +".selector";
   public static final String PROGRESSBAR = "ui.progressbar";
   public static final String PROGRESSBAR_ID = PROGRESSBAR +".id";
-  public static final String THEMESWITCHER = "ui.themeswitcher";
-  public static final String THEMESWITCHER_ID = THEMESWITCHER +".id";
-  public static final String THEME_KEY = "theme";
-  public static final String COOKIE_THEME = "jquery-ui-theme";
+
   // common CSS classes
   public static final String _PROGRESSBAR =
       ".ui-progressbar.ui-widget.ui-widget-content.ui-corner-all";
@@ -79,14 +62,12 @@ public class JQueryUI extends HtmlBlock {
   @Override
   protected void render(Block html) {
     html.
-      link(root_url(join("static/jquery/themes-1.8.16/",
-        getTheme(), "/jquery-ui.css"))).
-      link(root_url("static/dt-1.7.5/css/jui-dt.css")).
-      script(root_url("static/jquery/jquery.min-1.6.4.js")).
-      script(root_url("static/jquery/jquery-ui.min-1.8.16.js")).
-      script(root_url("static/dt-1.7.5/js/jquery.dataTables.min.js")).
+      link(root_url("static/jquery/themes-1.9.1/base/jquery-ui.css")).
+      link(root_url("static/dt-1.9.4/css/jui-dt.css")).
+      script(root_url("static/jquery/jquery-1.8.2.min.js")).
+      script(root_url("static/jquery/jquery-ui-1.9.1.custom.min.js")).
+      script(root_url("static/dt-1.9.4/js/jquery.dataTables.min.js")).
       script(root_url("static/yarn.dt.plugins.js")).
-      script(root_url("static/themeswitcher.js")).
       style("#jsnotice { padding: 0.2em; text-align: center; }",
             ".ui-progressbar { height: 1em; min-width: 5em }"); // required
 
@@ -95,7 +76,6 @@ public class JQueryUI extends HtmlBlock {
     initDataTables(list);
     initDialogs(list);
     initProgressBars(list);
-    initThemeSwitcher(list);
 
     if (!list.isEmpty()) {
       html.
@@ -189,28 +169,6 @@ public class JQueryUI extends HtmlBlock {
     }
   }
 
-  protected void initThemeSwitcher(List<String> list) {
-    for (String id : split($(THEMESWITCHER_ID))) {
-      if (Html.isValidId(id)) {
-        list.add(join("  $('#", id,
-                      "').themeswitcher({expires:888, path:'/'});"));
-        break; // one is enough
-      }
-    }
-  }
-
-  protected String getTheme() {
-    String theme = $(THEME_KEY);
-    if (!theme.isEmpty()) {
-      return theme;
-    }
-    Cookie c = cookies().get(COOKIE_THEME);
-    if (c != null) {
-      return c.getValue().toLowerCase(Locale.US).replace("%20", "-");
-    }
-    return "base";
-  }
-
   public static String initID(String name, String id) {
     return djoin(name, id, "init");
   }
@@ -227,13 +185,5 @@ public class JQueryUI extends HtmlBlock {
     return new StringBuilder("{bJQueryUI:true, ").
         append("sPaginationType: 'full_numbers', iDisplayLength:20, ").
         append("aLengthMenu:[20, 40, 60, 80, 100]");
-  }
-
-  public static StringBuilder tableInitProgress(StringBuilder init,
-                                                long numCells) {
-    return init.append(", bProcessing:true, ").
-        append("oLanguage:{sProcessing:'Processing ").
-        append(numCells).append(" cells...").
-        append("<p><img src=\"/static/busy.gif\">'}");
   }
 }

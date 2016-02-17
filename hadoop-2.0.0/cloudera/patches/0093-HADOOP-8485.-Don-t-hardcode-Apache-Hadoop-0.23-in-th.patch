@@ -1,7 +1,7 @@
 From 8a26e770b0b43151523a15439e91e39abd63ea7a Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 6 Jun 2012 21:14:15 +0000
-Subject: [PATCH 093/545] HADOOP-8485. Don't hardcode "Apache Hadoop 0.23" in the docs. Contributed by Eli Collins
+Subject: [PATCH 0093/1612] HADOOP-8485. Don't hardcode "Apache Hadoop 0.23" in the docs. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1347133 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3d543848c2d545d925c4cf39be0930606281706a)

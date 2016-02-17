@@ -1,7 +1,7 @@
 From 09e60c578e0c5fa2003f1ef942bb197423df86a7 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 30 Jul 2012 22:56:15 +0000
-Subject: [PATCH 433/545] MAPREDUCE-4342. Distributed Cache gives inconsistent result if cache files get deleted from tasktracker. (mayank_bansal via tucu)
+Subject: [PATCH 0433/1612] MAPREDUCE-4342. Distributed Cache gives inconsistent result if cache files get deleted from tasktracker. (mayank_bansal via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367352 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a8b2ad8720911ed492c5b6758899d1ec39fa8b4f)

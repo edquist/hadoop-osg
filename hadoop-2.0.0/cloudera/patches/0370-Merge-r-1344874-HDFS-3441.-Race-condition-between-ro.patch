@@ -1,7 +1,7 @@
 From 68ad321dd6d73aeda6cc4b60423144b8777543b3 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:29:21 -0700
-Subject: [PATCH 370/545] Merge r:1344874 HDFS-3441. Race condition between rolling logs at active NN and purging at standby. Contributed by Rakesh R.
+Subject: [PATCH 0370/1612] Merge r:1344874 HDFS-3441. Race condition between rolling logs at active NN and purging at standby. Contributed by Rakesh R.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1344876 13f79535-47bb-0310-9956-ffa450edef68
 

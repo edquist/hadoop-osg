@@ -1,7 +1,7 @@
 From 9dd69692fae221ade5121cfec31e86ff6069df05 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 7 Jun 2012 18:43:45 +0000
-Subject: [PATCH 217/545] HDFS-3485. DataTransferThrottler will over-throttle when currentTimeMillis jumps. Contributed by Andy Isaacson.
+Subject: [PATCH 0217/1612] HDFS-3485. DataTransferThrottler will over-throttle when currentTimeMillis jumps. Contributed by Andy Isaacson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1347753 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 9fa4a1a0eda783c875aebc2414746f233e6d8f5c)

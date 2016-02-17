@@ -24,11 +24,11 @@ import java.io.IOException;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Map;
 import java.util.SortedSet;
 import java.util.TreeSet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -48,6 +48,9 @@ import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsDatasetSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.FsVolumeSpi;
 import org.apache.hadoop.hdfs.server.datanode.fsdataset.RollingLogs;
 import org.apache.hadoop.hdfs.util.DataTransferThrottler;
+import org.apache.hadoop.util.GSet;
+import org.apache.hadoop.util.LightWeightGSet;
+import org.apache.hadoop.util.LightWeightGSet.LinkedElement;
 import org.apache.hadoop.io.IOUtils;
 import org.apache.hadoop.util.Time;
 
@@ -80,9 +83,10 @@ class BlockPoolSliceScanner {
   private final FsDatasetSpi<? extends FsVolumeSpi> dataset;
   
   private final SortedSet<BlockScanInfo> blockInfoSet
-      = new TreeSet<BlockScanInfo>();
-  private final Map<Block, BlockScanInfo> blockMap
-      = new HashMap<Block, BlockScanInfo>();
+      = new TreeSet<BlockScanInfo>(BlockScanInfo.LAST_SCAN_TIME_COMPARATOR);
+  private final GSet<Block, BlockScanInfo> blockMap
+      = new LightWeightGSet<Block, BlockScanInfo>(
+          LightWeightGSet.computeCapacity(0.5, "BlockMap"));
   
   // processedBlocks keeps track of which blocks are scanned
   // since the last run.
@@ -96,6 +100,7 @@ class BlockPoolSliceScanner {
   private long currentPeriodStart = Time.now();
   private long bytesLeft = 0; // Bytes to scan in this period
   private long totalBytesToScan = 0;
+  private boolean isNewPeriod = true;
   
   private final LogFileHandler verificationLog;
   
@@ -106,38 +111,63 @@ class BlockPoolSliceScanner {
     VERIFICATION_SCAN,     // scanned as part of periodic verfication
     NONE,
   }
-  
-  static class BlockScanInfo implements Comparable<BlockScanInfo> {
-    Block block;
+
+  // Extend Block because in the DN process there's a 1-to-1 correspondence of
+  // BlockScanInfo to Block instances, so by extending rather than containing
+  // Block, we can save a bit of Object overhead (about 24 bytes per block
+  // replica.)
+  static class BlockScanInfo extends Block
+      implements LightWeightGSet.LinkedElement {
+
+    /** Compare the info by the last scan time. */
+    static final Comparator<BlockScanInfo> LAST_SCAN_TIME_COMPARATOR
+        = new Comparator<BlockPoolSliceScanner.BlockScanInfo>() {
+
+      @Override
+      public int compare(BlockScanInfo left, BlockScanInfo right) {
+        final long l = left.lastScanTime;
+        final long r = right.lastScanTime;
+        // compare blocks itself if scantimes are same to avoid.
+        // because TreeMap uses comparator if available to check existence of
+        // the object. 
+        return l < r? -1: l > r? 1: left.compareTo(right); 
+      }
+    };
+
     long lastScanTime = 0;
     ScanType lastScanType = ScanType.NONE; 
     boolean lastScanOk = true;
+    private LinkedElement next;
     
     BlockScanInfo(Block block) {
-      this.block = block;
+      super(block);
     }
     
     @Override
     public int hashCode() {
-      return block.hashCode();
+      return super.hashCode();
     }
     
     @Override
-    public boolean equals(Object other) {
-      return other instanceof BlockScanInfo &&
-             compareTo((BlockScanInfo)other) == 0;
+    public boolean equals(Object that) {
+      if (this == that) {
+        return true;
+      }
+      return super.equals(that);
     }
     
     long getLastScanTime() {
       return (lastScanType == ScanType.NONE) ? 0 : lastScanTime;
     }
-    
+
     @Override
-    public int compareTo(BlockScanInfo other) {
-      long t1 = lastScanTime;
-      long t2 = other.lastScanTime;
-      return ( t1 < t2 ) ? -1 : 
-                          (( t1 > t2 ) ? 1 : block.compareTo(other.block)); 
+    public void setNext(LinkedElement next) {
+      this.next = next;
+    }
+
+    @Override
+    public LinkedElement getNext() {
+      return next;
     }
   }
   
@@ -154,7 +184,7 @@ class BlockPoolSliceScanner {
     }
     this.scanPeriod = hours * 3600 * 1000;
     LOG.info("Periodic Block Verification Scanner initialized with interval "
-        + hours + " hours for block pool " + bpid + ".");
+        + hours + " hours for block pool " + bpid);
 
     // get the list of blocks and arrange them in random order
     List<Block> arr = dataset.getFinalizedBlocks(blockPoolId);
@@ -194,19 +224,19 @@ class BlockPoolSliceScanner {
   
   private synchronized void addBlockInfo(BlockScanInfo info) {
     boolean added = blockInfoSet.add(info);
-    blockMap.put(info.block, info);
+    blockMap.put(info);
     
     if (added) {
-      updateBytesToScan(info.block.getNumBytes(), info.lastScanTime);
+      updateBytesToScan(info.getNumBytes(), info.lastScanTime);
     }
   }
   
   private synchronized void delBlockInfo(BlockScanInfo info) {
     boolean exists = blockInfoSet.remove(info);
-    blockMap.remove(info.block);
+    blockMap.remove(info);
 
     if (exists) {
-      updateBytesToScan(-info.block.getNumBytes(), info.lastScanTime);
+      updateBytesToScan(-info.getNumBytes(), info.lastScanTime);
     }
   }
   
@@ -310,12 +340,12 @@ class BlockPoolSliceScanner {
   }
   
   private void handleScanFailure(ExtendedBlock block) {
-    LOG.info("Reporting bad block " + block);
+    LOG.info("Reporting bad " + block);
     try {
       datanode.reportBadBlocks(block);
     } catch (IOException ie) {
       // it is bad, but not bad enough to shutdown the scanner
-      LOG.warn("Cannot report bad block=" + block.getBlockId());
+      LOG.warn("Cannot report bad " + block.getBlockId());
     }
   }
   
@@ -388,8 +418,8 @@ class BlockPoolSliceScanner {
       try {
         adjustThrottler();
         
-        blockSender = new BlockSender(block, 0, -1, false, true, datanode,
-            null);
+        blockSender = new BlockSender(block, 0, -1, false, true, true, 
+            datanode, null);
 
         DataOutputStream out = 
                 new DataOutputStream(new IOUtils.NullOutputStream());
@@ -411,7 +441,7 @@ class BlockPoolSliceScanner {
 
         // If the block does not exists anymore, then its not an error
         if (!dataset.contains(block)) {
-          LOG.info(block + " is no longer in the dataset.");
+          LOG.info(block + " is no longer in the dataset");
           deleteBlock(block.getLocalBlock());
           return;
         }
@@ -424,7 +454,7 @@ class BlockPoolSliceScanner {
         // is a block really deleted by mistake, DirectoryScan should catch it.
         if (e instanceof FileNotFoundException ) {
           LOG.info("Verification failed for " + block +
-              ". It may be due to race with write.");
+              " - may be due to race with write");
           deleteBlock(block.getLocalBlock());
           return;
         }
@@ -455,7 +485,7 @@ class BlockPoolSliceScanner {
   
   private synchronized boolean isFirstBlockProcessed() {
     if (!blockInfoSet.isEmpty()) {
-      long blockId = blockInfoSet.first().block.getBlockId();
+      long blockId = blockInfoSet.first().getBlockId();
       if ((processedBlocks.get(blockId) != null)
           && (processedBlocks.get(blockId) == 1)) {
         return true;
@@ -469,7 +499,7 @@ class BlockPoolSliceScanner {
     Block block = null;
     synchronized (this) {
       if (!blockInfoSet.isEmpty()) {
-        block = blockInfoSet.first().block;
+        block = blockInfoSet.first();
       }
     }
     if ( block != null ) {
@@ -511,10 +541,12 @@ class BlockPoolSliceScanner {
                   entry.genStamp));
               if (info != null) {
                 if (processedBlocks.get(entry.blockId) == null) {
-                  updateBytesLeft(-info.block.getNumBytes());
+                  if (isNewPeriod) {
+                    updateBytesLeft(-info.getNumBytes());
+                  }
                   processedBlocks.put(entry.blockId, 1);
                 }
-                if (logIterator.isPrevious()) {
+                if (logIterator.isLastReadFromPrevious()) {
                   // write the log entry to current file
                   // so that the entry is preserved for later runs.
                   verificationLog.append(entry.verificationTime, entry.genStamp,
@@ -529,6 +561,7 @@ class BlockPoolSliceScanner {
       } finally {
         IOUtils.closeStream(logIterator);
       }
+      isNewPeriod = false;
     }
     
     
@@ -569,6 +602,7 @@ class BlockPoolSliceScanner {
     // reset the byte counts :
     bytesLeft = totalBytesToScan;
     currentPeriodStart = Time.now();
+    isNewPeriod = true;
   }
   
   private synchronized boolean workRemainingInCurrentPeriod() {
@@ -602,6 +636,15 @@ class BlockPoolSliceScanner {
       lastScanTime.set(Time.now());
     }
   }
+
+  /**
+   * Shuts down this BlockPoolSliceScanner and releases any internal resources.
+   */
+  void shutdown() {
+    if (verificationLog != null) {
+      verificationLog.close();
+    }
+  }
   
   private void scan() {
     if (LOG.isDebugEnabled()) {
@@ -610,7 +653,8 @@ class BlockPoolSliceScanner {
     try {
       adjustThrottler();
         
-      while (datanode.shouldRun && !Thread.interrupted()
+      while (datanode.shouldRun
+          && !datanode.blockScanner.blockScannerThread.isInterrupted()
           && datanode.isBPServiceAlive(blockPoolId)) {
         long now = Time.now();
         synchronized (this) {
@@ -693,7 +737,7 @@ class BlockPoolSliceScanner {
           (info.lastScanType == ScanType.VERIFICATION_SCAN) ? "local" : "none"; 
         buffer.append(String.format("%-26s : status : %-6s type : %-6s" +
                                     " scan time : " +
-                                    "%-15d %s\n", info.block, 
+                                    "%-15d %s%n", info,
                                     (info.lastScanOk ? "ok" : "failed"),
                                     scanType, scanTime,
                                     (scanTime <= 0) ? "not yet verified" : 

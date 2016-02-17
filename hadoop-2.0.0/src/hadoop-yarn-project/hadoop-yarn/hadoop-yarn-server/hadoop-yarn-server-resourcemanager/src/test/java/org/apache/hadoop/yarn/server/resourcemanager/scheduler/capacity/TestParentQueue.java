@@ -21,6 +21,7 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 import static org.mockito.Matchers.any;
 import static org.mockito.Matchers.eq;
 import static org.mockito.Mockito.doAnswer;
@@ -44,6 +45,8 @@ import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.DefaultResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.NodeType;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.common.fica.FiCaSchedulerApp;
@@ -67,6 +70,9 @@ public class TestParentQueue {
   final static int GB = 1024;
   final static String DEFAULT_RACK = "/default";
 
+  private final ResourceCalculator resourceComparator =
+      new DefaultResourceCalculator();
+  
   @Before
   public void setUp() throws Exception {
     rmContext = TestUtils.getMockRMContext();
@@ -77,11 +83,17 @@ public class TestParentQueue {
     when(csContext.getConf()).thenReturn(conf);
     when(csContext.getConfiguration()).thenReturn(csConf);
     when(csContext.getMinimumResourceCapability()).thenReturn(
-        Resources.createResource(GB));
+        Resources.createResource(GB, 1));
     when(csContext.getMaximumResourceCapability()).thenReturn(
-        Resources.createResource(16*GB));
+        Resources.createResource(16*GB, 32));
     when(csContext.getClusterResources()).
-        thenReturn(Resources.createResource(100 * 16 * GB));
+        thenReturn(Resources.createResource(100 * 16 * GB, 100 * 32));
+    when(csContext.getApplicationComparator()).
+    thenReturn(CapacityScheduler.applicationComparator);
+    when(csContext.getQueueComparator()).
+    thenReturn(CapacityScheduler.queueComparator);
+    when(csContext.getResourceCalculator()).
+    thenReturn(resourceComparator);
   }
   
   private static final String A = "a";
@@ -90,7 +102,6 @@ public class TestParentQueue {
     
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 30);
@@ -104,7 +115,7 @@ public class TestParentQueue {
   private FiCaSchedulerApp getMockApplication(int appId, String user) {
     FiCaSchedulerApp application = mock(FiCaSchedulerApp.class);
     doReturn(user).when(application).getUser();
-    doReturn(Resources.createResource(0)).when(application).getHeadroom();
+    doReturn(Resources.createResource(0, 0)).when(application).getHeadroom();
     return application;
   }
 
@@ -192,12 +203,11 @@ public class TestParentQueue {
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator,
             TestUtils.spyHook);
 
     // Setup some nodes
     final int memoryPerNode = 10;
+    final int coresPerNode = 16;
     final int numNodes = 2;
     
     FiCaSchedulerNode node_0 = 
@@ -206,7 +216,8 @@ public class TestParentQueue {
         TestUtils.getMockNode("host_1", DEFAULT_RACK, 0, memoryPerNode*GB);
     
     final Resource clusterResource = 
-        Resources.createResource(numNodes * (memoryPerNode*GB));
+        Resources.createResource(numNodes * (memoryPerNode*GB),
+            numNodes * coresPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing
@@ -286,8 +297,7 @@ public class TestParentQueue {
     try {
       CapacityScheduler.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
-          CapacityScheduler.queueComparator,
-          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+          TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
       exceptionOccured = true;
     }
@@ -301,8 +311,7 @@ public class TestParentQueue {
     try {
       CapacityScheduler.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
-          CapacityScheduler.queueComparator,
-          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+          TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
       exceptionOccured = true;
     }
@@ -316,8 +325,7 @@ public class TestParentQueue {
     try {
       CapacityScheduler.parseQueue(csContext, csConf, null,
           CapacitySchedulerConfiguration.ROOT, queues, queues,
-          CapacityScheduler.queueComparator,
-          CapacityScheduler.applicationComparator, TestUtils.spyHook);
+          TestUtils.spyHook);
     } catch (IllegalArgumentException ie) {
       exceptionOccured = true;
     }
@@ -344,7 +352,6 @@ public class TestParentQueue {
     
     // Define top-level queues
     csConf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {A, B, C, D});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
     
     final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
     conf.setCapacity(Q_A, 10);
@@ -395,12 +402,11 @@ public class TestParentQueue {
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator,
             TestUtils.spyHook);
     
     // Setup some nodes
     final int memoryPerNode = 10;
+    final int coresPerNode = 16;
     final int numNodes = 3;
     
     FiCaSchedulerNode node_0 = 
@@ -411,7 +417,8 @@ public class TestParentQueue {
         TestUtils.getMockNode("host_2", DEFAULT_RACK, 0, memoryPerNode*GB);
     
     final Resource clusterResource = 
-        Resources.createResource(numNodes * (memoryPerNode*GB));
+        Resources.createResource(numNodes * (memoryPerNode*GB), 
+            numNodes * coresPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing
@@ -496,6 +503,66 @@ public class TestParentQueue {
     verifyQueueMetrics(c, 4*GB, clusterResource);
     reset(a); reset(b); reset(c);
   }
+  
+  @Test (expected=IllegalArgumentException.class)
+  public void testQueueCapacitySettingChildZero() throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+    
+    // set child queues capacity to 0 when parents not 0
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
+    csConf.setCapacity(Q_B + "." + B1, 0);
+    csConf.setCapacity(Q_B + "." + B2, 0);
+    csConf.setCapacity(Q_B + "." + B3, 0);
+    
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+    CapacityScheduler.parseQueue(csContext, csConf, null, 
+        CapacitySchedulerConfiguration.ROOT, queues, queues, 
+        TestUtils.spyHook);
+  }
+  
+  @Test (expected=IllegalArgumentException.class)
+  public void testQueueCapacitySettingParentZero() throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+    
+    // set parent capacity to 0 when child not 0
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
+    csConf.setCapacity(Q_B, 0);
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
+    csConf.setCapacity(Q_A, 60);
+
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+    CapacityScheduler.parseQueue(csContext, csConf, null, 
+        CapacitySchedulerConfiguration.ROOT, queues, queues, 
+        TestUtils.spyHook);
+  }
+  
+  @Test
+  public void testQueueCapacityZero() throws Exception {
+    // Setup queue configs
+    setupMultiLevelQueues(csConf);
+    
+    // set parent and child capacity to 0
+    final String Q_B = CapacitySchedulerConfiguration.ROOT + "." + B;
+    csConf.setCapacity(Q_B, 0);
+    csConf.setCapacity(Q_B + "." + B1, 0);
+    csConf.setCapacity(Q_B + "." + B2, 0);
+    csConf.setCapacity(Q_B + "." + B3, 0);
+    
+    final String Q_A = CapacitySchedulerConfiguration.ROOT + "." + A;
+    csConf.setCapacity(Q_A, 60);
+
+    Map<String, CSQueue> queues = new HashMap<String, CSQueue>(); 
+    try {
+      CapacityScheduler.parseQueue(csContext, csConf, null, 
+          CapacitySchedulerConfiguration.ROOT, queues, queues, 
+          TestUtils.spyHook);
+    } catch (IllegalArgumentException e) {
+      fail("Failed to create queues with 0 capacity: " + e);
+    }
+    assertTrue("Failed to create queues with 0 capacity", true);
+  }
 
   @Test
   public void testOffSwitchScheduling() throws Exception {
@@ -506,12 +573,11 @@ public class TestParentQueue {
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator,
             TestUtils.spyHook);
 
     // Setup some nodes
     final int memoryPerNode = 10;
+    final int coresPerNode = 16;
     final int numNodes = 2;
     
     FiCaSchedulerNode node_0 = 
@@ -520,7 +586,8 @@ public class TestParentQueue {
         TestUtils.getMockNode("host_1", DEFAULT_RACK, 0, memoryPerNode*GB);
     
     final Resource clusterResource = 
-        Resources.createResource(numNodes * (memoryPerNode*GB));
+        Resources.createResource(numNodes * (memoryPerNode*GB), 
+            numNodes * coresPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing
@@ -572,12 +639,11 @@ public class TestParentQueue {
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator,
             TestUtils.spyHook);
 
     // Setup some nodes
     final int memoryPerNode = 10;
+    final int coresPerNode = 10;
     final int numNodes = 2;
     
     FiCaSchedulerNode node_0 = 
@@ -586,7 +652,8 @@ public class TestParentQueue {
         TestUtils.getMockNode("host_1", DEFAULT_RACK, 0, memoryPerNode*GB);
     
     final Resource clusterResource = 
-        Resources.createResource(numNodes * (memoryPerNode*GB));
+        Resources.createResource(numNodes * (memoryPerNode*GB),
+            numNodes * coresPerNode);
     when(csContext.getNumClusterNodes()).thenReturn(numNodes);
 
     // Start testing
@@ -656,8 +723,6 @@ public class TestParentQueue {
     CSQueue root = 
         CapacityScheduler.parseQueue(csContext, csConf, null, 
             CapacitySchedulerConfiguration.ROOT, queues, queues, 
-            CapacityScheduler.queueComparator, 
-            CapacityScheduler.applicationComparator,
             TestUtils.spyHook);
 
     UserGroupInformation user = UserGroupInformation.getCurrentUser();

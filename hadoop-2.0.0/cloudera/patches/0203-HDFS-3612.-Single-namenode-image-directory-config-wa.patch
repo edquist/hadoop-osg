@@ -1,7 +1,7 @@
 From 145c3cf517aaaa251702c5362b5b3f359f8ae053 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Fri, 13 Jul 2012 07:21:18 +0000
-Subject: [PATCH 203/545] HDFS-3612. Single namenode image directory config warning can be improved. Contributed by Andy Isaacson. (harsh)
+Subject: [PATCH 0203/1612] HDFS-3612. Single namenode image directory config warning can be improved. Contributed by Andy Isaacson. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1361060 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit cf636013882e813f2ba2ab0b0192d89f8ad61708)

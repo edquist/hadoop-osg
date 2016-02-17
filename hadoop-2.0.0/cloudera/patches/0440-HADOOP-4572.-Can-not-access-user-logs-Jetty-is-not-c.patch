@@ -1,7 +1,7 @@
 From ecc3fbadf95d11de84d2931fbc63152b62b386a1 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 23 Aug 2012 22:52:47 +0000
-Subject: [PATCH 440/545] HADOOP-4572. Can not access user logs - Jetty is not configured by default to serve aliases/symlinks (ahmed via tucu)
+Subject: [PATCH 0440/1612] HADOOP-4572. Can not access user logs - Jetty is not configured by default to serve aliases/symlinks (ahmed via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1376753 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 62c403c40ef4cfd50155ac440b166e38ddaf566c)

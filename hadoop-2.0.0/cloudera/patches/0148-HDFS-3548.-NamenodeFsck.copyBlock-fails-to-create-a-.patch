@@ -1,7 +1,7 @@
 From 2ff5be15f8b8402ed9fb465341474b4258bf2276 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sun, 8 Jul 2012 19:41:55 +0000
-Subject: [PATCH 148/545] HDFS-3548. NamenodeFsck.copyBlock fails to create a Block Reader. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0148/1612] HDFS-3548. NamenodeFsck.copyBlock fails to create a Block Reader. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1358822 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 390883c136cbdb217b69918b3973ee90f93ec13a)

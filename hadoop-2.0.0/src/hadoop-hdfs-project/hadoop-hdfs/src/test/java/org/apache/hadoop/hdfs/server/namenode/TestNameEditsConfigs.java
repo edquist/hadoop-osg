@@ -25,17 +25,15 @@ import static org.junit.Assert.fail;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
-import java.util.Random;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.fs.CommonConfigurationKeys;
-import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.FileUtil;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.hdfs.DFSConfigKeys;
+import org.apache.hadoop.hdfs.DFSTestUtil;
 import org.apache.hadoop.hdfs.HdfsConfiguration;
 import org.apache.hadoop.hdfs.MiniDFSCluster;
 import org.apache.hadoop.hdfs.server.namenode.NNStorage.NameNodeDirType;
@@ -69,18 +67,6 @@ public class TestNameEditsConfigs {
     if(base_dir.exists() && !FileUtil.fullyDelete(base_dir)) {
       throw new IOException("Cannot remove directory " + base_dir);
     }
-  }
-
-  private void writeFile(FileSystem fileSys, Path name, int repl)
-      throws IOException {
-    FSDataOutputStream stm = fileSys.create(name, true, fileSys.getConf()
-        .getInt(CommonConfigurationKeys.IO_FILE_BUFFER_SIZE_KEY, 4096),
-        (short) repl, BLOCK_SIZE);
-    byte[] buffer = new byte[FILE_SIZE];
-    Random rand = new Random(SEED);
-    rand.nextBytes(buffer);
-    stm.write(buffer);
-    stm.close();
   }
 
   void checkImageAndEditsFilesExistence(File dir, 
@@ -187,7 +173,8 @@ public class TestNameEditsConfigs {
 
     try {
       assertTrue(!fileSys.exists(file1));
-      writeFile(fileSys, file1, replication);
+      DFSTestUtil.createFile(fileSys, file1, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
+          (short) replication, SEED);
       checkFile(fileSys, file1, replication);
       secondary.doCheckpoint();
     } finally {
@@ -224,7 +211,8 @@ public class TestNameEditsConfigs {
       assertTrue(fileSys.exists(file1));
       checkFile(fileSys, file1, replication);
       cleanupFile(fileSys, file1);
-      writeFile(fileSys, file2, replication);
+      DFSTestUtil.createFile(fileSys, file2, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
+          (short) replication, SEED);
       checkFile(fileSys, file2, replication);
       secondary.doCheckpoint();
     } finally {
@@ -260,7 +248,8 @@ public class TestNameEditsConfigs {
       assertTrue(fileSys.exists(file2));
       checkFile(fileSys, file2, replication);
       cleanupFile(fileSys, file2);
-      writeFile(fileSys, file3, replication);
+      DFSTestUtil.createFile(fileSys, file3, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
+          (short) replication, SEED);
       checkFile(fileSys, file3, replication);
       secondary.doCheckpoint();
     } finally {
@@ -320,6 +309,88 @@ public class TestNameEditsConfigs {
   }
 
   /**
+   * Test edits.dir.required configuration options.
+   * 1. Directory present in dfs.namenode.edits.dir.required but not in
+   *    dfs.namenode.edits.dir. Expected to fail.
+   * 2. Directory present in both dfs.namenode.edits.dir.required and
+   *    dfs.namenode.edits.dir. Expected to succeed.
+   * 3. Directory present only in dfs.namenode.edits.dir. Expected to
+   *    succeed.
+   */
+  @Test
+  public void testNameEditsRequiredConfigs() throws IOException {
+    MiniDFSCluster cluster = null;
+    File nameAndEditsDir = new File(base_dir, "name_and_edits");
+    File nameAndEditsDir2 = new File(base_dir, "name_and_edits2");
+
+    // 1
+    // Bad configuration. Add a directory to dfs.namenode.edits.dir.required
+    // without adding it to dfs.namenode.edits.dir.
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.set(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY,
+          nameAndEditsDir2.toURI().toString());
+      conf.set(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+          nameAndEditsDir.toURI().toString());
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(NUM_DATA_NODES)
+          .manageNameDfsDirs(false)
+          .build();
+      fail("Successfully started cluster but should not have been able to.");
+    } catch (IllegalArgumentException iae) { // expect to fail
+      LOG.info("EXPECTED: cluster start failed due to bad configuration" + iae);
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+      cluster = null;
+    }
+
+    // 2
+    // Good configuration. Add a directory to both dfs.namenode.edits.dir.required
+    // and dfs.namenode.edits.dir.
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.setStrings(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+          nameAndEditsDir.toURI().toString(),
+          nameAndEditsDir2.toURI().toString());
+      conf.set(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_REQUIRED_KEY,
+          nameAndEditsDir2.toURI().toString());
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(NUM_DATA_NODES)
+          .manageNameDfsDirs(false)
+          .build();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+
+    // 3
+    // Good configuration. Adds a directory to dfs.namenode.edits.dir but not to
+    // dfs.namenode.edits.dir.required.
+    try {
+      Configuration conf = new HdfsConfiguration();
+      conf.setStrings(
+          DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY,
+          nameAndEditsDir.toURI().toString(),
+          nameAndEditsDir2.toURI().toString());
+      cluster = new MiniDFSCluster.Builder(conf)
+          .numDataNodes(NUM_DATA_NODES)
+          .manageNameDfsDirs(false)
+          .build();
+    } finally {
+      if (cluster != null) {
+        cluster.shutdown();
+      }
+    }
+  }
+
+  /**
    * Test various configuration options of dfs.namenode.name.dir and dfs.namenode.edits.dir
    * This test tries to simulate failure scenarios.
    * 1. Start cluster with shared name and edits dir
@@ -364,7 +435,8 @@ public class TestNameEditsConfigs {
       fileSys = cluster.getFileSystem();
 
       assertTrue(!fileSys.exists(file1));
-      writeFile(fileSys, file1, replication);
+      DFSTestUtil.createFile(fileSys, file1, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
+          (short) replication, SEED);
       checkFile(fileSys, file1, replication);
     } finally  {
       fileSys.close();
@@ -402,7 +474,8 @@ public class TestNameEditsConfigs {
       assertTrue(fileSys.exists(file1));
       checkFile(fileSys, file1, replication);
       cleanupFile(fileSys, file1);
-      writeFile(fileSys, file2, replication);
+      DFSTestUtil.createFile(fileSys, file2, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
+          (short) replication, SEED);
       checkFile(fileSys, file2, replication);
     } finally {
       fileSys.close();
@@ -429,7 +502,8 @@ public class TestNameEditsConfigs {
       assertTrue(fileSys.exists(file2));
       checkFile(fileSys, file2, replication);
       cleanupFile(fileSys, file2);
-      writeFile(fileSys, file3, replication);
+      DFSTestUtil.createFile(fileSys, file3, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
+          (short) replication, SEED);
       checkFile(fileSys, file3, replication);
     } finally {
       fileSys.close();
@@ -483,7 +557,8 @@ public class TestNameEditsConfigs {
       assertTrue(fileSys.exists(file3));
       checkFile(fileSys, file3, replication);
       cleanupFile(fileSys, file3);
-      writeFile(fileSys, file3, replication);
+      DFSTestUtil.createFile(fileSys, file3, FILE_SIZE, FILE_SIZE, BLOCK_SIZE,
+          (short) replication, SEED);
       checkFile(fileSys, file3, replication);
     } finally {
       fileSys.close();

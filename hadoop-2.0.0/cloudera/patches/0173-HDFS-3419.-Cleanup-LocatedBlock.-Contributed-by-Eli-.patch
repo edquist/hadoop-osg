@@ -1,7 +1,7 @@
 From 740e31dd953e3123fce3eebfc392461df2e751a6 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 15 May 2012 17:23:50 +0000
-Subject: [PATCH 173/545] HDFS-3419. Cleanup LocatedBlock. Contributed by Eli Collins
+Subject: [PATCH 0173/1612] HDFS-3419. Cleanup LocatedBlock. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1338802 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a78efd5860ef52b8fa8fa3cdeefa775985f16286)

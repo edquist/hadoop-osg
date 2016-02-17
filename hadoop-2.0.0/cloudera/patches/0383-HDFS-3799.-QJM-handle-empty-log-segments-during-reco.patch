@@ -1,7 +1,7 @@
 From 29e1d85519288b556acdf540e2795bc9f39ee59c Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 15 Aug 2012 00:57:24 +0000
-Subject: [PATCH 383/545] HDFS-3799. QJM: handle empty log segments during recovery. Contributed by Todd Lipcon.
+Subject: [PATCH 0383/1612] HDFS-3799. QJM: handle empty log segments during recovery. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1373183 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 88b426f617e5c8e5a810659a3aa3be131cf6c635)

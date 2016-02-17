@@ -1,7 +1,7 @@
 From 16b0f3a8c3679d786562e6701267740286a1aeaf Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 23 Aug 2012 23:24:25 +0000
-Subject: [PATCH 426/545] HADOOP-8031. Configuration class fails to find embedded .jar resources; should use URL.openStream() (genman via tucu)
+Subject: [PATCH 0426/1612] HADOOP-8031. Configuration class fails to find embedded .jar resources; should use URL.openStream() (genman via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1376772 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0b45e523355dc85ff3e4c63bba861410f7c62a2f)

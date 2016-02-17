@@ -1,7 +1,7 @@
 From 097d2ed2580bd3d08bdbb3e4379d3380a8c0f22e Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Thu, 17 May 2012 11:42:46 -0700
-Subject: [PATCH 065/545] HDFS-2800. Fix cancellation of checkpoints in the standby node to be more reliable. Contributed by Todd Lipcon.
+Subject: [PATCH 0065/1612] HDFS-2800. Fix cancellation of checkpoints in the standby node to be more reliable. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1339744 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 11d04c8aae2be7046c46ac58b9d643a28b30b325)

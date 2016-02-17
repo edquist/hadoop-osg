@@ -1,0 +1,45 @@
+From 92972c0542b131a59b00dbf4a655d4507abd7815 Mon Sep 17 00:00:00 2001
+From: Konstantin Shvachko <shv@apache.org>
+Date: Wed, 12 Feb 2014 07:06:44 +0000
+Subject: [PATCH 1566/1612] HDFS-4858. HDFS DataNode to NameNode RPC should timeout. Contributed by Henry Wang.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1567537 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 34ce352bc3e7f971a867aa87dab377891a9c0f3a)
+---
+ .../main/java/org/apache/hadoop/ipc/Client.java    |    2 +-
+ .../DatanodeProtocolClientSideTranslatorPB.java    |    5 +++--
+ 2 files changed, 4 insertions(+), 3 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Client.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Client.java
+index 4686093..3c1fe3e 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Client.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Client.java
+@@ -140,7 +140,7 @@ public class Client {
+    * @param conf Configuration
+    * @return the ping interval
+    */
+-  final static int getPingInterval(Configuration conf) {
++  final public static int getPingInterval(Configuration conf) {
+     return conf.getInt(CommonConfigurationKeys.IPC_PING_INTERVAL_KEY,
+         CommonConfigurationKeys.IPC_PING_INTERVAL_DEFAULT);
+   }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocolPB/DatanodeProtocolClientSideTranslatorPB.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocolPB/DatanodeProtocolClientSideTranslatorPB.java
+index 92563d2..94b9cf5 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocolPB/DatanodeProtocolClientSideTranslatorPB.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/protocolPB/DatanodeProtocolClientSideTranslatorPB.java
+@@ -102,9 +102,10 @@ public class DatanodeProtocolClientSideTranslatorPB implements
+   private static DatanodeProtocolPB createNamenode(
+       InetSocketAddress nameNodeAddr, Configuration conf,
+       UserGroupInformation ugi) throws IOException {
+-    return RPC.getProxy(DatanodeProtocolPB.class,
++    return RPC.getProtocolProxy(DatanodeProtocolPB.class,
+         RPC.getProtocolVersion(DatanodeProtocolPB.class), nameNodeAddr, ugi,
+-        conf, NetUtils.getSocketFactory(conf, DatanodeProtocolPB.class));
++        conf, NetUtils.getSocketFactory(conf, DatanodeProtocolPB.class),
++        org.apache.hadoop.ipc.Client.getPingInterval(conf), null).getProxy();
+   }
+ 
+   /** Create a {@link NameNode} proxy */
+-- 
+1.7.0.4
+

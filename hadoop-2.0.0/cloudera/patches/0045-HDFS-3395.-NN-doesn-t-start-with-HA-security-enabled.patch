@@ -1,7 +1,7 @@
 From 7895dd0ca9863470e41ae2d57f7c76d324cbc1cc Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Thu, 10 May 2012 13:53:30 +0000
-Subject: [PATCH 045/545] HDFS-3395. NN doesn't start with HA+security enabled and HTTP address set to 0.0.0.0. Contributed by Aaron T. Myers.
+Subject: [PATCH 0045/1612] HDFS-3395. NN doesn't start with HA+security enabled and HTTP address set to 0.0.0.0. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1336693 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 651c860a3a6a652860e0b1211c5ad937691c960a)

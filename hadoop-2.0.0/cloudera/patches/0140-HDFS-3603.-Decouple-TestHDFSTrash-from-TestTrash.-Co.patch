@@ -1,7 +1,7 @@
 From 280771accc585fb9a7cc926a30d6b2c97d751ae5 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sun, 8 Jul 2012 18:15:30 +0000
-Subject: [PATCH 140/545] HDFS-3603. Decouple TestHDFSTrash from TestTrash. Contributed by Jason Lowe
+Subject: [PATCH 0140/1612] HDFS-3603. Decouple TestHDFSTrash from TestTrash. Contributed by Jason Lowe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1358804 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 69fe93266d68a02badc6878faf77b08fbf26d2d9)

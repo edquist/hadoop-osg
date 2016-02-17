@@ -1,7 +1,7 @@
 From 9b9796ae8998ec2ab0a477638d56e17311714c68 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 27 Jun 2012 22:41:26 +0000
-Subject: [PATCH 180/545] HDFS-3572. Cleanup code which inits SPNEGO in HttpServer. Contributed by Todd Lipcon.
+Subject: [PATCH 0180/1612] HDFS-3572. Cleanup code which inits SPNEGO in HttpServer. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1354766 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f3711e1d457ea315452c938c4ee8ed4dea7d739a)

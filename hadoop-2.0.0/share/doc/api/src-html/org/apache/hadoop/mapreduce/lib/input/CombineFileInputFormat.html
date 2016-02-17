@@ -218,10 +218,10 @@
 <FONT color="green">215</FONT>        // times, one time each for each pool in the next loop.<a name="line.215"></a>
 <FONT color="green">216</FONT>        List&lt;Path&gt; newpaths = new LinkedList&lt;Path&gt;();<a name="line.216"></a>
 <FONT color="green">217</FONT>        for (int i = 0; i &lt; paths.length; i++) {<a name="line.217"></a>
-<FONT color="green">218</FONT>          Path p = new Path(paths[i].toUri().getPath());<a name="line.218"></a>
-<FONT color="green">219</FONT>          newpaths.add(p);<a name="line.219"></a>
-<FONT color="green">220</FONT>        }<a name="line.220"></a>
-<FONT color="green">221</FONT>        paths = null;<a name="line.221"></a>
+<FONT color="green">218</FONT>          FileSystem fs = paths[i].getFileSystem(conf);<a name="line.218"></a>
+<FONT color="green">219</FONT>          Path p = fs.makeQualified(paths[i]);<a name="line.219"></a>
+<FONT color="green">220</FONT>          newpaths.add(p);<a name="line.220"></a>
+<FONT color="green">221</FONT>        }<a name="line.221"></a>
 <FONT color="green">222</FONT>    <a name="line.222"></a>
 <FONT color="green">223</FONT>        // In one single iteration, process all the paths in a single pool.<a name="line.223"></a>
 <FONT color="green">224</FONT>        // Processing one pool at a time ensures that a split contains paths<a name="line.224"></a>

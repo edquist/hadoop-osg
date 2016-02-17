@@ -1,7 +1,7 @@
 From 57550b398689292c213f37ebfe69fdda4b75a2e9 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Wed, 27 Jun 2012 02:53:20 +0000
-Subject: [PATCH 228/545] HDFS-3551. WebHDFS CREATE does not use client location for redirection.
+Subject: [PATCH 0228/1612] HDFS-3551. WebHDFS CREATE does not use client location for redirection.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1354317 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0eaf04e11593b1de35c157bc6bff9cfa71f9c29f)

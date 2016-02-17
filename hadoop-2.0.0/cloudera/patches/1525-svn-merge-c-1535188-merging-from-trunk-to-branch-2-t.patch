@@ -1,0 +1,58 @@
+From aea61865c592f4109b19408340e239520d1b0822 Mon Sep 17 00:00:00 2001
+From: Kihwal Lee <kihwal@apache.org>
+Date: Wed, 23 Oct 2013 21:31:23 +0000
+Subject: [PATCH 1525/1612] svn merge -c 1535188 merging from trunk to branch-2 to fix HDFS-5341.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1535190 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 99ba4ba740739b1b85d868564d72e272cc660350)
+---
+ .../hdfs/server/datanode/DirectoryScanner.java     |   12 +++++++++++-
+ 1 files changed, 11 insertions(+), 1 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DirectoryScanner.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DirectoryScanner.java
+index 7022079..8379ccb 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DirectoryScanner.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DirectoryScanner.java
+@@ -192,6 +192,11 @@ public class DirectoryScanner implements Runnable {
+ 
+     private final FsVolumeSpi volume;
+ 
++    /**
++     * Get the file's length in async block scan
++     */
++    private final long blockFileLength;
++
+     private final static Pattern CONDENSED_PATH_REGEX =
+         Pattern.compile("(?<!^)(\\\\|/){2,}");
+     
+@@ -236,6 +241,7 @@ public class DirectoryScanner implements Runnable {
+         getCondensedPath(vol.getBasePath());
+       this.blockSuffix = blockFile == null ? null :
+         getSuffix(blockFile, condensedVolPath);
++      this.blockFileLength = (blockFile != null) ? blockFile.length() : 0; 
+       if (metaFile == null) {
+         this.metaSuffix = null;
+       } else if (blockFile == null) {
+@@ -252,6 +258,10 @@ public class DirectoryScanner implements Runnable {
+         new File(volume.getBasePath(), blockSuffix);
+     }
+ 
++    long getBlockFileLength() {
++      return blockFileLength;
++    }
++
+     File getMetaFile() {
+       if (metaSuffix == null) {
+         return null;
+@@ -471,7 +481,7 @@ public class DirectoryScanner implements Runnable {
+             // Block metadata file exits and block file is missing
+             addDifference(diffRecord, statsRecord, info);
+           } else if (info.getGenStamp() != memBlock.getGenerationStamp()
+-              || info.getBlockFile().length() != memBlock.getNumBytes()) {
++              || info.getBlockFileLength() != memBlock.getNumBytes()) {
+             // Block metadata file is missing or has wrong generation stamp,
+             // or block file length is different than expected
+             statsRecord.mismatchBlocks++;
+-- 
+1.7.0.4
+

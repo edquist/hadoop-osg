@@ -1,7 +1,7 @@
 From a051f312a0609ce18f3ed199ff10781464990545 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Sun, 20 May 2012 07:41:56 +0000
-Subject: [PATCH 137/545] MAPREDUCE-4002. MultiFileWordCount job fails if the input path is not from default file system. Contributed by Bhallamudi Venkata Siva Kamesh.
+Subject: [PATCH 0137/1612] MAPREDUCE-4002. MultiFileWordCount job fails if the input path is not from default file system. Contributed by Bhallamudi Venkata Siva Kamesh.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1340630 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 829200091e87dc47b36b3311eab3a39091e8678e)

@@ -100,6 +100,11 @@ public class DataBlockScanner implements Runnable {
       }
       bpScanner.scanBlockPoolSlice();
     }
+
+    // Call shutdown for each allocated BlockPoolSliceScanner.
+    for (BlockPoolSliceScanner bpss: blockPoolScannerMap.values()) {
+      bpss.shutdown();
+    }
   }
 
   // Wait for at least one block pool to be up
@@ -237,9 +242,21 @@ public class DataBlockScanner implements Runnable {
     }
   }
   
-  public synchronized void shutdown() {
+  public void shutdown() {
+    synchronized (this) {
+      if (blockScannerThread != null) {
+        blockScannerThread.interrupt();
+      }
+    }
+
+    // We cannot join within the synchronized block, because it would create a
+    // deadlock situation.  blockScannerThread calls other synchronized methods.
     if (blockScannerThread != null) {
-      blockScannerThread.interrupt();
+      try {
+        blockScannerThread.join();
+      } catch (InterruptedException e) {
+        // shutting down anyway
+      }
     }
   }
 
@@ -255,7 +272,10 @@ public class DataBlockScanner implements Runnable {
   }
   
   public synchronized void removeBlockPool(String blockPoolId) {
-    blockPoolScannerMap.remove(blockPoolId);
+    BlockPoolSliceScanner bpss = blockPoolScannerMap.remove(blockPoolId);
+    if (bpss != null) {
+      bpss.shutdown();
+    }
     LOG.info("Removed bpid="+blockPoolId+" from blockPoolScannerMap");
   }
   

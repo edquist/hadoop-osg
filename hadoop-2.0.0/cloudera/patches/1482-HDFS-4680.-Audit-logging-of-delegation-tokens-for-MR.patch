@@ -1,0 +1,480 @@
+From 24b09690f0c31fd653a9dc4a3e7cc50abe9c7258 Mon Sep 17 00:00:00 2001
+From: Andrew Wang <wang@apache.org>
+Date: Wed, 11 Sep 2013 19:57:37 +0000
+Subject: [PATCH 1482/1612] HDFS-4680. Audit logging of delegation tokens for MR tracing. (Andrew Wang)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1522012 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 6fa8f9d1c9dbaee3f9c9653248e530a0c53e9fb0)
+
+Conflicts:
+	hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java
+---
+ .../hadoop/security/token/TokenIdentifier.java     |   19 ++++
+ .../AbstractDelegationTokenSecretManager.java      |   36 +++++++-
+ .../java/org/apache/hadoop/hdfs/DFSConfigKeys.java |    2 +
+ .../delegation/DelegationTokenSecretManager.java   |   18 +++-
+ .../hadoop/hdfs/server/namenode/FSNamesystem.java  |   93 +++++++++++++++++++-
+ .../hdfs/server/namenode/HdfsAuditLogger.java      |   66 ++++++++++++++
+ 6 files changed, 224 insertions(+), 10 deletions(-)
+ create mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/HdfsAuditLogger.java
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/TokenIdentifier.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/TokenIdentifier.java
+index a33bcde..ebf9d58 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/TokenIdentifier.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/TokenIdentifier.java
+@@ -21,6 +21,7 @@ package org.apache.hadoop.security.token;
+ import java.io.IOException;
+ import java.util.Arrays;
+ 
++import org.apache.commons.codec.digest.DigestUtils;
+ import org.apache.hadoop.classification.InterfaceAudience;
+ import org.apache.hadoop.classification.InterfaceStability;
+ import org.apache.hadoop.io.DataOutputBuffer;
+@@ -35,6 +36,9 @@ import org.apache.hadoop.security.UserGroupInformation;
+ @InterfaceAudience.LimitedPrivate({"HDFS", "MapReduce"})
+ @InterfaceStability.Evolving
+ public abstract class TokenIdentifier implements Writable {
++
++  private String trackingId = null;
++
+   /**
+    * Get the token kind
+    * @return the kind of the token
+@@ -62,4 +66,19 @@ public abstract class TokenIdentifier implements Writable {
+     }
+     return Arrays.copyOf(buf.getData(), buf.getLength());
+   }
++
++  /**
++   * Returns a tracking identifier that can be used to associate usages of a
++   * token across multiple client sessions.
++   *
++   * Currently, this function just returns an MD5 of {{@link #getBytes()}.
++   *
++   * @return tracking identifier
++   */
++  public String getTrackingId() {
++    if (trackingId == null) {
++      trackingId = DigestUtils.md5Hex(getBytes());
++    }
++    return trackingId;
++  }
+ }
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java
+index 7a132ca..2d1677c 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/token/delegation/AbstractDelegationTokenSecretManager.java
+@@ -86,6 +86,11 @@ extends AbstractDelegationTokenIdentifier>
+   private long tokenMaxLifetime;
+   private long tokenRemoverScanInterval;
+   private long tokenRenewInterval;
++  /**
++   * Whether to store a token's tracking ID in its TokenInformation.
++   * Can be overridden by a subclass.
++   */
++  protected boolean storeTokenTrackingId;
+   private Thread tokenRemoverThread;
+   protected volatile boolean running;
+ 
+@@ -102,6 +107,7 @@ extends AbstractDelegationTokenIdentifier>
+     this.tokenMaxLifetime = delegationTokenMaxLifetime;
+     this.tokenRenewInterval = delegationTokenRenewInterval;
+     this.tokenRemoverScanInterval = delegationTokenRemoverScanInterval;
++    this.storeTokenTrackingId = false;
+   }
+ 
+   /** should be called before this object is used */
+@@ -216,7 +222,7 @@ extends AbstractDelegationTokenIdentifier>
+     LOG.info("Creating password for identifier: " + identifier);
+     byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
+     currentTokens.put(identifier, new DelegationTokenInformation(now
+-        + tokenRenewInterval, password));
++        + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier)));
+     return password;
+   }
+ 
+@@ -235,6 +241,21 @@ extends AbstractDelegationTokenIdentifier>
+     return info.getPassword();
+   }
+ 
++  protected String getTrackingIdIfEnabled(TokenIdent ident) {
++    if (storeTokenTrackingId) {
++      return ident.getTrackingId();
++    }
++    return null;
++  }
++
++  public synchronized String getTokenTrackingId(TokenIdent identifier) {
++    DelegationTokenInformation info = currentTokens.get(identifier);
++    if (info == null) {
++      return null;
++    }
++    return info.getTrackingId();
++  }
++
+   /**
+    * Verifies that the given identifier and password are valid and match.
+    * @param identifier Token identifier.
+@@ -295,8 +316,9 @@ extends AbstractDelegationTokenIdentifier>
+           + " is trying to renew a token with " + "wrong password");
+     }
+     long renewTime = Math.min(id.getMaxDate(), now + tokenRenewInterval);
++    String trackingId = getTrackingIdIfEnabled(id);
+     DelegationTokenInformation info = new DelegationTokenInformation(renewTime,
+-        password);
++        password, trackingId);
+ 
+     if (currentTokens.get(id) == null) {
+       throw new InvalidToken("Renewal request for unknown token");
+@@ -354,9 +376,13 @@ extends AbstractDelegationTokenIdentifier>
+   public static class DelegationTokenInformation {
+     long renewDate;
+     byte[] password;
+-    public DelegationTokenInformation(long renewDate, byte[] password) {
++    String trackingId;
++
++    public DelegationTokenInformation(long renewDate, byte[] password,
++        String trackingId) {
+       this.renewDate = renewDate;
+       this.password = password;
++      this.trackingId = trackingId;
+     }
+     /** returns renew date */
+     public long getRenewDate() {
+@@ -366,6 +392,10 @@ extends AbstractDelegationTokenIdentifier>
+     byte[] getPassword() {
+       return password;
+     }
++    /** returns tracking id */
++    public String getTrackingId() {
++      return trackingId;
++    }
+   }
+   
+   /** Remove expired delegation tokens from cache */
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+index 73c9871..5626c67 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSConfigKeys.java
+@@ -257,6 +257,8 @@ public class DFSConfigKeys extends CommonConfigurationKeys {
+   public static final String  DFS_CLIENT_LOCAL_INTERFACES = "dfs.client.local.interfaces";
+   public static final String  DFS_NAMENODE_AUDIT_LOGGERS_KEY = "dfs.namenode.audit.loggers";
+   public static final String  DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME = "default";
++  public static final String  DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY = "dfs.namenode.audit.log.token.tracking.id";
++  public static final boolean DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT = false;
+ 
+   // Much code in hdfs is not yet updated to use these keys.
+   public static final String  DFS_CLIENT_BLOCK_WRITE_LOCATEFOLLOWINGBLOCK_RETRIES_KEY = "dfs.client.block.write.locateFollowingBlock.retries";
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
+index 896c20c..2350006 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
+@@ -53,6 +53,15 @@ public class DelegationTokenSecretManager
+       .getLog(DelegationTokenSecretManager.class);
+   
+   private final FSNamesystem namesystem;
++
++  public DelegationTokenSecretManager(long delegationKeyUpdateInterval,
++      long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
++      long delegationTokenRemoverScanInterval, FSNamesystem namesystem) {
++    this(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
++        delegationTokenRenewInterval, delegationTokenRemoverScanInterval, false,
++        namesystem);
++  }
++
+   /**
+    * Create a secret manager
+    * @param delegationKeyUpdateInterval the number of seconds for rolling new
+@@ -62,13 +71,16 @@ public class DelegationTokenSecretManager
+    * @param delegationTokenRenewInterval how often the tokens must be renewed
+    * @param delegationTokenRemoverScanInterval how often the tokens are scanned
+    *        for expired tokens
++   * @param storeTokenTrackingId whether to store the token's tracking id
+    */
+   public DelegationTokenSecretManager(long delegationKeyUpdateInterval,
+       long delegationTokenMaxLifetime, long delegationTokenRenewInterval,
+-      long delegationTokenRemoverScanInterval, FSNamesystem namesystem) {
++      long delegationTokenRemoverScanInterval, boolean storeTokenTrackingId,
++      FSNamesystem namesystem) {
+     super(delegationKeyUpdateInterval, delegationTokenMaxLifetime,
+         delegationTokenRenewInterval, delegationTokenRemoverScanInterval);
+     this.namesystem = namesystem;
++    this.storeTokenTrackingId = storeTokenTrackingId;
+   }
+ 
+   @Override //SecretManager
+@@ -167,7 +179,7 @@ public class DelegationTokenSecretManager
+     }
+     if (currentTokens.get(identifier) == null) {
+       currentTokens.put(identifier, new DelegationTokenInformation(expiryTime,
+-          password));
++          password, getTrackingIdIfEnabled(identifier)));
+     } else {
+       throw new IOException(
+           "Same delegation token being added twice; invalid entry in fsimage or editlogs");
+@@ -206,7 +218,7 @@ public class DelegationTokenSecretManager
+       byte[] password = createPassword(identifier.getBytes(), allKeys
+           .get(keyId).getKey());
+       currentTokens.put(identifier, new DelegationTokenInformation(expiryTime,
+-          password));
++          password, getTrackingIdIfEnabled(identifier)));
+     }
+   }
+ 
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+index 3a408c0..36c14c4 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+@@ -36,6 +36,8 @@ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_HA_STANDBY_CHECKPOINTS_KE
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_KEY;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_ACCESSTIME_PRECISION_DEFAULT;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOGGERS_KEY;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT;
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DEFAULT_AUDIT_LOGGER_NAME;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_DEFAULT;
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_DELEGATION_KEY_UPDATE_INTERVAL_KEY;
+@@ -85,6 +87,8 @@ import java.io.IOException;
+ import java.io.PrintWriter;
+ import java.io.StringWriter;
+ import java.lang.management.ManagementFactory;
++import java.lang.reflect.InvocationTargetException;
++import java.lang.reflect.Method;
+ import java.net.InetAddress;
+ import java.net.URI;
+ import java.util.ArrayList;
+@@ -100,6 +104,7 @@ import java.util.LinkedHashSet;
+ import java.util.List;
+ import java.util.Map;
+ import java.util.Set;
++import java.util.concurrent.ConcurrentHashMap;
+ import java.util.concurrent.TimeUnit;
+ import java.util.concurrent.locks.ReentrantReadWriteLock;
+ 
+@@ -201,6 +206,7 @@ import org.apache.hadoop.security.UserGroupInformation;
+ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+ import org.apache.hadoop.security.token.SecretManager.InvalidToken;
+ import org.apache.hadoop.security.token.Token;
++import org.apache.hadoop.security.token.TokenIdentifier;
+ import org.apache.hadoop.security.token.delegation.DelegationKey;
+ import org.apache.hadoop.util.Daemon;
+ import org.apache.hadoop.util.DataChecksum;
+@@ -274,6 +280,28 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+           stat.getGroup(), symlink, path);
+     }
+     for (AuditLogger logger : auditLoggers) {
++      // Try to invoke new reflected method, fall back to the old method
++      if (hdfsAuditLoggerMethodCache.containsKey(logger)) {
++        Exception ex = null;
++        try {
++          Method m = hdfsAuditLoggerMethodCache.get(logger);
++          m.invoke(logger, succeeded, ugi.toString(), addr, cmd, src, dst,
++              status, ugi, dtSecretManager);
++          continue; // success
++        } catch (IllegalAccessException e) {
++          ex = e;
++        } catch (IllegalArgumentException e) {
++          ex = e;
++        } catch (InvocationTargetException e) {
++          ex = e;
++        }
++        if (ex != null) {
++          LOG.warn("Exception while trying to call logAuditEvent with"
++              + " token tracking ID information", ex);
++          hdfsAuditLoggerMethodCache.remove(logger);
++        }
++      }
++      // Not in cache or reflected method failed
+       logger.logAuditEvent(succeeded, ugi.toString(), addr,
+           cmd, src, dst, status);
+     }
+@@ -315,6 +343,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+   // underlying logger is disabled, and avoid some unnecessary work.
+   private final boolean isDefaultAuditLogger;
+   private final List<AuditLogger> auditLoggers;
++  private final Map<AuditLogger, Method> hdfsAuditLoggerMethodCache;
+ 
+   /** The namespace tree. */
+   FSDirectory dir;
+@@ -579,6 +608,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       this.dir = new FSDirectory(fsImage, this, conf);
+       this.safeMode = new SafeModeInfo(conf);
+       this.auditLoggers = initAuditLoggers(conf);
++      this.hdfsAuditLoggerMethodCache =
++          initHdfsAuditLoggerMethodCache(auditLoggers);
+       this.isDefaultAuditLogger = auditLoggers.size() == 1 &&
+         auditLoggers.get(0) instanceof DefaultAuditLogger;
+     } catch(IOException e) {
+@@ -622,6 +653,36 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     return auditLoggers;
+   }
+ 
++  private static Map<AuditLogger, Method> initHdfsAuditLoggerMethodCache(
++      List<AuditLogger> auditLoggers) {
++    Map<AuditLogger, Method> hdfsAuditLoggerMethodCache =
++        new ConcurrentHashMap<AuditLogger, Method>(auditLoggers.size());
++    for (AuditLogger logger: auditLoggers) {
++      try {
++        Method m = logger.getClass().getMethod(
++            "logAuditEvent",
++            boolean.class,     // succeeded
++            String.class,      // userName
++            InetAddress.class, // addr
++            String.class,      // cmd
++            String.class,      // src
++            String.class,      // dst
++            FileStatus.class,  // stat
++            UserGroupInformation.class,        // ugi
++            DelegationTokenSecretManager.class // dtSecretManager
++            );
++        hdfsAuditLoggerMethodCache.put(logger, m);
++      } catch (NoSuchMethodException e) {
++        LOG.info("Could not find logAuditEvent method for logging token"
++            + " tracking IDs", e);
++      } catch (SecurityException e) {
++        LOG.warn("SecurityException while trying to find logAuditEvent method"
++            + " for logging token tracking IDs", e);
++      }
++    }
++    return hdfsAuditLoggerMethodCache;
++  }
++
+   void loadFSImage(StartupOption startOpt, FSImage fsImage, boolean haEnabled)
+       throws IOException {
+     // format before starting up if requested
+@@ -5226,7 +5287,10 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+             DFS_NAMENODE_DELEGATION_TOKEN_MAX_LIFETIME_DEFAULT),
+         conf.getLong(DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_KEY,
+             DFS_NAMENODE_DELEGATION_TOKEN_RENEW_INTERVAL_DEFAULT),
+-        DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL, this);
++        DELEGATION_TOKEN_REMOVER_SCAN_INTERVAL,
++        conf.getBoolean(DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY,
++            DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT),
++        this);
+   }
+ 
+   /**
+@@ -5712,17 +5776,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+    * defined in the config file. It can also be explicitly listed in the
+    * config file.
+    */
+-  private static class DefaultAuditLogger implements AuditLogger {
++  private static class DefaultAuditLogger extends HdfsAuditLogger {
++
++    private boolean logTokenTrackingId;
+ 
+     @Override
+     public void initialize(Configuration conf) {
+-      // Nothing to do.
++      logTokenTrackingId = conf.getBoolean(
++          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_KEY,
++          DFSConfigKeys.DFS_NAMENODE_AUDIT_LOG_TOKEN_TRACKING_ID_DEFAULT);
+     }
+ 
+     @Override
+     public void logAuditEvent(boolean succeeded, String userName,
+         InetAddress addr, String cmd, String src, String dst,
+-        FileStatus status) {
++        FileStatus status, UserGroupInformation ugi,
++        DelegationTokenSecretManager dtSecretManager) {
+       if (auditLog.isInfoEnabled()) {
+         final StringBuilder sb = auditBuffer.get();
+         sb.setLength(0);
+@@ -5740,6 +5809,22 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+           sb.append(status.getGroup()).append(":");
+           sb.append(status.getPermission());
+         }
++        if (logTokenTrackingId) {
++          sb.append("\t").append("trackingId=");
++          String trackingId = null;
++          if (ugi != null && dtSecretManager != null
++              && ugi.getAuthenticationMethod() == AuthenticationMethod.TOKEN) {
++            for (TokenIdentifier tid: ugi.getTokenIdentifiers()) {
++              if (tid instanceof DelegationTokenIdentifier) {
++                DelegationTokenIdentifier dtid =
++                    (DelegationTokenIdentifier)tid;
++                trackingId = dtSecretManager.getTokenTrackingId(dtid);
++                break;
++              }
++            }
++          }
++          sb.append(trackingId);
++        }
+         auditLog.info(sb);
+       }
+     }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/HdfsAuditLogger.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/HdfsAuditLogger.java
+new file mode 100644
+index 0000000..1c2bc57
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/HdfsAuditLogger.java
+@@ -0,0 +1,66 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hdfs.server.namenode;
++
++import java.net.InetAddress;
++
++import org.apache.hadoop.classification.InterfaceAudience;
++import org.apache.hadoop.classification.InterfaceStability;
++import org.apache.hadoop.fs.FileStatus;
++import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenSecretManager;
++import org.apache.hadoop.security.UserGroupInformation;
++
++/**
++ * Extension of {@link AuditLogger}.
++ */
++@InterfaceAudience.Public
++@InterfaceStability.Evolving
++public abstract class HdfsAuditLogger implements AuditLogger {
++
++  @Override
++  public void logAuditEvent(boolean succeeded, String userName,
++      InetAddress addr, String cmd, String src, String dst,
++      FileStatus status) {
++    logAuditEvent(succeeded, userName, addr, cmd, src, dst, status, null,
++        null);
++  }
++
++  /**
++   * Same as
++   * {@link #logAuditEvent(boolean, String, InetAddress, String, String, String, FileStatus)}
++   * with additional parameters related to logging delegation token tracking
++   * IDs.
++   * 
++   * @param succeeded Whether authorization succeeded.
++   * @param userName Name of the user executing the request.
++   * @param addr Remote address of the request.
++   * @param cmd The requested command.
++   * @param src Path of affected source file.
++   * @param dst Path of affected destination file (if any).
++   * @param stat File information for operations that change the file's metadata
++   *          (permissions, owner, times, etc).
++   * @param ugi UserGroupInformation of the current user, or null if not logging
++   *          token tracking information
++   * @param dtSecretManager The token secret manager, or null if not logging
++   *          token tracking information
++   */
++  public abstract void logAuditEvent(boolean succeeded, String userName,
++      InetAddress addr, String cmd, String src, String dst,
++      FileStatus stat, UserGroupInformation ugi,
++      DelegationTokenSecretManager dtSecretManager);
++}
+-- 
+1.7.0.4
+

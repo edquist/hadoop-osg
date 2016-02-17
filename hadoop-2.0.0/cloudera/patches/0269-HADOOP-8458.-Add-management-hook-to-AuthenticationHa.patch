@@ -1,7 +1,7 @@
 From e4d4f5a5a2003f909cb48f8fc7fe4c247c0466c0 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Tue, 12 Jun 2012 20:45:57 +0000
-Subject: [PATCH 269/545] HADOOP-8458. Add management hook to AuthenticationHandler to enable delegation token operations support (tucu)
+Subject: [PATCH 0269/1612] HADOOP-8458. Add management hook to AuthenticationHandler to enable delegation token operations support (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349514 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4a70e982808c409fad67b1d9821d363651c2011e)

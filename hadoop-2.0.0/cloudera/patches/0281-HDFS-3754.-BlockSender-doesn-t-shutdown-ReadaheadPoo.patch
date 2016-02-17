@@ -1,7 +1,7 @@
 From b831930d5e21f1519b21f4bd7e7112329d42ff1e Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 7 Aug 2012 20:17:59 +0000
-Subject: [PATCH 281/545] HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. Contributed by Eli Collins
+Subject: [PATCH 0281/1612] HDFS-3754. BlockSender doesn't shutdown ReadaheadPool threads. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1370495 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 67331d3e6da48735751fc847181b4c7c2d18c882)

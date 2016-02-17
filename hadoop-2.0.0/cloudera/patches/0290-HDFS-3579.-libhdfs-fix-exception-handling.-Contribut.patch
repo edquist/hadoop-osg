@@ -1,7 +1,7 @@
 From b35f945f6068d7649afca7d4077db7649f4eab0f Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Mon, 6 Aug 2012 21:02:30 +0000
-Subject: [PATCH 290/545] HDFS-3579. libhdfs: fix exception handling. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0290/1612] HDFS-3579. libhdfs: fix exception handling. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1370015 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 735ef5042a17b923ce00aaee0129a276655208e8)

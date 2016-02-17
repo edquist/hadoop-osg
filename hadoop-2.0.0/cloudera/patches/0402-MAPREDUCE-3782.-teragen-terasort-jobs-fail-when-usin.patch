@@ -1,7 +1,7 @@
 From 95346c8d9a1f38a3f21b1b0db7015e8a76aa2dde Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Thu, 9 Aug 2012 17:29:36 +0000
-Subject: [PATCH 402/545] MAPREDUCE-3782. teragen terasort jobs fail when using webhdfs:// (Jason Lowe via bobby)
+Subject: [PATCH 0402/1612] MAPREDUCE-3782. teragen terasort jobs fail when using webhdfs:// (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1371325 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 1ff46434b0951682b50be6167d4f5955f3f899ad)

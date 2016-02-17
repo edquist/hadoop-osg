@@ -1,7 +1,7 @@
 From d1e89b4318088ae1f9caa94f0f6996056b8d519c Mon Sep 17 00:00:00 2001
 From: Jitendra Nath Pandey <jitendra@apache.org>
 Date: Thu, 23 Aug 2012 04:05:12 +0000
-Subject: [PATCH 471/545] HDFS-3819. Should check whether invalidate work percentage default value is not greater than 1.0f. Contributed by Jing Zhao.
+Subject: [PATCH 0471/1612] HDFS-3819. Should check whether invalidate work percentage default value is not greater than 1.0f. Contributed by Jing Zhao.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1376360 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit fcbb99b5f6d6b09bfed5e15d93af1e7b1c30bc6e)

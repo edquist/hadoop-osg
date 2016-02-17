@@ -1,7 +1,7 @@
 From a21099cc89281538980a542fad14ee7b279d06c5 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 2 May 2012 19:41:57 -0700
-Subject: [PATCH 032/545] HADOOP-8279. Allow manual failover to be invoked when auto-failover is enabled. Contributed by Todd Lipcon.
+Subject: [PATCH 0032/1612] HADOOP-8279. Allow manual failover to be invoked when auto-failover is enabled. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1333288 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 93bdab468ba7677112a3d977077c982de8c1c844)

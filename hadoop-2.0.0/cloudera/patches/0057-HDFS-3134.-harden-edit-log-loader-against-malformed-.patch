@@ -1,7 +1,7 @@
 From f0a4936da6163c246a4a40f407fcf3fc6e04986c Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 10 May 2012 23:13:02 +0000
-Subject: [PATCH 057/545] HDFS-3134. harden edit log loader against malformed or malicious input. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0057/1612] HDFS-3134. harden edit log loader against malformed or malicious input. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336943 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 32ddd1b6485412870485114c13d4f5c55db4548a)

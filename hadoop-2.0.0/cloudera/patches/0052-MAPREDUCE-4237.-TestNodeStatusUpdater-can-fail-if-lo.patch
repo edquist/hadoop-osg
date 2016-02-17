@@ -1,7 +1,7 @@
 From f171ab1f5579b1f95a92152f00bf9834af4d1a49 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Wed, 9 May 2012 21:08:53 +0000
-Subject: [PATCH 052/545] MAPREDUCE-4237. TestNodeStatusUpdater can fail if localhost has a domain associated with it (bobby)
+Subject: [PATCH 0052/1612] MAPREDUCE-4237. TestNodeStatusUpdater can fail if localhost has a domain associated with it (bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336399 13f79535-47bb-0310-9956-ffa450edef68
 ---

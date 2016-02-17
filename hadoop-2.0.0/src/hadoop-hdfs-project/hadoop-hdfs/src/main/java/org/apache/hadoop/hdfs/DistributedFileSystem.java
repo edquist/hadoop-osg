@@ -42,6 +42,7 @@ import org.apache.hadoop.fs.FsStatus;
 import org.apache.hadoop.fs.LocatedFileStatus;
 import org.apache.hadoop.fs.MD5MD5CRC32FileChecksum;
 import org.apache.hadoop.fs.Options;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.PathFilter;
 import org.apache.hadoop.fs.RemoteIterator;
@@ -63,10 +64,13 @@ import org.apache.hadoop.hdfs.security.token.delegation.DelegationTokenIdentifie
 import org.apache.hadoop.hdfs.server.common.UpgradeStatusReport;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.net.NetUtils;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.token.SecretManager.InvalidToken;
 import org.apache.hadoop.security.token.Token;
 import org.apache.hadoop.util.Progressable;
+
+import com.google.common.annotations.VisibleForTesting;
 
 
 /****************************************************************
@@ -258,19 +262,19 @@ public class DistributedFileSystem extends FileSystem {
   public HdfsDataOutputStream create(Path f, FsPermission permission,
       boolean overwrite, int bufferSize, short replication, long blockSize,
       Progressable progress) throws IOException {
-    return create(f, permission,
+    return this.create(f, permission,
         overwrite ? EnumSet.of(CreateFlag.CREATE, CreateFlag.OVERWRITE)
             : EnumSet.of(CreateFlag.CREATE), bufferSize, replication,
-        blockSize, progress);
+        blockSize, progress, null);
   }
   
   @Override
   public HdfsDataOutputStream create(Path f, FsPermission permission,
     EnumSet<CreateFlag> cflags, int bufferSize, short replication, long blockSize,
-    Progressable progress) throws IOException {
+    Progressable progress, ChecksumOpt checksumOpt) throws IOException {
     statistics.incrementWriteOps(1);
     final DFSOutputStream out = dfs.create(getPathName(f), permission, cflags,
-        replication, blockSize, progress, bufferSize);
+        replication, blockSize, progress, bufferSize, checksumOpt);
     return new HdfsDataOutputStream(out, statistics);
   }
   
@@ -279,11 +283,11 @@ public class DistributedFileSystem extends FileSystem {
   protected HdfsDataOutputStream primitiveCreate(Path f,
     FsPermission absolutePermission, EnumSet<CreateFlag> flag, int bufferSize,
     short replication, long blockSize, Progressable progress,
-    int bytesPerChecksum) throws IOException {
+    ChecksumOpt checksumOpt) throws IOException {
     statistics.incrementWriteOps(1);
     return new HdfsDataOutputStream(dfs.primitiveCreate(getPathName(f),
         absolutePermission, flag, true, replication, blockSize,
-        progress, bufferSize, bytesPerChecksum),statistics);
+        progress, bufferSize, checksumOpt),statistics);
    } 
 
   /**
@@ -298,7 +302,8 @@ public class DistributedFileSystem extends FileSystem {
       flag.add(CreateFlag.CREATE);
     }
     return new HdfsDataOutputStream(dfs.create(getPathName(f), permission, flag,
-        false, replication, blockSize, progress, bufferSize), statistics);
+        false, replication, blockSize, progress, 
+        bufferSize, null), statistics);
   }
 
   @Override
@@ -310,10 +315,9 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /**
-   * THIS IS DFS only operations, it is not part of FileSystem
-   * move blocks from srcs to trg
+   * Move blocks from srcs to trg
    * and delete srcs afterwards
-   * all blocks should be the same size
+   * RESTRICTION: all blocks should be the same size
    * @param trg existing file to append to
    * @param psrcs list of files (same block size, same replication)
    * @throws IOException
@@ -509,14 +513,32 @@ public class DistributedFileSystem extends FileSystem {
   }
   
   /**
-   * Create a directory with given name and permission, only when
-   * parent directory exists.
+   * Create a directory, only when the parent directories exist.
+   *
+   * See {@link FsPermission#applyUMask(FsPermission)} for details of how
+   * the permission is applied.
+   *
+   * @param f           The path to create
+   * @param permission  The permission.  See FsPermission#applyUMask for 
+   *                    details about how this is used to calculate the
+   *                    effective permission.
    */
   public boolean mkdir(Path f, FsPermission permission) throws IOException {
     statistics.incrementWriteOps(1);
     return dfs.mkdirs(getPathName(f), permission, false);
   }
 
+  /**
+   * Create a directory and its parent directories.
+   *
+   * See {@link FsPermission#applyUMask(FsPermission)} for details of how
+   * the permission is applied.
+   *
+   * @param f           The path to create
+   * @param permission  The permission.  See FsPermission#applyUMask for 
+   *                    details about how this is used to calculate the
+   *                    effective permission.
+   */
   @Override
   public boolean mkdirs(Path f, FsPermission permission) throws IOException {
     statistics.incrementWriteOps(1);
@@ -547,9 +569,8 @@ public class DistributedFileSystem extends FileSystem {
     return "DFS[" + dfs + "]";
   }
 
-  /** @deprecated DFSClient should not be accessed directly. */
   @InterfaceAudience.Private
-  @Deprecated
+  @VisibleForTesting
   public DFSClient getClient() {
     return dfs;
   }        
@@ -653,11 +674,27 @@ public class DistributedFileSystem extends FileSystem {
    * Enter, leave or get safe mode.
    *  
    * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(
-   *    HdfsConstants.SafeModeAction)
+   *    HdfsConstants.SafeModeAction,boolean)
    */
   public boolean setSafeMode(HdfsConstants.SafeModeAction action) 
   throws IOException {
-    return dfs.setSafeMode(action);
+    return setSafeMode(action, false);
+  }
+
+  /**
+   * Enter, leave or get safe mode.
+   * 
+   * @param action
+   *          One of SafeModeAction.ENTER, SafeModeAction.LEAVE and
+   *          SafeModeAction.GET
+   * @param isChecked
+   *          If true check only for Active NNs status, else check first NN's
+   *          status
+   * @see org.apache.hadoop.hdfs.protocol.ClientProtocol#setSafeMode(SafeModeAction, boolean)
+   */
+  public boolean setSafeMode(HdfsConstants.SafeModeAction action,
+      boolean isChecked) throws IOException {
+    return dfs.setSafeMode(action, isChecked);
   }
 
   /**
@@ -751,7 +788,7 @@ public class DistributedFileSystem extends FileSystem {
     }
     DatanodeInfo[] dataNode = {dfsIn.getCurrentDatanode()}; 
     lblocks[0] = new LocatedBlock(dataBlock, dataNode);
-    LOG.info("Found checksum error in data stream at block="
+    LOG.info("Found checksum error in data stream at "
         + dataBlock + " on datanode="
         + dataNode[0]);
 
@@ -764,7 +801,7 @@ public class DistributedFileSystem extends FileSystem {
     }
     DatanodeInfo[] sumsNode = {dfsSums.getCurrentDatanode()}; 
     lblocks[1] = new LocatedBlock(sumsBlock, sumsNode);
-    LOG.info("Found checksum error in checksum stream at block="
+    LOG.info("Found checksum error in checksum stream at "
         + sumsBlock + " on datanode=" + sumsNode[0]);
 
     // Ask client to delete blocks.
@@ -852,14 +889,6 @@ public class DistributedFileSystem extends FileSystem {
     return getDelegationToken(renewer.toString());
   }
   
-  @Override // FileSystem
-  public List<Token<?>> getDelegationTokens(String renewer) throws IOException {
-    List<Token<?>> tokenList = new ArrayList<Token<?>>();
-    Token<DelegationTokenIdentifier> token = this.getDelegationToken(renewer);
-    tokenList.add(token);
-    return tokenList;
-  }
-
   /**
    * Renew an existing delegation token.
    * 
@@ -915,14 +944,43 @@ public class DistributedFileSystem extends FileSystem {
   public String getCanonicalServiceName() {
     return dfs.getCanonicalServiceName();
   }
+  
+  @Override
+  protected URI canonicalizeUri(URI uri) {
+    if (HAUtil.isLogicalUri(getConf(), uri)) {
+      // Don't try to DNS-resolve logical URIs, since the 'authority'
+      // portion isn't a proper hostname
+      return uri;
+    } else {
+      return NetUtils.getCanonicalUri(uri, getDefaultPort());
+    }
+  }
 
   /**
-   * Utility function that returns if the NameNode is in safemode or not.
-   *
+   * Utility function that returns if the NameNode is in safemode or not. In HA
+   * mode, this API will return only ActiveNN's safemode status.
+   * 
    * @return true if NameNode is in safemode, false otherwise.
-   * @throws IOException when there is an issue communicating with the NameNode
+   * @throws IOException
+   *           when there is an issue communicating with the NameNode
    */
   public boolean isInSafeMode() throws IOException {
-    return setSafeMode(SafeModeAction.SAFEMODE_GET);
+    return setSafeMode(SafeModeAction.SAFEMODE_GET, true);
   }
+ 
+  /**
+   * Get the close status of a file
+   * @param src The path to the file
+   *
+   * @return return true if file is closed
+   * @throws FileNotFoundException if the file does not exist.
+   * @throws IOException If an I/O error occurred     
+   * @throws UnsupportedOperationException if the HDFS cluster this client is
+   *          connecting to is running an older version which does not support
+   *          this feature.
+   */
+  public boolean isFileClosed(Path src) throws IOException {
+    return dfs.isFileClosed(getPathName(src));
+  }
+  
 }

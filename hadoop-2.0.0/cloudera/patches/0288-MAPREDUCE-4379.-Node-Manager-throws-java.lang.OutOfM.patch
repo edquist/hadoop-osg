@@ -1,7 +1,7 @@
 From 05c2c18a2d558065de97b32f942ff12a9c8b4b22 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Fri, 6 Jul 2012 17:19:13 +0000
-Subject: [PATCH 288/545] MAPREDUCE-4379. Node Manager throws java.lang.OutOfMemoryError: Java heap space due to org.apache.hadoop.fs.LocalDirAllocator.contexts (Devaraj K via bobby)
+Subject: [PATCH 0288/1612] MAPREDUCE-4379. Node Manager throws java.lang.OutOfMemoryError: Java heap space due to org.apache.hadoop.fs.LocalDirAllocator.contexts (Devaraj K via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1358305 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b4a2bddd57ce7c76105d9b76e28697d237d52c08)

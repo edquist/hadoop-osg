@@ -72,7 +72,7 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private static final Pattern CPU_TIME_FORMAT =
     Pattern.compile("^cpu[ \t]*([0-9]*)" +
     		            "[ \t]*([0-9]*)[ \t]*([0-9]*)[ \t].*");
-  
+
   private String procfsMemFile;
   private String procfsCpuFile;
   private String procfsStatFile;
@@ -91,11 +91,10 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   private float cpuUsage = UNAVAILABLE;
   private long sampleTime = UNAVAILABLE;
   private long lastSampleTime = UNAVAILABLE;
-  private ProcfsBasedProcessTree pTree = null;
 
   boolean readMemInfoFile = false;
   boolean readCpuInfoFile = false;
-  
+
   /**
    * Get current time
    * @return Unix time stamp in millisecond
@@ -103,16 +102,14 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
   long getCurrentTime() {
     return System.currentTimeMillis();
   }
-  
+
   public LinuxResourceCalculatorPlugin() {
     procfsMemFile = PROCFS_MEMFILE;
     procfsCpuFile = PROCFS_CPUINFO;
     procfsStatFile = PROCFS_STAT;
     jiffyLengthInMillis = ProcfsBasedProcessTree.JIFFY_LENGTH_IN_MILLIS;
-    String pid = System.getenv().get("JVM_PID");
-    pTree = new ProcfsBasedProcessTree(pid);
   }
-  
+
   /**
    * Constructor which allows assigning the /proc/ directories. This will be
    * used only in unit tests
@@ -129,8 +126,6 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
     this.procfsCpuFile = procfsCpuFile;
     this.procfsStatFile = procfsStatFile;
     this.jiffyLengthInMillis = jiffyLengthInMillis;
-    String pid = System.getenv().get("JVM_PID");
-    pTree = new ProcfsBasedProcessTree(pid);
   }
 
   /**
@@ -399,14 +394,5 @@ public class LinuxResourceCalculatorPlugin extends ResourceCalculatorPlugin {
       // do nothing
     }
     System.out.println("CPU usage % : " + plugin.getCpuUsage());
-  }
-
-  @Override
-  public ProcResourceValues getProcResourceValues() {
-    pTree = pTree.getProcessTree();
-    long cpuTime = pTree.getCumulativeCpuTime();
-    long pMem = pTree.getCumulativeRssmem();
-    long vMem = pTree.getCumulativeVmem();
-    return new ProcResourceValues(cpuTime, pMem, vMem);
   }
 }

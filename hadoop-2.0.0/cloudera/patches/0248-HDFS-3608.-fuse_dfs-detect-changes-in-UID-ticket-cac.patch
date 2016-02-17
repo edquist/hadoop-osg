@@ -1,7 +1,7 @@
 From 20d17fe5eb7cb72dad351f666f2164293bc76eb9 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 20 Jul 2012 19:15:52 +0000
-Subject: [PATCH 248/545] HDFS-3608. fuse_dfs: detect changes in UID ticket cache. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0248/1612] HDFS-3608. fuse_dfs: detect changes in UID ticket cache. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363904 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit df354a430936cae62a08cbb2ac191ca6695fc6a7)

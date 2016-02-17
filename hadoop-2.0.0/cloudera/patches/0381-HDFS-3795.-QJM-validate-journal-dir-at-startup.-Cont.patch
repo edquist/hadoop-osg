@@ -1,7 +1,7 @@
 From a6a7d70afc6d32df24f81f072f03fb6827c94e78 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 15 Aug 2012 00:52:24 +0000
-Subject: [PATCH 381/545] HDFS-3795. QJM: validate journal dir at startup. Contributed by Todd Lipcon.
+Subject: [PATCH 0381/1612] HDFS-3795. QJM: validate journal dir at startup. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1373178 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2c199eef8c87a9e972100b018a4b3b519ec6b8cd)

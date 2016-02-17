@@ -1,7 +1,7 @@
 From f9f7cae05125e6a75683c5faea31a9a34bb55fca Mon Sep 17 00:00:00 2001
 From: Aaron T. Myers <atm@cloudera.com>
 Date: Fri, 11 May 2012 02:09:09 -0400
-Subject: [PATCH 038/545] HDFS-3026. HA: Handle failure during HA state transition. Contributed by Aaron T. Myers.
+Subject: [PATCH 0038/1612] HDFS-3026. HA: Handle failure during HA state transition. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1337031 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a447ccb61cc78dafe6a6a23ca251fc9943ca10e0)

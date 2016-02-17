@@ -1,7 +1,7 @@
 From e08dedf8eec9f13b11904946f2c8906fcfcdcbfc Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Mon, 14 May 2012 20:56:12 -0700
-Subject: [PATCH 047/545] Revert HDFS-3157 Error in deleting block is keep on coming from DN even after the block report and directory scanning has happened.
+Subject: [PATCH 0047/1612] Revert HDFS-3157 Error in deleting block is keep on coming from DN even after the block report and directory scanning has happened.
 
 This patch broke some tests and had potential for data loss. It is also reverted upstream.
 

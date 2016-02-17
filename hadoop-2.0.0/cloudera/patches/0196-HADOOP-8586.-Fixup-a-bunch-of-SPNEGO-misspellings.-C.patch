@@ -1,7 +1,7 @@
 From 481ed9e36cfe12188c4395e03f72411a9617d251 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 11 Jul 2012 08:14:46 +0000
-Subject: [PATCH 196/545] HADOOP-8586. Fixup a bunch of SPNEGO misspellings. Contributed by Eli Collins
+Subject: [PATCH 0196/1612] HADOOP-8586. Fixup a bunch of SPNEGO misspellings. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1360053 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit be601739e93efd59f5350b2409bfe88526794c63)

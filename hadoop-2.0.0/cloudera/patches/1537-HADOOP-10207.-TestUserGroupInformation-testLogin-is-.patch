@@ -1,0 +1,27 @@
+From 1d1791e0f891789141b5d35cce1a7b3322ed2de6 Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Wed, 8 Jan 2014 23:28:18 +0000
+Subject: [PATCH 1537/1612] HADOOP-10207. TestUserGroupInformation#testLogin is flaky (jxiang via cmccabe)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1556670 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 90aeadc90163898cc85194e923c50702d59ee541)
+---
+ .../hadoop/security/TestUserGroupInformation.java  |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/security/TestUserGroupInformation.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/security/TestUserGroupInformation.java
+index 526009b..e575954 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/security/TestUserGroupInformation.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/security/TestUserGroupInformation.java
+@@ -529,7 +529,7 @@ public class TestUserGroupInformation {
+       long groups) throws InterruptedException {
+     MetricsRecordBuilder rb = getMetrics("UgiMetrics");
+     if (groups > 0) {
+-      assertCounter("GetGroupsNumOps", groups, rb);
++      assertCounterGt("GetGroupsNumOps", groups-1, rb);
+       double avg = getDoubleGauge("GetGroupsAvgTime", rb);
+       assertTrue(avg >= 0.0);
+ 
+-- 
+1.7.0.4
+

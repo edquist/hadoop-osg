@@ -34,7 +34,9 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
+import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.URI;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -50,8 +52,10 @@ import junit.framework.Assert;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.AbstractFileSystem;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
+import org.apache.hadoop.fs.Options.ChecksumOpt;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.fs.permission.FsPermission;
 import org.apache.hadoop.io.DataOutputBuffer;
@@ -95,6 +99,8 @@ import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.even
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.localizer.event.LocalizerEventType;
 import org.apache.hadoop.yarn.util.BuilderUtils;
 import org.apache.hadoop.yarn.util.ConverterUtils;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.mockito.ArgumentCaptor;
@@ -105,29 +111,43 @@ public class TestResourceLocalizationService {
   static final Path basedir =
       new Path("target", TestResourceLocalizationService.class.getName());
   static Server mockServer;
+
+  private Configuration conf;
+  private AbstractFileSystem spylfs;
+  private FileContext lfs;
   
   @BeforeClass
-  public static void setup() {
+  public static void setupClass() {
     mockServer = mock(Server.class);
     doReturn(new InetSocketAddress(123)).when(mockServer).getListenerAddress();
+  }
+
+  @Before
+  public void setup() throws IOException {
+    conf = new Configuration();
+    spylfs = spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
+    lfs = FileContext.getFileContext(spylfs, conf);
+    doNothing().when(spylfs).mkdir(
+        isA(Path.class), isA(FsPermission.class), anyBoolean());
+    String logDir = lfs.makeQualified(new Path(basedir, "logdir ")).toString();
+    conf.set(YarnConfiguration.NM_LOG_DIRS, logDir);
+  }
+
+  @After
+  public void cleanup() {
+    conf = null;
   }
   
   @Test
   public void testLocalizationInit() throws Exception {
-    final Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
     AsyncDispatcher dispatcher = new AsyncDispatcher();
     dispatcher.init(new Configuration());
 
     ContainerExecutor exec = mock(ContainerExecutor.class);
     DeletionService delService = spy(new DeletionService(exec));
-    delService.init(new Configuration());
+    delService.init(conf);
     delService.start();
-
-    AbstractFileSystem spylfs =
-      spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-    FileContext lfs = FileContext.getFileContext(spylfs, conf);
-    doNothing().when(spylfs).mkdir(
-        isA(Path.class), isA(FsPermission.class), anyBoolean());
 
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[4];
@@ -136,6 +156,7 @@ public class TestResourceLocalizationService {
       sDirs[i] = localDirs.get(i).toString();
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
+
     LocalDirsHandlerService diskhandler = new LocalDirsHandlerService();
     diskhandler.init(conf);
 
@@ -150,14 +171,19 @@ public class TestResourceLocalizationService {
       // initialize ResourceLocalizationService
       locService.init(conf);
 
+      final FsPermission defaultPerm = new FsPermission((short)0755);
+
       // verify directory creation
       for (Path p : localDirs) {
+        p = new Path((new URI(p.toString())).getPath());
         Path usercache = new Path(p, ContainerLocalizer.USERCACHE);
         verify(spylfs)
-          .mkdir(eq(usercache), isA(FsPermission.class), eq(true));
+          .mkdir(eq(usercache),
+              eq(defaultPerm), eq(true));
         Path publicCache = new Path(p, ContainerLocalizer.FILECACHE);
         verify(spylfs)
-          .mkdir(eq(publicCache), isA(FsPermission.class), eq(true));
+          .mkdir(eq(publicCache),
+              eq(defaultPerm), eq(true));
         Path nmPriv = new Path(p, ResourceLocalizationService.NM_PRIVATE_DIR);
         verify(spylfs).mkdir(eq(nmPriv),
             eq(ResourceLocalizationService.NM_PRIVATE_PERM), eq(true));
@@ -171,13 +197,6 @@ public class TestResourceLocalizationService {
   @Test
   @SuppressWarnings("unchecked") // mocked generics
   public void testResourceRelease() throws Exception {
-    Configuration conf = new YarnConfiguration();
-    AbstractFileSystem spylfs =
-      spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-    final FileContext lfs = FileContext.getFileContext(spylfs, conf);
-    doNothing().when(spylfs).mkdir(
-        isA(Path.class), isA(FsPermission.class), anyBoolean());
-
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[4];
     for (int i = 0; i < 4; ++i) {
@@ -318,6 +337,8 @@ public class TestResourceLocalizationService {
       
       //Send Cleanup Event
       spyService.handle(new ContainerLocalizationCleanupEvent(c, req));
+      verify(mockLocallilzerTracker)
+        .cleanupPrivLocalizers("container_314159265358979_0003_01_000042");
       req2.remove(LocalResourceVisibility.PRIVATE);
       spyService.handle(new ContainerLocalizationCleanupEvent(c, req2));
       dispatcher.await();
@@ -358,13 +379,6 @@ public class TestResourceLocalizationService {
   @Test
   @SuppressWarnings("unchecked") // mocked generics
   public void testLocalizationHeartbeat() throws Exception {
-    Configuration conf = new YarnConfiguration();
-    AbstractFileSystem spylfs =
-      spy(FileContext.getLocalFSFileContext().getDefaultFileSystem());
-    final FileContext lfs = FileContext.getFileContext(spylfs, conf);
-    doNothing().when(spylfs).mkdir(
-        isA(Path.class), isA(FsPermission.class), anyBoolean());
-
     List<Path> localDirs = new ArrayList<Path>();
     String[] sDirs = new String[4];
     for (int i = 0; i < 4; ++i) {
@@ -372,7 +386,6 @@ public class TestResourceLocalizationService {
       sDirs[i] = localDirs.get(i).toString();
     }
     conf.setStrings(YarnConfiguration.NM_LOCAL_DIRS, sDirs);
-
     DrainDispatcher dispatcher = new DrainDispatcher();
     dispatcher.init(conf);
     dispatcher.start();
@@ -430,7 +443,7 @@ public class TestResourceLocalizationService {
         new FSDataOutputStream(new DataOutputBuffer(), null);
       doReturn(out).when(spylfs).createInternal(isA(Path.class),
           isA(EnumSet.class), isA(FsPermission.class), anyInt(), anyShort(),
-          anyLong(), isA(Progressable.class), anyInt(), anyBoolean());
+          anyLong(), isA(Progressable.class), isA(ChecksumOpt.class), anyBoolean());
       final LocalResource resource = getPrivateMockedResource(r);
       final LocalResourceRequest req = new LocalResourceRequest(resource);
       Map<LocalResourceVisibility, Collection<LocalResourceRequest>> rsrcs =

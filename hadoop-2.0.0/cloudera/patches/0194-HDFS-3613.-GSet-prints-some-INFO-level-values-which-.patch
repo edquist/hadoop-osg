@@ -1,7 +1,7 @@
 From 23863dea5c50afd73a07a4e4eb517eeb24986b1e Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Wed, 11 Jul 2012 03:15:54 +0000
-Subject: [PATCH 194/545] HDFS-3613. GSet prints some INFO level values, which aren't really very useful to all.
+Subject: [PATCH 0194/1612] HDFS-3613. GSet prints some INFO level values, which aren't really very useful to all.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1360000 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 028183474cb2724954efde140a85a53ec6d4a7e0)

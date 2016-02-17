@@ -1,7 +1,7 @@
 From 90d8e9b305acf4d59c16be4fc88d891f5d3a154f Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Thu, 21 Jun 2012 15:01:35 +0000
-Subject: [PATCH 337/545] MAPREDUCE-4320. gridmix mainClass wrong in pom.xml (tgraves)
+Subject: [PATCH 0337/1612] MAPREDUCE-4320. gridmix mainClass wrong in pom.xml (tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1352550 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 915d1b52fc83787be78c7688ab3bf24dc67d4e46)

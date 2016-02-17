@@ -1,7 +1,7 @@
 From d41357eb0c877d4dac2d91037a700283f3e71af4 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 8 Aug 2012 15:43:26 +0000
-Subject: [PATCH 294/545] HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
+Subject: [PATCH 0294/1612] HADOOP-8660. TestPseudoAuthenticator failing with NPE. (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1370815 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 79d778a7a7911014b499c28c07f794d1dd80d569)

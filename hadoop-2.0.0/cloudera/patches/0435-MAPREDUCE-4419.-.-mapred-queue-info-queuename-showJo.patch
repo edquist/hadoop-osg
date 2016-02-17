@@ -1,7 +1,7 @@
 From f96c3dcd35fa6e645d3b2746aa108d33d26818ed Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Fri, 13 Jul 2012 20:42:48 +0000
-Subject: [PATCH 435/545] MAPREDUCE-4419. ./mapred queue -info <queuename> -showJobs displays all the jobs irrespective of <queuename> (Devaraj K via bobby)
+Subject: [PATCH 0435/1612] MAPREDUCE-4419. ./mapred queue -info <queuename> -showJobs displays all the jobs irrespective of <queuename> (Devaraj K via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1361389 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 154ec3828ea3cfd13ad020fd4f84f37dc8a4ffa2)

@@ -169,6 +169,11 @@ public class WrappedMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     }
 
     @Override
+    public RawComparator<?> getCombinerKeyGroupingComparator() {
+      return mapContext.getCombinerKeyGroupingComparator();
+    }
+
+    @Override
     public RawComparator<?> getGroupingComparator() {
       return mapContext.getGroupingComparator();
     }
@@ -192,6 +197,11 @@ public class WrappedMapper<KEYIN, VALUEIN, KEYOUT, VALUEOUT>
     @Override
     public String getJobName() {
       return mapContext.getJobName();
+    }
+
+    @Override
+    public boolean userClassesTakesPrecedence() {
+      return mapContext.userClassesTakesPrecedence();
     }
 
     @Override

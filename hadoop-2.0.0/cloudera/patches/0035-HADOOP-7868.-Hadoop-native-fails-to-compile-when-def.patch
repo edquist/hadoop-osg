@@ -1,7 +1,7 @@
 From 4455b9c4e747e206a44383acd3e78d03990415b1 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 10 May 2012 06:16:01 +0000
-Subject: [PATCH 035/545] HADOOP-7868. Hadoop native fails to compile when default linker option is -Wl,--as-needed. Contributed by Trevor Robinson
+Subject: [PATCH 0035/1612] HADOOP-7868. Hadoop native fails to compile when default linker option is -Wl,--as-needed. Contributed by Trevor Robinson
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336491 13f79535-47bb-0310-9956-ffa450edef68
 ---

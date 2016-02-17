@@ -1,7 +1,7 @@
 From fee67255400b8d7dd7392b6d69bf64a0ecaffbe1 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Fri, 6 Jul 2012 13:38:11 +0000
-Subject: [PATCH 438/545] MAPREDUCE-4387. RM gets fatal error and exits during TestRM (Kihwal Lee via tgraves)
+Subject: [PATCH 0438/1612] MAPREDUCE-4387. RM gets fatal error and exits during TestRM (Kihwal Lee via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1358201 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 98fc217bb65e38ecb4140806f6aa2c5d721e4a1f)

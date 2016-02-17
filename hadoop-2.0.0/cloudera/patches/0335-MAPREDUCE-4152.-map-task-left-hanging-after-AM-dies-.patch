@@ -1,7 +1,7 @@
 From 6a8debc2ef8bd72eda01c681105d1b46ad705d1d Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Wed, 30 May 2012 14:48:53 +0000
-Subject: [PATCH 335/545] MAPREDUCE-4152. map task left hanging after AM dies trying to connect to RM (Tom Graves via bobby)
+Subject: [PATCH 0335/1612] MAPREDUCE-4152. map task left hanging after AM dies trying to connect to RM (Tom Graves via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1344283 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d7ada821aeef1198416a0fba6654b1e4caf59053)

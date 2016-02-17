@@ -1,7 +1,7 @@
 From 27c40ca59b54ed34e5ec0cde7b0da9ecac90346a Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Tue, 10 Jul 2012 18:31:25 +0000
-Subject: [PATCH 198/545] HDFS-3568. fuse_dfs: add support for security. Contributed by Colin McCabe.
+Subject: [PATCH 0198/1612] HDFS-3568. fuse_dfs: add support for security. Contributed by Colin McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1359826 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ed8dc0e96c80f36e93802e501ca677ae6eccfb34)

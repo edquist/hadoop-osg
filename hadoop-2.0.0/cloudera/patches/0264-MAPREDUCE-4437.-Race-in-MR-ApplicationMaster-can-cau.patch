@@ -1,7 +1,7 @@
 From 7aa69a29d84fbde79b2afcb3b38e7f365fa50bb3 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Mon, 16 Jul 2012 19:11:08 +0000
-Subject: [PATCH 264/545] MAPREDUCE-4437. Race in MR ApplicationMaster can cause reducers to never be scheduled (Jason Lowe via bobby)
+Subject: [PATCH 0264/1612] MAPREDUCE-4437. Race in MR ApplicationMaster can cause reducers to never be scheduled (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362209 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 642c6e6e00617cba467b0aa92dd2367e343e3467)

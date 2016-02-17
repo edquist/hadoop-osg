@@ -1,7 +1,7 @@
 From c14dfaf0ad520156aa62d35d27228121b62db0c9 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Tue, 29 May 2012 14:12:17 +0000
-Subject: [PATCH 150/545] HADOOP-8444. Fix the tests FSMainOperationsBaseTest.java and FileContextMainOperationsBaseTest.java to avoid potential test failure. Contributed by Madhukara Phatak. (harsh)
+Subject: [PATCH 0150/1612] HADOOP-8444. Fix the tests FSMainOperationsBaseTest.java and FileContextMainOperationsBaseTest.java to avoid potential test failure. Contributed by Madhukara Phatak. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1343732 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b0fa24b64b667ebf12fde8889f965c3f5a8263bd)

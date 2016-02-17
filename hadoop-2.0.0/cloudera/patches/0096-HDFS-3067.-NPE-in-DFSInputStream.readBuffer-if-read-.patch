@@ -1,7 +1,7 @@
 From 596f899b87bea0317f0143215ac4426903a9e29f Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Thu, 15 Mar 2012 20:26:29 +0000
-Subject: [PATCH 096/545] HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on corrupted block. Contributed by Henry Robinson.
+Subject: [PATCH 0096/1612] HDFS-3067. NPE in DFSInputStream.readBuffer if read is repeated on corrupted block. Contributed by Henry Robinson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1301182 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f36bac8b7873d4e45fda6dfebedff04456d667b2)

@@ -164,6 +164,16 @@ public class JobContextImpl implements JobContext {
   }
 
   /**
+   * Get the boolean value for the property that specifies which classpath
+   * takes precedence when tasks are launched. True - user's classes takes
+   * precedence. False - system's classes takes precedence.
+   * @return true if user's classes should take precedence
+   */
+  public boolean userClassesTakesPrecedence() {
+    return conf.userClassesTakesPrecedence();
+  }
+
+  /**
    * Get the {@link InputFormat} class for the job.
    * 
    * @return the {@link InputFormat} class for the job.
@@ -250,6 +260,17 @@ public class JobContextImpl implements JobContext {
    */
   public String getJar() {
     return conf.getJar();
+  }
+
+  /**
+   * Get the user defined {@link RawComparator} comparator for
+   * grouping keys of inputs to the combiner.
+   *
+   * @return comparator set by the user for grouping values.
+   * @see Job#setCombinerKeyGroupingComparatorClass(Class) for details.
+   */
+  public RawComparator<?> getCombinerKeyGroupingComparator() {
+    return conf.getCombinerKeyGroupingComparator();
   }
 
   /** 

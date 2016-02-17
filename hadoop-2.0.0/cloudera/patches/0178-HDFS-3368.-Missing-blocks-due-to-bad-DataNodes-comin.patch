@@ -1,7 +1,7 @@
 From 4934943a2a8709cd0fcdd8e05f12493df8234169 Mon Sep 17 00:00:00 2001
 From: Konstantin Shvachko <shv@apache.org>
 Date: Fri, 25 May 2012 06:29:17 +0000
-Subject: [PATCH 178/545] HDFS-3368. Missing blocks due to bad DataNodes coming up and down.
+Subject: [PATCH 0178/1612] HDFS-3368. Missing blocks due to bad DataNodes coming up and down.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1342512 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5b66d56cf7f5bf6470edcafef8d559e2792ac978)

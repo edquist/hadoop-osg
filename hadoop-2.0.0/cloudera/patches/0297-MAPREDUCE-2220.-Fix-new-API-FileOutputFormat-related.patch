@@ -1,7 +1,7 @@
 From 17d69d6db94db0d3f1e341b4ebee35c98fc0da72 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Sun, 8 Jul 2012 17:23:40 +0000
-Subject: [PATCH 297/545] MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in mapred-default.xml. Contributed by Rui Kubo. (harsh)
+Subject: [PATCH 0297/1612] MAPREDUCE-2220. Fix new API FileOutputFormat-related typos in mapred-default.xml. Contributed by Rui Kubo. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1358788 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d2faec2f8d917551f90d336d9b777f5c15615c23)

@@ -1,7 +1,7 @@
 From dd67aa451fde31181d6681bbb88abc963caa428c Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@cloudera.com>
 Date: Thu, 10 May 2012 20:18:06 -0700
-Subject: [PATCH 037/545] HDFS-3400. DNs should be able start with jsvc even if security is disabled. Contributed by Aaron T. Myers
+Subject: [PATCH 0037/1612] HDFS-3400. DNs should be able start with jsvc even if security is disabled. Contributed by Aaron T. Myers
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1337017 13f79535-47bb-0310-9956-ffa450edef68
 ---

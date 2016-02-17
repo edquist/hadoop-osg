@@ -1,7 +1,7 @@
 From 4ffbe40c8b091ced9ea0d30548836d13175b6c9c Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 10 May 2012 17:58:55 +0000
-Subject: [PATCH 169/545] HDFS-3230. Cleanup DatanodeID creation in the tests. Contributed by Eli Collins
+Subject: [PATCH 0169/1612] HDFS-3230. Cleanup DatanodeID creation in the tests. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336815 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit fbfd7730e9bfba738a9e03d0816a5f5139a23ae3)

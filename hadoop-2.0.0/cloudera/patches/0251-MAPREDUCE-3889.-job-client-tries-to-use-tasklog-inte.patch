@@ -1,7 +1,7 @@
 From 9feb901f2ab794ebb37f708a4b8499eb37e18e8a Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Wed, 20 Jun 2012 21:22:33 +0000
-Subject: [PATCH 251/545] MAPREDUCE-3889. job client tries to use /tasklog interface, but that doesn't exist anymore (Devaraj K via bobby)
+Subject: [PATCH 0251/1612] MAPREDUCE-3889. job client tries to use /tasklog interface, but that doesn't exist anymore (Devaraj K via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1352330 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit fc93b5adb9bdd73df398d4ed8c983b28f8b73102)

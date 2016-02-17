@@ -1,7 +1,7 @@
 From 4a60a891645e6643ada7ee4a68e2770ace88ae70 Mon Sep 17 00:00:00 2001
 From: Daryn Sharp <daryn@apache.org>
 Date: Tue, 3 Jul 2012 20:28:30 +0000
-Subject: [PATCH 236/545] HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
+Subject: [PATCH 0236/1612] HADOOP-8110. Fix trash checkpoint collisions (Jason Lowe via daryn)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1356918 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit aaa9b37e9beba285baa9cff20d06bd5f5e0c710b)

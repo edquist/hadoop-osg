@@ -160,6 +160,11 @@ class ChainReduceContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
   }
 
   @Override
+  public RawComparator<?> getCombinerKeyGroupingComparator() {
+    return base.getCombinerKeyGroupingComparator();
+  }
+
+  @Override
   public RawComparator<?> getGroupingComparator() {
     return base.getGroupingComparator();
   }
@@ -183,6 +188,11 @@ class ChainReduceContextImpl<KEYIN, VALUEIN, KEYOUT, VALUEOUT> implements
   @Override
   public String getJobName() {
     return base.getJobName();
+  }
+
+  @Override
+  public boolean userClassesTakesPrecedence() {
+    return base.userClassesTakesPrecedence();
   }
 
   @Override

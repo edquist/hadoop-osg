@@ -91,7 +91,7 @@ public class TestNMWebServicesContainers extends JerseyTest {
   private Injector injector = Guice.createInjector(new ServletModule() {
     @Override
     protected void configureServlets() {
-      nmContext = new NodeManager.NMContext();
+      nmContext = new NodeManager.NMContext(null);
       nmContext.getNodeId().setHost("testhost.foo.com");
       nmContext.getNodeId().setPort(8042);
       resourceView = new ResourceView() {
@@ -105,6 +105,16 @@ public class TestNMWebServicesContainers extends JerseyTest {
         public long getPmemAllocatedForContainers() {
           // 16G in bytes
           return new Long("17179869184");
+        }
+
+        @Override
+        public boolean isVmemCheckEnabled() {
+          return true;
+        }
+
+        @Override
+        public boolean isPmemCheckEnabled() {
+          return true;
         }
       };
       conf.set(YarnConfiguration.NM_LOCAL_DIRS, testRootDir.getAbsolutePath());

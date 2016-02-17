@@ -1,0 +1,193 @@
+From 9fa6eccbac70bc819b9f3bafa7bdc6b8a4f9ee8d Mon Sep 17 00:00:00 2001
+From: Daryn Sharp <daryn@apache.org>
+Date: Thu, 5 Dec 2013 15:35:48 +0000
+Subject: [PATCH 1596/1612] svn merge -c 1548161 FIXES: HDFS-5514. FSNamesystem's fsLock should allow custom implementation (daryn)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1548168 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 20634e80569e47a525a53d0cac7f3ba51bb69dee)
+---
+ .../hadoop/hdfs/server/namenode/FSNamesystem.java  |    9 ++-
+ .../hdfs/server/namenode/FSNamesystemLock.java     |   61 ++++++++++++++++++++
+ .../hdfs/server/namenode/TestFSNamesystem.java     |   54 +++++++++++++++++
+ 3 files changed, 121 insertions(+), 3 deletions(-)
+ create mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystemLock.java
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+index 5489701..6b27783 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+@@ -408,7 +408,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+   private final long accessTimePrecision;
+ 
+   /** Lock to protect FSNamesystem. */
+-  private ReentrantReadWriteLock fsLock = new ReentrantReadWriteLock(true);
++  private FSNamesystemLock fsLock;
+ 
+   /**
+    * Used when this NN is in standby state to read from the shared edit log.
+@@ -549,6 +549,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+    * @throws IOException on bad configuration
+    */
+   FSNamesystem(Configuration conf, FSImage fsImage) throws IOException {
++    boolean fair = conf.getBoolean("dfs.namenode.fslock.fair", true);
++    LOG.info("fsLock is fair:" + fair);
++    fsLock = new FSNamesystemLock(fair);
+     try {
+       resourceRecheckInterval = conf.getLong(
+           DFS_NAMENODE_RESOURCE_CHECK_INTERVAL_KEY,
+@@ -5852,12 +5855,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+   
+   @VisibleForTesting
+   void setFsLockForTests(ReentrantReadWriteLock lock) {
+-    this.fsLock = lock;
++    this.fsLock.coarseLock = lock;
+   }
+   
+   @VisibleForTesting
+   ReentrantReadWriteLock getFsLockForTests() {
+-    return fsLock;
++    return fsLock.coarseLock;
+   }
+ 
+   @VisibleForTesting
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystemLock.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystemLock.java
+new file mode 100644
+index 0000000..a2a1648
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystemLock.java
+@@ -0,0 +1,61 @@
++
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package org.apache.hadoop.hdfs.server.namenode;
++
++import java.util.concurrent.locks.Lock;
++import java.util.concurrent.locks.ReadWriteLock;
++import java.util.concurrent.locks.ReentrantReadWriteLock;
++
++import com.google.common.annotations.VisibleForTesting;
++
++/**
++ * Mimics a ReentrantReadWriteLock so more sophisticated locking capabilities
++ * are possible.
++ */
++class FSNamesystemLock implements ReadWriteLock {
++  @VisibleForTesting
++  protected ReentrantReadWriteLock coarseLock;
++  
++  FSNamesystemLock(boolean fair) {
++    this.coarseLock = new ReentrantReadWriteLock(fair);
++  }
++  
++  @Override
++  public Lock readLock() {
++    return coarseLock.readLock();
++  }
++  
++  @Override
++  public Lock writeLock() {
++    return coarseLock.writeLock();
++  }
++  
++  public int getReadHoldCount() {
++    return coarseLock.getReadHoldCount();
++  }
++  
++  public int getWriteHoldCount() {
++    return coarseLock.getWriteHoldCount();
++  }
++  
++  public boolean isWriteLockedByCurrentThread() {
++    return coarseLock.isWriteLockedByCurrentThread();
++  }
++}
+\ No newline at end of file
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
+index 3434621..111e58f 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
+@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
+ 
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
+ import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertFalse;
+ import static org.junit.Assert.assertTrue;
+ 
+ import java.io.IOException;
+@@ -130,4 +131,57 @@ public class TestFSNamesystem {
+     assertTrue("Replication queues weren't being populated after entering "
+       + "safemode 2nd time", fsn.isPopulatingReplQueues());
+   }
++  
++  @Test
++  public void testFsLockFairness() throws IOException, InterruptedException{
++    Configuration conf = new Configuration();
++
++    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
++    FSImage fsImage = Mockito.mock(FSImage.class);
++    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
++
++    conf.setBoolean("dfs.namenode.fslock.fair", true);
++    FSNamesystem fsNamesystem = new FSNamesystem(conf, fsImage);
++    assertTrue(fsNamesystem.getFsLockForTests().isFair());
++    
++    conf.setBoolean("dfs.namenode.fslock.fair", false);
++    fsNamesystem = new FSNamesystem(conf, fsImage);
++    assertFalse(fsNamesystem.getFsLockForTests().isFair());
++  }  
++  
++  @Test
++  public void testFSNamesystemLockCompatibility() {
++    FSNamesystemLock rwLock = new FSNamesystemLock(true);
++
++    assertEquals(0, rwLock.getReadHoldCount());
++    rwLock.readLock().lock();
++    assertEquals(1, rwLock.getReadHoldCount());
++
++    rwLock.readLock().lock();
++    assertEquals(2, rwLock.getReadHoldCount());
++
++    rwLock.readLock().unlock();
++    assertEquals(1, rwLock.getReadHoldCount());
++
++    rwLock.readLock().unlock();
++    assertEquals(0, rwLock.getReadHoldCount());
++
++    assertFalse(rwLock.isWriteLockedByCurrentThread());
++    assertEquals(0, rwLock.getWriteHoldCount());
++    rwLock.writeLock().lock();
++    assertTrue(rwLock.isWriteLockedByCurrentThread());
++    assertEquals(1, rwLock.getWriteHoldCount());
++    
++    rwLock.writeLock().lock();
++    assertTrue(rwLock.isWriteLockedByCurrentThread());
++    assertEquals(2, rwLock.getWriteHoldCount());
++
++    rwLock.writeLock().unlock();
++    assertTrue(rwLock.isWriteLockedByCurrentThread());
++    assertEquals(1, rwLock.getWriteHoldCount());
++
++    rwLock.writeLock().unlock();
++    assertFalse(rwLock.isWriteLockedByCurrentThread());
++    assertEquals(0, rwLock.getWriteHoldCount());
++  }
+ }
+-- 
+1.7.0.4
+

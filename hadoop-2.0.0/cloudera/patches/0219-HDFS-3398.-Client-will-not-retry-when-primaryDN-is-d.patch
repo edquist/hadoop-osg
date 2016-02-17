@@ -1,7 +1,7 @@
 From 6f9b4471fe9f7b982a1df6f1a8dd9bc9bd4bc2d4 Mon Sep 17 00:00:00 2001
 From: Uma Maheswara Rao G <umamahesh@apache.org>
 Date: Tue, 29 May 2012 19:43:41 +0000
-Subject: [PATCH 219/545] HDFS-3398. Client will not retry when primaryDN is down once it's just got pipeline.
+Subject: [PATCH 0219/1612] HDFS-3398. Client will not retry when primaryDN is down once it's just got pipeline.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1343948 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0dafc2685f3061189dbb439928cbf01cd9f4df08)

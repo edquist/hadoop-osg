@@ -1,7 +1,7 @@
 From 93bd3848b009b7ecbd885fbf755cf487f3fe392e Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 31 Jul 2012 14:46:57 +0000
-Subject: [PATCH 448/545] MAPREDUCE-4456. LocalDistributedCacheManager can get an ArrayIndexOutOfBounds when creating symlinks (Robert Evans via tgraves)
+Subject: [PATCH 0448/1612] MAPREDUCE-4456. LocalDistributedCacheManager can get an ArrayIndexOutOfBounds when creating symlinks (Robert Evans via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367581 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 9cda74eb1bab454e1eee357f6141af8bba8769e8)

@@ -18,11 +18,7 @@
 
 package org.apache.hadoop.yarn.applications.distributedshell;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -44,20 +40,8 @@ import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.yarn.api.ApplicationConstants;
 import org.apache.hadoop.yarn.api.ClientRMProtocol;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetApplicationReportResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterMetricsResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetClusterNodesResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.GetNewApplicationResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueInfoResponse;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.GetQueueUserAclsInfoResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.KillApplicationRequest;
-import org.apache.hadoop.yarn.api.protocolrecords.SubmitApplicationRequest;
 import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.ApplicationReport;
 import org.apache.hadoop.yarn.api.records.ApplicationSubmissionContext;
@@ -73,12 +57,12 @@ import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.QueueUserACLInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.YarnApplicationState;
+import org.apache.hadoop.yarn.api.records.YarnClusterMetrics;
+import org.apache.hadoop.yarn.client.YarnClientImpl;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.exceptions.YarnRemoteException;
-import org.apache.hadoop.yarn.ipc.YarnRPC;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.Records;
-
 
 /**
  * Client for Distributed Shell application submission to YARN.
@@ -113,18 +97,12 @@ import org.apache.hadoop.yarn.util.Records;
  */
 @InterfaceAudience.Public
 @InterfaceStability.Unstable
-public class Client {
+public class Client extends YarnClientImpl {
 
   private static final Log LOG = LogFactory.getLog(Client.class);
 
   // Configuration
   private Configuration conf;
-
-  // RPC to communicate to RM
-  private YarnRPC rpc;
-
-  // Handle to talk to the Resource Manager/Applications Manager
-  private ClientRMProtocol applicationsManager;
 
   // Application master specific info to register a new Application with RM/ASM
   private String appName = "";
@@ -138,7 +116,8 @@ public class Client {
   // Application master jar file
   private String appMasterJar = ""; 
   // Main class to invoke application master
-  private String appMasterMainClass = "";
+  private final String appMasterMainClass =
+      "org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster";
 
   // Shell command to be executed 
   private String shellCommand = ""; 
@@ -168,6 +147,9 @@ public class Client {
   // Debug flag
   boolean debugFlag = false;	
 
+  // Command line options
+  private Options opts;
+
   /**
    * @param args Command line arguments 
    */
@@ -176,9 +158,15 @@ public class Client {
     try {
       Client client = new Client();
       LOG.info("Initializing Client");
-      boolean doRun = client.init(args);
-      if (!doRun) {
-        System.exit(0);
+      try {
+        boolean doRun = client.init(args);
+        if (!doRun) {
+          System.exit(0);
+        }
+      } catch (IllegalArgumentException e) {
+        System.err.println(e.getLocalizedMessage());
+        client.printUsage();
+        System.exit(-1);
       }
       result = client.run();
     } catch (Throwable t) {
@@ -196,22 +184,39 @@ public class Client {
   /**
    */
   public Client(Configuration conf) throws Exception  {
-    // Set up the configuration and RPC
+    super();
     this.conf = conf;
-    rpc = YarnRPC.create(conf);
+    init(conf);
+    opts = new Options();
+    opts.addOption("appname", true, "Application Name. Default value - DistributedShell");
+    opts.addOption("priority", true, "Application Priority. Default 0");
+    opts.addOption("queue", true, "RM Queue in which this application is to be submitted");
+    opts.addOption("timeout", true, "Application timeout in milliseconds");
+    opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
+    opts.addOption("jar", true, "Jar file containing the application master");
+    opts.addOption("shell_command", true, "Shell command to be executed by the Application Master");
+    opts.addOption("shell_script", true, "Location of the shell script to be executed");
+    opts.addOption("shell_args", true, "Command line args for the shell script");
+    opts.addOption("shell_env", true, "Environment for shell script. Specified as env_key=env_val pairs");
+    opts.addOption("shell_cmd_priority", true, "Priority for the shell command containers");
+    opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
+    opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
+    opts.addOption("log_properties", true, "log4j.properties file");
+    opts.addOption("debug", false, "Dump out debug information");
+    opts.addOption("help", false, "Print usage");
   }
 
   /**
    */
   public Client() throws Exception  {
-    this(new Configuration());
+    this(new YarnConfiguration());
   }
 
   /**
    * Helper function to print out usage
    * @param opts Parsed command line options 
    */
-  private void printUsage(Options opts) {
+  private void printUsage() {
     new HelpFormatter().printHelp("Client", opts);
   }
 
@@ -223,33 +228,14 @@ public class Client {
    */
   public boolean init(String[] args) throws ParseException {
 
-    Options opts = new Options();
-    opts.addOption("appname", true, "Application Name. Default value - DistributedShell");
-    opts.addOption("priority", true, "Application Priority. Default 0");
-    opts.addOption("queue", true, "RM Queue in which this application is to be submitted");
-    opts.addOption("timeout", true, "Application timeout in milliseconds");
-    opts.addOption("master_memory", true, "Amount of memory in MB to be requested to run the application master");
-    opts.addOption("jar", true, "Jar file containing the application master");
-    opts.addOption("class", true, "Main class to  be run for the Application Master.");
-    opts.addOption("shell_command", true, "Shell command to be executed by the Application Master");
-    opts.addOption("shell_script", true, "Location of the shell script to be executed");
-    opts.addOption("shell_args", true, "Command line args for the shell script");
-    opts.addOption("shell_env", true, "Environment for shell script. Specified as env_key=env_val pairs");
-    opts.addOption("shell_cmd_priority", true, "Priority for the shell command containers");		
-    opts.addOption("container_memory", true, "Amount of memory in MB to be requested to run the shell command");
-    opts.addOption("num_containers", true, "No. of containers on which the shell command needs to be executed");
-    opts.addOption("log_properties", true, "log4j.properties file");
-    opts.addOption("debug", false, "Dump out debug information");
-    opts.addOption("help", false, "Print usage");
     CommandLine cliParser = new GnuParser().parse(opts, args);
 
     if (args.length == 0) {
-      printUsage(opts);
       throw new IllegalArgumentException("No args specified for client to initialize");
     }		
 
     if (cliParser.hasOption("help")) {
-      printUsage(opts);
+      printUsage();
       return false;
     }
 
@@ -273,8 +259,6 @@ public class Client {
     }		
 
     appMasterJar = cliParser.getOptionValue("jar");
-    appMasterMainClass = cliParser.getOptionValue("class",
-        "org.apache.hadoop.yarn.applications.distributedshell.ApplicationMaster");		
 
     if (!cliParser.hasOption("shell_command")) {
       throw new IllegalArgumentException("No shell command specified to be executed by application master");
@@ -328,22 +312,17 @@ public class Client {
    * @throws IOException
    */
   public boolean run() throws IOException {
-    LOG.info("Starting Client");
 
-    // Connect to ResourceManager 	
-    connectToASM();
-    assert(applicationsManager != null);		
+    LOG.info("Running Client");
+    start();
 
-    // Use ClientRMProtocol handle to general cluster information 
-    GetClusterMetricsRequest clusterMetricsReq = Records.newRecord(GetClusterMetricsRequest.class);
-    GetClusterMetricsResponse clusterMetricsResp = applicationsManager.getClusterMetrics(clusterMetricsReq);
+    YarnClusterMetrics clusterMetrics = super.getYarnClusterMetrics();
     LOG.info("Got Cluster metric info from ASM" 
-        + ", numNodeManagers=" + clusterMetricsResp.getClusterMetrics().getNumNodeManagers());
+        + ", numNodeManagers=" + clusterMetrics.getNumNodeManagers());
 
-    GetClusterNodesRequest clusterNodesReq = Records.newRecord(GetClusterNodesRequest.class);
-    GetClusterNodesResponse clusterNodesResp = applicationsManager.getClusterNodes(clusterNodesReq);
+    List<NodeReport> clusterNodeReports = super.getNodeReports();
     LOG.info("Got Cluster node info from ASM");
-    for (NodeReport node : clusterNodesResp.getNodeReports()) {
+    for (NodeReport node : clusterNodeReports) {
       LOG.info("Got node report from ASM for"
           + ", nodeId=" + node.getNodeId() 
           + ", nodeAddress" + node.getHttpAddress()
@@ -352,10 +331,7 @@ public class Client {
           + ", nodeHealthStatus" + node.getNodeHealthStatus());
     }
 
-    GetQueueInfoRequest queueInfoReq = Records.newRecord(GetQueueInfoRequest.class);
-    queueInfoReq.setQueueName(this.amQueue);
-    GetQueueInfoResponse queueInfoResp = applicationsManager.getQueueInfo(queueInfoReq);		
-    QueueInfo queueInfo = queueInfoResp.getQueueInfo();
+    QueueInfo queueInfo = super.getQueueInfo(this.amQueue);		
     LOG.info("Queue info"
         + ", queueName=" + queueInfo.getQueueName()
         + ", queueCurrentCapacity=" + queueInfo.getCurrentCapacity()
@@ -363,9 +339,7 @@ public class Client {
         + ", queueApplicationCount=" + queueInfo.getApplications().size()
         + ", queueChildQueueCount=" + queueInfo.getChildQueues().size());		
 
-    GetQueueUserAclsInfoRequest queueUserAclsReq = Records.newRecord(GetQueueUserAclsInfoRequest.class);
-    GetQueueUserAclsInfoResponse queueUserAclsResp = applicationsManager.getQueueUserAcls(queueUserAclsReq);				
-    List<QueueUserACLInfo> listAclInfo = queueUserAclsResp.getUserAclsInfoList();
+    List<QueueUserACLInfo> listAclInfo = super.getQueueAclsInfo();				
     for (QueueUserACLInfo aclInfo : listAclInfo) {
       for (QueueACL userAcl : aclInfo.getUserAcls()) {
         LOG.info("User ACL Info for Queue"
@@ -375,7 +349,7 @@ public class Client {
     }		
 
     // Get a new application id 
-    GetNewApplicationResponse newApp = getApplication();
+    GetNewApplicationResponse newApp = super.getNewApplication();
     ApplicationId appId = newApp.getApplicationId();
 
     // TODO get min/max resource capabilities from RM and change memory ask if needed
@@ -517,9 +491,10 @@ public class Client {
     classPathEnv.append(":./log4j.properties");
 
     // add the runtime classpath needed for tests to work
-    String testRuntimeClassPath = Client.getTestRuntimeClasspath();
-    classPathEnv.append(':');
-    classPathEnv.append(testRuntimeClassPath);
+    if (conf.getBoolean(YarnConfiguration.IS_MINI_YARN_CLUSTER, false)) {
+      classPathEnv.append(':');
+      classPathEnv.append(System.getProperty("java.class.path"));
+    }
 
     env.put("CLASSPATH", classPathEnv.toString());
 
@@ -590,16 +565,12 @@ public class Client {
     // Set the queue to which this application is to be submitted in the RM
     appContext.setQueue(amQueue);
 
-    // Create the request to send to the applications manager 
-    SubmitApplicationRequest appRequest = Records.newRecord(SubmitApplicationRequest.class);
-    appRequest.setApplicationSubmissionContext(appContext);
-
     // Submit the application to the applications manager
     // SubmitApplicationResponse submitResp = applicationsManager.submitApplication(appRequest);
     // Ignore the response as either a valid response object is returned on success 
     // or an exception thrown to denote some form of a failure
     LOG.info("Submitting application to ASM");
-    applicationsManager.submitApplication(appRequest);
+    super.submitApplication(appContext);
 
     // TODO
     // Try submitting the same request again
@@ -629,10 +600,7 @@ public class Client {
       }
 
       // Get application report for the appId we are interested in 
-      GetApplicationReportRequest reportRequest = Records.newRecord(GetApplicationReportRequest.class);
-      reportRequest.setApplicationId(appId);
-      GetApplicationReportResponse reportResponse = applicationsManager.getApplicationReport(reportRequest);
-      ApplicationReport report = reportResponse.getApplicationReport();
+      ApplicationReport report = super.getApplicationReport(appId);
 
       LOG.info("Got application report from ASM for"
           + ", appId=" + appId.getId()
@@ -671,7 +639,7 @@ public class Client {
 
       if (System.currentTimeMillis() > (clientStartTime + clientTimeout)) {
         LOG.info("Reached client specified timeout for application. Killing application");
-        killApplication(appId);
+        forceKillApplication(appId);
         return false;				
       }
     }			
@@ -683,107 +651,14 @@ public class Client {
    * @param appId Application Id to be killed. 
    * @throws YarnRemoteException
    */
-  private void killApplication(ApplicationId appId) throws YarnRemoteException {
-    KillApplicationRequest request = Records.newRecord(KillApplicationRequest.class);		
+  private void forceKillApplication(ApplicationId appId) throws YarnRemoteException {
     // TODO clarify whether multiple jobs with the same app id can be submitted and be running at 
     // the same time. 
     // If yes, can we kill a particular attempt only?
-    request.setApplicationId(appId);
-    // KillApplicationResponse response = applicationsManager.forceKillApplication(request);		
+
     // Response can be ignored as it is non-null on success or 
     // throws an exception in case of failures
-    applicationsManager.forceKillApplication(request);	
+    super.killApplication(appId);	
   }
-
-  /**
-   * Connect to the Resource Manager/Applications Manager
-   * @return Handle to communicate with the ASM
-   * @throws IOException 
-   */
-  private void connectToASM() throws IOException {
-
-    /*
-		UserGroupInformation user = UserGroupInformation.getCurrentUser();
-		applicationsManager = user.doAs(new PrivilegedAction<ClientRMProtocol>() {
-			public ClientRMProtocol run() {
-				InetSocketAddress rmAddress = NetUtils.createSocketAddr(conf.get(
-					YarnConfiguration.RM_SCHEDULER_ADDRESS,
-					YarnConfiguration.DEFAULT_RM_SCHEDULER_ADDRESS));		
-				LOG.info("Connecting to ResourceManager at " + rmAddress);
-				Configuration appsManagerServerConf = new Configuration(conf);
-				appsManagerServerConf.setClass(YarnConfiguration.YARN_SECURITY_INFO,
-				ClientRMSecurityInfo.class, SecurityInfo.class);
-				ClientRMProtocol asm = ((ClientRMProtocol) rpc.getProxy(ClientRMProtocol.class, rmAddress, appsManagerServerConf));
-				return asm;
-			}
-		});
-     */
-    YarnConfiguration yarnConf = new YarnConfiguration(conf);
-    InetSocketAddress rmAddress = yarnConf.getSocketAddr(
-        YarnConfiguration.RM_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_ADDRESS,
-        YarnConfiguration.DEFAULT_RM_PORT);
-    LOG.info("Connecting to ResourceManager at " + rmAddress);
-    applicationsManager = ((ClientRMProtocol) rpc.getProxy(
-        ClientRMProtocol.class, rmAddress, conf));
-  }		
-
-  /**
-   * Get a new application from the ASM 
-   * @return New Application
-   * @throws YarnRemoteException
-   */
-  private GetNewApplicationResponse getApplication() throws YarnRemoteException {
-    GetNewApplicationRequest request = Records.newRecord(GetNewApplicationRequest.class);		
-    GetNewApplicationResponse response = applicationsManager.getNewApplication(request);
-    LOG.info("Got new application id=" + response.getApplicationId());		
-    return response;		
-  }
-
-  private static String getTestRuntimeClasspath() {
-
-    InputStream classpathFileStream = null;
-    BufferedReader reader = null;
-    String envClassPath = "";
-
-    LOG.info("Trying to generate classpath for app master from current thread's classpath");
-    try {
-
-      // Create classpath from generated classpath
-      // Check maven ppom.xml for generated classpath info
-      // Works if compile time env is same as runtime. Mainly tests.
-      ClassLoader thisClassLoader =
-          Thread.currentThread().getContextClassLoader();
-      String generatedClasspathFile = "yarn-apps-ds-generated-classpath";
-      classpathFileStream =
-          thisClassLoader.getResourceAsStream(generatedClasspathFile);
-      if (classpathFileStream == null) {
-        LOG.info("Could not classpath resource from class loader");
-        return envClassPath;
-      }
-      LOG.info("Readable bytes from stream=" + classpathFileStream.available());
-      reader = new BufferedReader(new InputStreamReader(classpathFileStream));
-      String cp = reader.readLine();
-      if (cp != null) {
-        envClassPath += cp.trim() + ":";
-      }
-      // Put the file itself on classpath for tasks.
-      envClassPath += thisClassLoader.getResource(generatedClasspathFile).getFile();
-    } catch (IOException e) {
-      LOG.info("Could not find the necessary resource to generate class path for tests. Error=" + e.getMessage());
-    } 
-
-    try {
-      if (classpathFileStream != null) {
-        classpathFileStream.close();
-      }
-      if (reader != null) {
-        reader.close();
-      }
-    } catch (IOException e) {
-      LOG.info("Failed to close class path file stream or reader. Error=" + e.getMessage());
-    } 
-    return envClassPath;
-  }			
 
 }

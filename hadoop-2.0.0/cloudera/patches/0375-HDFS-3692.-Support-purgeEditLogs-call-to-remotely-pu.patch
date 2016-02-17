@@ -1,7 +1,7 @@
 From 00746d620185c797dcaf409047c0c93d40c13ad1 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 25 Jul 2012 21:44:26 +0000
-Subject: [PATCH 375/545] HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs. Contributed by Todd Lipcon.
+Subject: [PATCH 0375/1612] HDFS-3692. Support purgeEditLogs() call to remotely purge logs on JNs. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1365792 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0336b1117c41e4b8ca2d80fbbdf3328482a250b2)

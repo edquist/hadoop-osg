@@ -1,7 +1,7 @@
 From 2f758828307ffb4fade36bd00cf6beef2b3101ff Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 5 Jul 2012 22:18:16 +0000
-Subject: [PATCH 186/545] HDFS-3170. Add more useful metrics for write latency. Contributed by Matthew Jacobs.
+Subject: [PATCH 0186/1612] HDFS-3170. Add more useful metrics for write latency. Contributed by Matthew Jacobs.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1357969 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit deb35e642ab07ac2ab38483b84e5756be1c36847)

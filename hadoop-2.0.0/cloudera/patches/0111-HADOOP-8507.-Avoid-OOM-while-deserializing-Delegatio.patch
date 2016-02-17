@@ -1,7 +1,7 @@
 From dff05676403ed444fa1a5add55cb76694a7c4f6e Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 12 Jun 2012 22:10:12 +0000
-Subject: [PATCH 111/545] HADOOP-8507. Avoid OOM while deserializing DelegationTokenIdentifer. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0111/1612] HADOOP-8507. Avoid OOM while deserializing DelegationTokenIdentifer. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349561 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 15f7bc3dd634d82ee845f57a29d1ecb91fe044b8)

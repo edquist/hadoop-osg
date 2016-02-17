@@ -1,7 +1,7 @@
 From ff64c9f0af775726f3f8b01c8820b3acf3f44d0a Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Tue, 26 Jun 2012 01:58:13 +0000
-Subject: [PATCH 166/545] HDFS-3516. Check content-type in WebHdfsFileSystem.
+Subject: [PATCH 0166/1612] HDFS-3516. Check content-type in WebHdfsFileSystem.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1353800 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f9f5953c234af26a92f63b1d39c1f0c6409013fa)

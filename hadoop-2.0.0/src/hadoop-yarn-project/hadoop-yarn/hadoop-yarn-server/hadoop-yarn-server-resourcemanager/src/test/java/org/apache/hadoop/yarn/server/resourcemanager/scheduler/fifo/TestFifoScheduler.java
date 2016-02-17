@@ -31,18 +31,18 @@ import org.apache.hadoop.yarn.api.records.ApplicationId;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.QueueInfo;
 import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
 import org.apache.hadoop.yarn.server.resourcemanager.Application;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
 import org.apache.hadoop.yarn.server.resourcemanager.ResourceManager;
 import org.apache.hadoop.yarn.server.resourcemanager.Task;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.resourcetracker.InlineDispatcher;
-import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.ResourceScheduler;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.AppAddedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
 import org.apache.hadoop.yarn.util.BuilderUtils;
@@ -57,9 +57,11 @@ public class TestFifoScheduler {
   
   @Before
   public void setUp() throws Exception {
-    Store store = StoreFactory.getStore(new Configuration());
-    resourceManager = new ResourceManager(store);
-    resourceManager.init(new Configuration());
+    resourceManager = new ResourceManager();
+    Configuration conf = new Configuration();
+    conf.setClass(YarnConfiguration.RM_SCHEDULER, 
+        FifoScheduler.class, ResourceScheduler.class);
+    resourceManager.init(conf);
   }
 
   @After
@@ -69,9 +71,9 @@ public class TestFifoScheduler {
   
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
       registerNode(String hostName, int containerManagerPort, int nmHttpPort,
-          String rackName, int memory) throws IOException {
+          String rackName, Resource capability) throws IOException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
-        hostName, containerManagerPort, nmHttpPort, rackName, memory,
+        hostName, containerManagerPort, nmHttpPort, rackName, capability,
         resourceManager.getResourceTrackerService(), resourceManager
             .getRMContext());
   }
@@ -86,11 +88,11 @@ public class TestFifoScheduler {
   @Test
   public void testAppAttemptMetrics() throws Exception {
     AsyncDispatcher dispatcher = new InlineDispatcher();
-    RMContext rmContext = new RMContextImpl(null, dispatcher, null,
-        null, null, null, null);
+    RMContext rmContext = new RMContextImpl(dispatcher, null,
+        null, null, null, null, null, null);
 
     FifoScheduler schedular = new FifoScheduler();
-    schedular.reinitialize(new Configuration(), null, rmContext);
+    schedular.reinitialize(new Configuration(), rmContext);
 
     ApplicationId appId = BuilderUtils.newApplicationId(200, 1);
     ApplicationAttemptId appAttemptId = BuilderUtils.newApplicationAttemptId(
@@ -119,13 +121,15 @@ public class TestFifoScheduler {
     // Register node1
     String host_0 = "host_0";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_0 = 
-      registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 4 * GB);
+      registerNode(host_0, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(4 * GB, 1));
     nm_0.heartbeat();
     
     // Register node2
     String host_1 = "host_1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm_1 = 
-      registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 2 * GB);
+      registerNode(host_1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(2 * GB, 1));
     nm_1.heartbeat();
 
     // ResourceRequest priorities
@@ -196,15 +200,15 @@ public class TestFifoScheduler {
     LOG.info("Adding new tasks...");
     
     Task task_1_1 = new Task(application_1, priority_1, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_1.addTask(task_1_1);
 
     Task task_1_2 = new Task(application_1, priority_1, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_1.addTask(task_1_2);
 
     Task task_1_3 = new Task(application_1, priority_0, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_1.addTask(task_1_3);
     
     application_1.schedule();
@@ -218,7 +222,7 @@ public class TestFifoScheduler {
     application_0.addTask(task_0_2);
     
     Task task_0_3 = new Task(application_0, priority_0, 
-        new String[] {RMNode.ANY});
+        new String[] {ResourceRequest.ANY});
     application_0.addTask(task_0_3);
 
     application_0.schedule();

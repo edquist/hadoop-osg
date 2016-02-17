@@ -1,0 +1,175 @@
+From e895ee94816f1c84531da5eb63b8a31c49611e56 Mon Sep 17 00:00:00 2001
+From: Kihwal Lee <kihwal@apache.org>
+Date: Mon, 2 Dec 2013 20:27:37 +0000
+Subject: [PATCH 1584/1612] svn merge -c 1547173 merging from trunk to branch-2 to fix: HDFS-5557. Write pipeline recovery for the last packet in the block may cause rejection of valid replicas.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1547179 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 2544852dbb02d5484548ccc86269a2fd8bff2c22)
+---
+ .../org/apache/hadoop/hdfs/DFSOutputStream.java    |    3 +-
+ .../BlockInfoUnderConstruction.java                |    9 ++++---
+ .../hdfs/server/blockmanagement/BlockManager.java  |   24 ++++++++++----------
+ .../TestClientProtocolForPipelineRecovery.java     |   14 ++---------
+ 4 files changed, 21 insertions(+), 29 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSOutputStream.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSOutputStream.java
+index e0b4bee..a2d56a9 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSOutputStream.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/DFSOutputStream.java
+@@ -832,7 +832,6 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
+           // We also need to set lastAckedSeqno to the end-of-block Packet's seqno, so that
+           // a client waiting on close() will be aware that the flush finished.
+           synchronized (dataQueue) {
+-            assert dataQueue.size() == 1;
+             Packet endOfBlockPacket = dataQueue.remove();  // remove the end of block packet
+             assert endOfBlockPacket.lastPacketInBlock;
+             assert lastAckedSeqno == endOfBlockPacket.seqno - 1;
+@@ -1031,7 +1030,7 @@ public class DFSOutputStream extends FSOutputSummer implements Syncable {
+         
+         // set up the pipeline again with the remaining nodes
+         if (failPacket) { // for testing
+-          success = createBlockOutputStream(nodes, newGS-1, isRecovery);
++          success = createBlockOutputStream(nodes, newGS, isRecovery);
+           failPacket = false;
+           try {
+             // Give DNs time to send in bad reports. In real situations,
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockInfoUnderConstruction.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockInfoUnderConstruction.java
+index 9f727f2..285dcd7 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockInfoUnderConstruction.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockInfoUnderConstruction.java
+@@ -236,6 +236,8 @@ public class BlockInfoUnderConstruction extends BlockInfo {
+    * @param genStamp  The final generation stamp for the block.
+    */
+   public void setGenerationStampAndVerifyReplicas(long genStamp) {
++    // Set the generation stamp for the block.
++    setGenerationStamp(genStamp);
+     if (replicas == null)
+       return;
+ 
+@@ -245,12 +247,9 @@ public class BlockInfoUnderConstruction extends BlockInfo {
+       if (genStamp != r.getGenerationStamp()) {
+         r.getExpectedLocation().removeBlock(this);
+         NameNode.blockStateChangeLog.info("BLOCK* Removing stale replica "
+-            + "from location: " + r);
++            + "from location: " + r.getExpectedLocation());
+       }
+     }
+-
+-    // Set the generation stamp for the block.
+-    setGenerationStamp(genStamp);
+   }
+ 
+   /**
+@@ -265,6 +264,8 @@ public class BlockInfoUnderConstruction extends BlockInfo {
+           + block.getBlockId() + ", expected id = " + getBlockId());
+     blockUCState = BlockUCState.COMMITTED;
+     this.set(getBlockId(), block.getNumBytes(), block.getGenerationStamp());
++    // Sort out invalid replicas.
++    setGenerationStampAndVerifyReplicas(block.getGenerationStamp());
+   }
+ 
+   /**
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+index 815bbfb..b51442c 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+@@ -1476,13 +1476,15 @@ public class BlockManager {
+    * Besides the block in question, it provides the ReplicaState
+    * reported by the datanode in the block report. 
+    */
+-  private static class StatefulBlockInfo {
++  static class StatefulBlockInfo {
+     final BlockInfoUnderConstruction storedBlock;
++    final Block reportedBlock;
+     final ReplicaState reportedState;
+     
+     StatefulBlockInfo(BlockInfoUnderConstruction storedBlock, 
+-        ReplicaState reportedState) {
++        Block reportedBlock, ReplicaState reportedState) {
+       this.storedBlock = storedBlock;
++      this.reportedBlock = reportedBlock;
+       this.reportedState = reportedState;
+     }
+   }
+@@ -1632,7 +1634,7 @@ public class BlockManager {
+ 
+     // Process the blocks on each queue
+     for (StatefulBlockInfo b : toUC) { 
+-      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
++      addStoredBlockUnderConstruction(b, node);
+     }
+     for (Block b : toRemove) {
+       removeStoredBlock(b, node);
+@@ -1848,7 +1850,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+ 
+     if (isBlockUnderConstruction(storedBlock, ucState, reportedState)) {
+       toUC.add(new StatefulBlockInfo(
+-          (BlockInfoUnderConstruction)storedBlock, reportedState));
++          (BlockInfoUnderConstruction)storedBlock, block, reportedState));
+       return storedBlock;
+     }
+ 
+@@ -2019,13 +2021,11 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+     }
+   }
+   
+-  void addStoredBlockUnderConstruction(
+-      BlockInfoUnderConstruction block, 
+-      DatanodeDescriptor node, 
+-      ReplicaState reportedState) 
+-  throws IOException {
+-    block.addReplicaIfNotPresent(node, block, reportedState);
+-    if (reportedState == ReplicaState.FINALIZED && block.findDatanode(node) < 0) {
++  void addStoredBlockUnderConstruction(StatefulBlockInfo ucBlock,
++      DatanodeDescriptor node) throws IOException {
++    BlockInfoUnderConstruction block = ucBlock.storedBlock;
++    block.addReplicaIfNotPresent(node, ucBlock.reportedBlock, ucBlock.reportedState);
++    if (ucBlock.reportedState == ReplicaState.FINALIZED && block.findDatanode(node) < 0) {
+       addStoredBlock(block, node, null, true);
+     }
+   }
+@@ -2672,7 +2672,7 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+       : "The block should be only in one of the lists.";
+ 
+     for (StatefulBlockInfo b : toUC) { 
+-      addStoredBlockUnderConstruction(b.storedBlock, node, b.reportedState);
++      addStoredBlockUnderConstruction(b, node);
+     }
+     long numBlocksLogged = 0;
+     for (BlockInfo b : toAdd) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestClientProtocolForPipelineRecovery.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestClientProtocolForPipelineRecovery.java
+index 0a8ed3e..86a9fec 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestClientProtocolForPipelineRecovery.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestClientProtocolForPipelineRecovery.java
+@@ -139,16 +139,10 @@ public class TestClientProtocolForPipelineRecovery {
+ 
+       Path file = new Path("dataprotocol1.dat");
+       Mockito.when(faultInjector.failPacket()).thenReturn(true);
+-      try {
+-        DFSTestUtil.createFile(fileSys, file, 1L, (short)numDataNodes, 0L);
+-      } catch (IOException e) {
+-        // completeFile() should fail.
+-        Assert.assertTrue(e.getMessage().startsWith("Unable to close file"));
+-        return;
+-      }
++      DFSTestUtil.createFile(fileSys, file, 68000000L, (short)numDataNodes, 0L);
+ 
+-      // At this point, NN let data corruption to happen. 
+-      // Before failing test, try reading the file. It should fail.
++      // At this point, NN should have accepted only valid replicas.
++      // Read should succeed.
+       FSDataInputStream in = fileSys.open(file);
+       try {
+         int c = in.read();
+@@ -158,8 +152,6 @@ public class TestClientProtocolForPipelineRecovery {
+         Assert.fail("Block is missing because the file was closed with"
+             + " corrupt replicas.");
+       }
+-      Assert.fail("The file was closed with corrupt replicas, but read still"
+-          + " works!");
+     } finally {
+       DFSClientFaultInjector.instance = oldInjector;
+       if (cluster != null) {
+-- 
+1.7.0.4
+

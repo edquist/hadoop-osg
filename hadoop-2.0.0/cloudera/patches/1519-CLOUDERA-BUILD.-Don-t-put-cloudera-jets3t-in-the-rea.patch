@@ -1,0 +1,37 @@
+From c13504ba4999143ea2816eb1b9f81d992c10ba43 Mon Sep 17 00:00:00 2001
+From: Andrew Bayer <andrew@cloudera.com>
+Date: Mon, 18 Nov 2013 11:07:02 -0800
+Subject: [PATCH 1519/1612] CLOUDERA-BUILD. Don't put cloudera-jets3t in the reactor in non-dist builds.
+
+---
+ hadoop-common-project/pom.xml |    9 ++++++++-
+ 1 files changed, 8 insertions(+), 1 deletions(-)
+
+diff --git a/hadoop-common-project/pom.xml b/hadoop-common-project/pom.xml
+index 329e756..39a5c40 100644
+--- a/hadoop-common-project/pom.xml
++++ b/hadoop-common-project/pom.xml
+@@ -32,7 +32,6 @@
+     <module>hadoop-auth-examples</module>
+     <module>hadoop-common</module>
+     <module>hadoop-annotations</module>
+-    <module>cloudera-jets3t</module>
+   </modules>
+ 
+   <build>
+@@ -55,4 +54,12 @@
+     </plugins>
+   </build>
+ 
++  <profiles>
++    <profile>
++      <id>dist</id>
++      <modules>
++        <module>cloudera-jets3t</module>
++      </modules>
++    </profile>
++  </profiles>
+ </project>
+-- 
+1.7.0.4
+

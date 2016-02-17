@@ -1,7 +1,7 @@
 From 92d072f444a1bda0068c310838053dfd416743b3 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Thu, 9 Aug 2012 21:33:20 +0000
-Subject: [PATCH 286/545] HDFS-3721. hsync support broke wire compatibility. Contributed by Todd Lipcon and Aaron T. Myers.
+Subject: [PATCH 0286/1612] HDFS-3721. hsync support broke wire compatibility. Contributed by Todd Lipcon and Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1371496 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2e43f9d39f2070af6c04464a43f26d584cfc2c14)

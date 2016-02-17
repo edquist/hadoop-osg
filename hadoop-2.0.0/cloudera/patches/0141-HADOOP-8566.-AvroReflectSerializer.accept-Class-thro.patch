@@ -1,7 +1,7 @@
 From f829866e009530778f34b12cc3d4b31a5ca10a73 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 6 Jul 2012 22:27:13 +0000
-Subject: [PATCH 141/545] HADOOP-8566. AvroReflectSerializer.accept(Class) throws a NPE if the class has no package (primitive types and arrays). (tucu)
+Subject: [PATCH 0141/1612] HADOOP-8566. AvroReflectSerializer.accept(Class) throws a NPE if the class has no package (primitive types and arrays). (tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1358454 13f79535-47bb-0310-9956-ffa450edef68
 ---

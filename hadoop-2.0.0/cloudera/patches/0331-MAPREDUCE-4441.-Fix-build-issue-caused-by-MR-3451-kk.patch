@@ -1,7 +1,7 @@
 From 42c84820d1ecefacf78c73bd78f5381bf2bd0050 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Fri, 13 Jul 2012 20:42:00 +0000
-Subject: [PATCH 331/545] MAPREDUCE-4441. Fix build issue caused by MR-3451 (kkambatl via tucu)
+Subject: [PATCH 0331/1612] MAPREDUCE-4441. Fix build issue caused by MR-3451 (kkambatl via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1361387 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b3db982dd7d182d56b90b2c5dbc554f42f895717)

@@ -1,7 +1,7 @@
 From 7b8a4bb338014c58b0809343d0bbcfdc7ea573c4 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 22 Aug 2012 22:45:30 +0000
-Subject: [PATCH 404/545] MAPREDUCE-4577. HDFS-3672 broke TestCombineFileInputFormat.testMissingBlocks() test. Contributed by Aaron T. Myers.
+Subject: [PATCH 0404/1612] MAPREDUCE-4577. HDFS-3672 broke TestCombineFileInputFormat.testMissingBlocks() test. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1376298 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e2ebfba0794164ea6cade1c6e1c5c18522de82f7)

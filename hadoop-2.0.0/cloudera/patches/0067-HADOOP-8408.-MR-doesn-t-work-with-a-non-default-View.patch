@@ -1,7 +1,7 @@
 From 78438a3884848ee4a28d22842b3f0493d99d0d54 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 18 May 2012 04:20:28 +0000
-Subject: [PATCH 067/545] HADOOP-8408. MR doesn't work with a non-default ViewFS mount table and security enabled. Contributed by Aaron T. Myers
+Subject: [PATCH 0067/1612] HADOOP-8408. MR doesn't work with a non-default ViewFS mount table and security enabled. Contributed by Aaron T. Myers
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1339970 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 63226de5e51c2e7ebbef7b0b39b50070d5bf5de7)

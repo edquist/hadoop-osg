@@ -1,7 +1,7 @@
 From f720f9c4e57be62a9244165275463fdc8556af74 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Mon, 30 Jul 2012 18:05:38 +0000
-Subject: [PATCH 418/545] HADOOP-8634. Ensure FileSystem#close doesn't squawk for deleteOnExit paths (daryn via bobby)
+Subject: [PATCH 0418/1612] HADOOP-8634. Ensure FileSystem#close doesn't squawk for deleteOnExit paths (daryn via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367196 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 19d258120b79906d0b883342ad715b43b487632e)

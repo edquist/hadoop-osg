@@ -42,6 +42,7 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.fs.CommonConfigurationKeys;
 import org.apache.hadoop.fs.FSDataOutputStream;
 import org.apache.hadoop.fs.FileContext;
 import org.apache.hadoop.fs.FileStatus;
@@ -106,15 +107,65 @@ public class TestFSDownload {
     FileStatus status = files.getFileStatus(p);
     ret.setSize(status.getLen());
     ret.setTimestamp(status.getModificationTime());
-    ret.setType(LocalResourceType.ARCHIVE);
+    ret.setType(LocalResourceType.PATTERN);
     ret.setVisibility(vis);
+    ret.setPattern("classes/.*");
     return ret;
+  }
+  
+  @Test
+  public void testDownloadBadPublic() throws IOException, URISyntaxException,
+      InterruptedException {
+    Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
+    FileContext files = FileContext.getLocalFSFileContext(conf);
+    final Path basedir = files.makeQualified(new Path("target",
+      TestFSDownload.class.getSimpleName()));
+    files.mkdir(basedir, null, true);
+    conf.setStrings(TestFSDownload.class.getName(), basedir.toString());
+    
+    Map<LocalResource, LocalResourceVisibility> rsrcVis =
+        new HashMap<LocalResource, LocalResourceVisibility>();
+
+    Random rand = new Random();
+    long sharedSeed = rand.nextLong();
+    rand.setSeed(sharedSeed);
+    System.out.println("SEED: " + sharedSeed);
+
+    Map<LocalResource,Future<Path>> pending =
+      new HashMap<LocalResource,Future<Path>>();
+    ExecutorService exec = Executors.newSingleThreadExecutor();
+    LocalDirAllocator dirs =
+      new LocalDirAllocator(TestFSDownload.class.getName());
+    int size = 512;
+    LocalResourceVisibility vis = LocalResourceVisibility.PUBLIC;
+    Path path = new Path(basedir, "test-file");
+    LocalResource rsrc = createFile(files, path, size, rand, vis);
+    rsrcVis.put(rsrc, vis);
+    Path destPath = dirs.getLocalPathForWrite(
+        basedir.toString(), size, conf);
+    FSDownload fsd =
+      new FSDownload(files, UserGroupInformation.getCurrentUser(), conf,
+          destPath, rsrc, new Random(sharedSeed));
+    pending.put(rsrc, exec.submit(fsd));
+
+    try {
+      for (Map.Entry<LocalResource,Future<Path>> p : pending.entrySet()) {
+        p.getValue().get();
+        Assert.fail("We localized a file that is not public.");
+      }
+    } catch (ExecutionException e) {
+      Assert.assertTrue(e.getCause() instanceof IOException);
+    } finally {
+      exec.shutdown();
+    }
   }
   
   @Test
   public void testDownload() throws IOException, URISyntaxException,
       InterruptedException {
     Configuration conf = new Configuration();
+    conf.set(CommonConfigurationKeys.FS_PERMISSIONS_UMASK_KEY, "077");
     FileContext files = FileContext.getLocalFSFileContext(conf);
     final Path basedir = files.makeQualified(new Path("target",
       TestFSDownload.class.getSimpleName()));
@@ -137,14 +188,9 @@ public class TestFSDownload {
     int[] sizes = new int[10];
     for (int i = 0; i < 10; ++i) {
       sizes[i] = rand.nextInt(512) + 512;
-      LocalResourceVisibility vis = LocalResourceVisibility.PUBLIC;
-      switch (i%3) {
-      case 1:
-        vis = LocalResourceVisibility.PRIVATE;
-        break;
-      case 2:
+      LocalResourceVisibility vis = LocalResourceVisibility.PRIVATE;
+      if (i%2 == 1) {
         vis = LocalResourceVisibility.APPLICATION;
-        break;       
       }
       Path p = new Path(basedir, "" + i);
       LocalResource rsrc = createFile(files, p, sizes[i], rand, vis);
@@ -162,22 +208,19 @@ public class TestFSDownload {
         Path localized = p.getValue().get();
         assertEquals(sizes[Integer.valueOf(localized.getName())], p.getKey()
             .getSize());
-        FileStatus status = files.getFileStatus(localized);
+
+        FileStatus status = files.getFileStatus(localized.getParent());
         FsPermission perm = status.getPermission();
+        assertEquals("Cache directory permissions are incorrect",
+            new FsPermission((short)0755), perm);
+
+        status = files.getFileStatus(localized);
+        perm = status.getPermission();
         System.out.println("File permission " + perm + 
             " for rsrc vis " + p.getKey().getVisibility().name());
         assert(rsrcVis.containsKey(p.getKey()));
-        switch (rsrcVis.get(p.getKey())) {
-        case PUBLIC:
-          Assert.assertTrue("Public file should be 555",
-              perm.toShort() == FSDownload.PUBLIC_FILE_PERMS.toShort());
-          break;
-        case PRIVATE:
-        case APPLICATION:
-          Assert.assertTrue("Private file should be 500",
-              perm.toShort() == FSDownload.PRIVATE_FILE_PERMS.toShort());          
-          break;
-        }
+        Assert.assertTrue("Private file should be 500",
+            perm.toShort() == FSDownload.PRIVATE_FILE_PERMS.toShort());
       }
     } catch (ExecutionException e) {
       throw new IOException("Failed exec", e);
@@ -241,14 +284,9 @@ public class TestFSDownload {
     LocalDirAllocator dirs =
       new LocalDirAllocator(TestFSDownload.class.getName());
     for (int i = 0; i < 5; ++i) {
-      LocalResourceVisibility vis = LocalResourceVisibility.PUBLIC;
-      switch (rand.nextInt()%3) {
-      case 1:
-        vis = LocalResourceVisibility.PRIVATE;
-        break;
-      case 2:
+      LocalResourceVisibility vis = LocalResourceVisibility.PRIVATE;
+      if (i%2 == 1) {
         vis = LocalResourceVisibility.APPLICATION;
-        break;       
       }
 
       Path p = new Path(basedir, "dir" + i + ".jar");

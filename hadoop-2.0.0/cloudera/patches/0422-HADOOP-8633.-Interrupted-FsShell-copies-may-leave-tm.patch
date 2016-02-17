@@ -1,7 +1,7 @@
 From 411a3ceab6c6a2b816da25dabd4ae56cf8bbb136 Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Wed, 1 Aug 2012 14:02:22 +0000
-Subject: [PATCH 422/545] HADOOP-8633. Interrupted FsShell copies may leave tmp files (Daryn Sharp via tgraves)
+Subject: [PATCH 0422/1612] HADOOP-8633. Interrupted FsShell copies may leave tmp files (Daryn Sharp via tgraves)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1368002 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit dab7719ef7e38d22ed1ad50e94987918526d60f5)

@@ -31,10 +31,11 @@ import org.apache.hadoop.mapreduce.JobID;
 import org.apache.hadoop.mapreduce.MRJobConfig;
 import org.apache.hadoop.mapreduce.TypeConverter;
 import org.apache.hadoop.mapreduce.v2.api.records.JobId;
-import org.apache.hadoop.mapreduce.v2.api.records.JobState;
 import org.apache.hadoop.mapreduce.v2.app.AppContext;
 import org.apache.hadoop.mapreduce.v2.app.client.ClientService;
 import org.apache.hadoop.mapreduce.v2.app.job.Job;
+import org.apache.hadoop.mapreduce.v2.app.job.JobStateInternal;
+import org.apache.hadoop.mapreduce.v2.app.job.impl.JobImpl;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JobHistoryUtils;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.security.UserGroupInformation;
@@ -66,7 +67,7 @@ public abstract class RMCommunicator extends AbstractService  {
   private int rmPollInterval;//millis
   protected ApplicationId applicationId;
   protected ApplicationAttemptId applicationAttemptId;
-  private AtomicBoolean stopped;
+  private final AtomicBoolean stopped;
   protected Thread allocatorThread;
   @SuppressWarnings("rawtypes")
   protected EventHandler eventHandler;
@@ -84,6 +85,7 @@ public abstract class RMCommunicator extends AbstractService  {
   private Job job;
   // Has a signal (SIGTERM etc) been issued?
   protected volatile boolean isSignalled = false;
+  private volatile boolean shouldUnregister = true;
 
   public RMCommunicator(ClientService clientService, AppContext context) {
     super("RMCommunicator");
@@ -162,13 +164,14 @@ public abstract class RMCommunicator extends AbstractService  {
   protected void unregister() {
     try {
       FinalApplicationStatus finishState = FinalApplicationStatus.UNDEFINED;
-      if (job.getState() == JobState.SUCCEEDED) {
+      JobImpl jobImpl = (JobImpl)job;
+      if (jobImpl.getInternalState() == JobStateInternal.SUCCEEDED) {
         finishState = FinalApplicationStatus.SUCCEEDED;
-      } else if (job.getState() == JobState.KILLED
-          || (job.getState() == JobState.RUNNING && isSignalled)) {
+      } else if (jobImpl.getInternalState() == JobStateInternal.KILLED
+          || (jobImpl.getInternalState() == JobStateInternal.RUNNING && isSignalled)) {
         finishState = FinalApplicationStatus.KILLED;
-      } else if (job.getState() == JobState.FAILED
-          || job.getState() == JobState.ERROR) {
+      } else if (jobImpl.getInternalState() == JobStateInternal.FAILED
+          || jobImpl.getInternalState() == JobStateInternal.ERROR) {
         finishState = FinalApplicationStatus.FAILED;
       }
       StringBuffer sb = new StringBuffer();
@@ -213,7 +216,9 @@ public abstract class RMCommunicator extends AbstractService  {
     } catch (InterruptedException ie) {
       LOG.warn("InterruptedException while stopping", ie);
     }
-    unregister();
+    if(shouldUnregister) {
+      unregister();
+    }
     super.stop();
   }
 
@@ -234,7 +239,9 @@ public abstract class RMCommunicator extends AbstractService  {
               // TODO: for other exceptions
             }
           } catch (InterruptedException e) {
-            LOG.warn("Allocated thread interrupted. Returning.");
+            if (!stopped.get()) {
+              LOG.warn("Allocated thread interrupted. Returning.");
+            }
             return;
           }
         }
@@ -288,8 +295,15 @@ public abstract class RMCommunicator extends AbstractService  {
 
   protected abstract void heartbeat() throws Exception;
 
+  public void setShouldUnregister(boolean shouldUnregister) {
+    this.shouldUnregister = shouldUnregister;
+    LOG.info("RMCommunicator notified that shouldUnregistered is: " 
+        + shouldUnregister);
+  }
+  
   public void setSignalled(boolean isSignalled) {
     this.isSignalled = isSignalled;
-    LOG.info("RMCommunicator notified that iSignalled was : " + isSignalled);
+    LOG.info("RMCommunicator notified that iSignalled is: " 
+        + isSignalled);
   }
 }

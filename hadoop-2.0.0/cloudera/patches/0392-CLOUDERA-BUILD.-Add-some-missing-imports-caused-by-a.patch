@@ -1,7 +1,7 @@
 From 4d4803cc6ac75f6b5f53b56010456db60fba1bf9 Mon Sep 17 00:00:00 2001
 From: Aaron T. Myers <atm@cloudera.com>
 Date: Mon, 20 Aug 2012 15:32:09 -0700
-Subject: [PATCH 392/545] CLOUDERA-BUILD. Add some missing imports caused by an errant merge.
+Subject: [PATCH 0392/1612] CLOUDERA-BUILD. Add some missing imports caused by an errant merge.
 
 ---
  .../hadoop/hdfs/server/namenode/TestEditLog.java   |    1 +

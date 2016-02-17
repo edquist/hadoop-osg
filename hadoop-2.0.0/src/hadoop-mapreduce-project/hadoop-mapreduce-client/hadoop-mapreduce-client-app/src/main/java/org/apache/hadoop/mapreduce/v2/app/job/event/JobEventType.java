@@ -35,6 +35,13 @@ public enum JobEventType {
   JOB_MAP_TASK_RESCHEDULED,
   JOB_TASK_ATTEMPT_COMPLETED,
 
+  //Producer:CommitterEventHandler
+  JOB_SETUP_COMPLETED,
+  JOB_SETUP_FAILED,
+  JOB_COMMIT_COMPLETED,
+  JOB_COMMIT_FAILED,
+  JOB_ABORT_COMPLETED,
+
   //Producer:Job
   JOB_COMPLETED,
 
@@ -44,5 +51,9 @@ public enum JobEventType {
   JOB_COUNTER_UPDATE,
   
   //Producer:TaskAttemptListener
-  JOB_TASK_ATTEMPT_FETCH_FAILURE
+  JOB_TASK_ATTEMPT_FETCH_FAILURE,
+  
+  //Producer:RMContainerAllocator
+  JOB_UPDATED_NODES
+  
 }

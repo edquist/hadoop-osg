@@ -1,7 +1,7 @@
 From aa8846e6e34953cfdf9194a0c829d9d2215baf5c Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Fri, 13 Jul 2012 20:53:43 +0000
-Subject: [PATCH 323/545] MAPREDUCE-4299. Terasort hangs with MR2 FifoScheduler (Tom White via bobby)
+Subject: [PATCH 0323/1612] MAPREDUCE-4299. Terasort hangs with MR2 FifoScheduler (Tom White via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1361397 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3ccf9271d547f18917e0403d4fd6009ec4c1ccc8)

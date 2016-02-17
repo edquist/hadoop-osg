@@ -1,7 +1,7 @@
 From 48d1e9c793a4613e67192561232a5efc128423ea Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 2 Jul 2012 22:46:55 +0000
-Subject: [PATCH 315/545] HADOOP-8463. hadoop.security.auth_to_local needs a key definition and doc. Contributed by Madhukara Phatak
+Subject: [PATCH 0315/1612] HADOOP-8463. hadoop.security.auth_to_local needs a key definition and doc. Contributed by Madhukara Phatak
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1356513 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b6447bd35911d77f3d30a20bd1c441baa3d5b118)

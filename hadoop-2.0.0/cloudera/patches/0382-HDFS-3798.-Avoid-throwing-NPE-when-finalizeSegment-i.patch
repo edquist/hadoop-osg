@@ -1,7 +1,7 @@
 From 720197ec14a742a54c423762150136f17d93c544 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 15 Aug 2012 00:54:49 +0000
-Subject: [PATCH 382/545] HDFS-3798. Avoid throwing NPE when finalizeSegment() is called on invalid segment. Contributed by Todd Lipcon.
+Subject: [PATCH 0382/1612] HDFS-3798. Avoid throwing NPE when finalizeSegment() is called on invalid segment. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1373179 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e63a7949fdf084dd8a93573a9d9b96ae5d08b407)

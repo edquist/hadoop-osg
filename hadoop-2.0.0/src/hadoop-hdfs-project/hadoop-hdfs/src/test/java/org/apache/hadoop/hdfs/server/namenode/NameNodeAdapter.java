@@ -37,6 +37,7 @@ import org.apache.hadoop.hdfs.server.common.Storage.StorageDirectory;
 import org.apache.hadoop.hdfs.server.namenode.FSEditLogOp.MkdirOp;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem.SafeModeInfo;
 import org.apache.hadoop.hdfs.server.namenode.LeaseManager.Lease;
+import org.apache.hadoop.hdfs.server.namenode.ha.EditLogTailer;
 import org.apache.hadoop.hdfs.server.protocol.DatanodeRegistration;
 import org.apache.hadoop.hdfs.server.protocol.HeartbeatResponse;
 import org.apache.hadoop.ipc.Server;
@@ -180,6 +181,23 @@ public class NameNodeAdapter {
     return spy;
   }
   
+  public static FSEditLog spyOnEditLog(NameNode nn) {
+    FSEditLog spyEditLog = spy(nn.getNamesystem().getFSImage().getEditLog());
+    nn.getFSImage().setEditLogForTesting(spyEditLog);
+    EditLogTailer tailer = nn.getNamesystem().getEditLogTailer();
+    if (tailer != null) {
+      tailer.setEditLog(spyEditLog);
+    }
+    return spyEditLog;
+  }
+  
+  public static JournalSet spyOnJournalSet(NameNode nn) {
+    FSEditLog editLog = nn.getFSImage().getEditLog();
+    JournalSet js = Mockito.spy(editLog.getJournalSet());
+    editLog.setJournalSetForTesting(js);
+    return js;
+  }
+  
   public static String getMkdirOpPath(FSEditLogOp op) {
     if (op.opCode == FSEditLogOpCodes.OP_MKDIR) {
       return ((MkdirOp) op).path;
@@ -210,15 +228,10 @@ public class NameNodeAdapter {
   }
   
   /**
-   * @return true if safemode is not running, or if safemode has already
-   * initialized the replication queues
+   * @return Replication queue initialization status
    */
   public static boolean safeModeInitializedReplQueues(NameNode nn) {
-    SafeModeInfo smi = nn.getNamesystem().getSafeModeInfoForTests();
-    if (smi == null) {
-      return true;
-    }
-    return smi.initializedReplQueues;
+    return nn.getNamesystem().isPopulatingReplQueues();
   }
   
   public static File getInProgressEditsFile(StorageDirectory sd, long startTxId) {

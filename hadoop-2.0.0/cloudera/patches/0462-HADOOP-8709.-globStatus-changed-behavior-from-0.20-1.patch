@@ -1,7 +1,7 @@
 From 4a1bae5ab1ff7cd821b94d5d5e2941c299bcb6ed Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Thu, 23 Aug 2012 19:18:05 +0000
-Subject: [PATCH 462/545] HADOOP-8709. globStatus changed behavior from 0.20/1.x (Jason Lowe via bobby)
+Subject: [PATCH 0462/1612] HADOOP-8709. globStatus changed behavior from 0.20/1.x (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1376653 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 1f158ebe2831c61b049626d4b5a0907292bd21fe)

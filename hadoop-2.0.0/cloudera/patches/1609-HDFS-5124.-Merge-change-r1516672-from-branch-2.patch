@@ -1,0 +1,56 @@
+From 8f1573109fde7f607175627b09e60ab9a97acc55 Mon Sep 17 00:00:00 2001
+From: Jing Zhao <jing9@apache.org>
+Date: Fri, 23 Aug 2013 01:00:03 +0000
+Subject: [PATCH 1609/1612] HDFS-5124. Merge change r1516672 from branch-2.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.1-beta@1516673 13f79535-47bb-0310-9956-ffa450edef68
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
+---
+ .../delegation/DelegationTokenSecretManager.java   |   15 ++-------------
+ 1 files changed, 2 insertions(+), 13 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
+index a402744..7b17050 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
+@@ -89,7 +89,7 @@ public class DelegationTokenSecretManager
+   }
+   
+   @Override
+-  public synchronized byte[] retrievePassword(
++  public byte[] retrievePassword(
+       DelegationTokenIdentifier identifier) throws InvalidToken {
+     try {
+       // this check introduces inconsistency in the authentication to a
+@@ -98,7 +98,7 @@ public class DelegationTokenSecretManager
+       // different in that a standby may be behind and thus not yet know
+       // of all tokens issued by the active NN.  the following check does
+       // not allow ANY token auth, however it should allow known tokens in
+-      checkAvailableForRead();
++      namesystem.checkOperation(OperationCategory.READ);
+     } catch (StandbyException se) {
+       // FIXME: this is a hack to get around changing method signatures by
+       // tunneling a non-InvalidToken exception as the cause which the
+@@ -110,17 +110,6 @@ public class DelegationTokenSecretManager
+     return super.retrievePassword(identifier);
+   }
+   
+-  @Override //SecretManager
+-  public void checkAvailableForRead() throws StandbyException {
+-    namesystem.checkOperation(OperationCategory.READ);
+-    namesystem.readLock();
+-    try {
+-      namesystem.checkOperation(OperationCategory.READ);
+-    } finally {
+-      namesystem.readUnlock();
+-    }
+-  }
+-
+   /**
+    * Returns expiry time of a token given its identifier.
+    * 
+-- 
+1.7.0.4
+

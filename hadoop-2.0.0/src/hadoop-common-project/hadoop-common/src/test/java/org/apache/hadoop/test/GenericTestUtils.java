@@ -20,11 +20,16 @@ package org.apache.hadoop.test;
 import java.io.File;
 import java.io.IOException;
 import java.io.StringWriter;
+import java.lang.management.ManagementFactory;
+import java.lang.management.ThreadInfo;
+import java.lang.management.ThreadMXBean;
+import java.lang.reflect.InvocationTargetException;
 import java.util.Arrays;
 import java.util.Random;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeoutException;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.regex.Pattern;
 
 import org.apache.commons.logging.Log;
@@ -48,12 +53,22 @@ import com.google.common.collect.Sets;
  */
 public abstract class GenericTestUtils {
 
+  private static final AtomicInteger sequence = new AtomicInteger();
+
   /**
    * Extracts the name of the method where the invocation has happened
    * @return String name of the invoking method
    */
   public static String getMethodName() {
     return Thread.currentThread().getStackTrace()[2].getMethodName();
+  }
+
+  /**
+   * Generates a process-wide unique sequence number.
+   * @return an unique sequence number
+   */
+  public static int uniqueSequenceId() {
+    return sequence.incrementAndGet();
   }
   
   /**
@@ -80,8 +95,8 @@ public abstract class GenericTestUtils {
     Set<String> expectedSet = Sets.newTreeSet(
         Arrays.asList(expectedMatches));
     Assert.assertEquals("Bad files matching " + pattern + " in " + dir,
-        Joiner.on(",").join(found),
-        Joiner.on(",").join(expectedSet));
+        Joiner.on(",").join(expectedSet),
+        Joiner.on(",").join(found));
   }
   
   public static void assertExceptionContains(String string, Throwable t) {
@@ -148,6 +163,9 @@ public abstract class GenericTestUtils {
     private final CountDownLatch waitLatch = new CountDownLatch(1);
     private final CountDownLatch resultLatch = new CountDownLatch(1);
     
+    private final AtomicInteger fireCounter = new AtomicInteger(0);
+    private final AtomicInteger resultCounter = new AtomicInteger(0);
+    
     // Result fields set after proceed() is called.
     private volatile Throwable thrown;
     private volatile Object returnValue;
@@ -173,6 +191,7 @@ public abstract class GenericTestUtils {
   
     public Object answer(InvocationOnMock invocation) throws Throwable {
       LOG.info("DelayAnswer firing fireLatch");
+      fireCounter.getAndIncrement();
       fireLatch.countDown();
       try {
         LOG.info("DelayAnswer waiting on waitLatch");
@@ -193,6 +212,7 @@ public abstract class GenericTestUtils {
         thrown = t;
         throw t;
       } finally {
+        resultCounter.incrementAndGet();
         resultLatch.countDown();
       }
     }
@@ -220,6 +240,14 @@ public abstract class GenericTestUtils {
     public Object getReturnValue() {
       return returnValue;
     }
+    
+    public int getFireCount() {
+      return fireCounter.get();
+    }
+    
+    public int getResultCount() {
+      return resultCounter.get();
+    }
   }
   
   /**
@@ -238,15 +266,29 @@ public abstract class GenericTestUtils {
    */
   public static class DelegateAnswer implements Answer<Object> { 
     private final Object delegate;
+    private final Log log;
     
     public DelegateAnswer(Object delegate) {
+      this(null, delegate);
+    }
+    
+    public DelegateAnswer(Log log, Object delegate) {
+      this.log = log;
       this.delegate = delegate;
     }
 
     @Override
     public Object answer(InvocationOnMock invocation) throws Throwable {
-      return invocation.getMethod().invoke(
-          delegate, invocation.getArguments());
+      try {
+        if (log != null) {
+          log.info("Call to " + invocation + " on " + delegate,
+              new Exception("TRACE"));
+        }
+        return invocation.getMethod().invoke(
+            delegate, invocation.getArguments());
+      } catch (InvocationTargetException ite) {
+        throw ite.getCause();
+      }
     }
   }
 
@@ -286,5 +328,34 @@ public abstract class GenericTestUtils {
     Assert.assertTrue("Expected output to match /" + pattern + "/" +
         " but got:\n" + output,
         Pattern.compile(pattern).matcher(output).find());
+  }
+  
+  public static void assertValueNear(long expected, long actual, long allowedError) {
+    assertValueWithinRange(expected - allowedError, expected + allowedError, actual);
+  }
+  
+  public static void assertValueWithinRange(long expectedMin, long expectedMax,
+      long actual) {
+    Assert.assertTrue("Expected " + actual + " to be in range (" + expectedMin + ","
+        + expectedMax + ")", expectedMin <= actual && actual <= expectedMax);
+  }
+
+  /**
+   * Assert that there are no threads running whose name matches the
+   * given regular expression.
+   * @param regex the regex to match against
+   */
+  public static void assertNoThreadsMatching(String regex) {
+    Pattern pattern = Pattern.compile(regex);
+    ThreadMXBean threadBean = ManagementFactory.getThreadMXBean();
+    
+    ThreadInfo[] infos = threadBean.getThreadInfo(threadBean.getAllThreadIds(), 20);
+    for (ThreadInfo info : infos) {
+      if (info == null) continue;
+      if (pattern.matcher(info.getThreadName()).matches()) {
+        Assert.fail("Leaked thread: " + info + "\n" +
+            Joiner.on("\n").join(info.getStackTrace()));
+      }
+    }
   }
 }

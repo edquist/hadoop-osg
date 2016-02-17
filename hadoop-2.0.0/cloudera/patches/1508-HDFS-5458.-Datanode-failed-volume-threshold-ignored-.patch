@@ -1,0 +1,27 @@
+From 3d0643a90e11d1b92e4dbaeb4a0d2db10f3178cd Mon Sep 17 00:00:00 2001
+From: Andrew Wang <wang@apache.org>
+Date: Tue, 5 Nov 2013 18:27:00 +0000
+Subject: [PATCH 1508/1612] HDFS-5458. Datanode failed volume threshold ignored if exception is thrown in getDataDirsFromURIs. Contributed by Mike Mellenthin.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1539091 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit b1d195068db63246190a6615150df65d031beeee)
+---
+ .../hadoop/hdfs/server/datanode/DataNode.java      |    2 +-
+ 1 files changed, 1 insertions(+), 1 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java
+index 56d793c..b770551 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/DataNode.java
+@@ -1814,7 +1814,7 @@ public class DataNode extends Configured
+       } catch (IOException ioe) {
+         LOG.warn("Invalid " + DFS_DATANODE_DATA_DIR_KEY + " "
+             + dir + " : ", ioe);
+-        invalidDirs.append("\"").append(dir.getCanonicalPath()).append("\" ");
++        invalidDirs.append("\"").append(dirURI.getPath()).append("\" ");
+       }
+     }
+     if (dirs.size() == 0) {
+-- 
+1.7.0.4
+

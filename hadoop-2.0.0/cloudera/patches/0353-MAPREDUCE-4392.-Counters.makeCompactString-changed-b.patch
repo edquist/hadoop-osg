@@ -1,7 +1,7 @@
 From 28d1d1fe6259f20973906ff1892a3a73b914b20e Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Thu, 5 Jul 2012 18:09:09 +0000
-Subject: [PATCH 353/545] MAPREDUCE-4392. Counters.makeCompactString() changed behavior from 0.20 (Jason Lowe via bobby)
+Subject: [PATCH 0353/1612] MAPREDUCE-4392. Counters.makeCompactString() changed behavior from 0.20 (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1357776 13f79535-47bb-0310-9956-ffa450edef68
 ---

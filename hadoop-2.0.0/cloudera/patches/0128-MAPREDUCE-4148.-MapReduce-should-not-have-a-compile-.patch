@@ -1,7 +1,7 @@
 From f7c43e7c2d6e052d2ae5c9e541bf573bfbf04b9b Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Fri, 11 May 2012 15:00:48 +0000
-Subject: [PATCH 128/545] MAPREDUCE-4148. MapReduce should not have a compile-time dependency on HDFS.
+Subject: [PATCH 0128/1612] MAPREDUCE-4148. MapReduce should not have a compile-time dependency on HDFS.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1337199 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e6119e8a733db1aac8b1a34555c476ea33d7452a)

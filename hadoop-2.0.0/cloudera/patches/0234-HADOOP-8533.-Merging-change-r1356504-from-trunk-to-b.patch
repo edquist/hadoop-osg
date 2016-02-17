@@ -1,7 +1,7 @@
 From 3f14f3bbbd2d9e237753b8e463e49b091f9315ef Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Mon, 2 Jul 2012 23:03:17 +0000
-Subject: [PATCH 234/545] HADOOP-8533. Merging change r1356504 from trunk to branch-2
+Subject: [PATCH 0234/1612] HADOOP-8533. Merging change r1356504 from trunk to branch-2
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1356515 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 81831aa964787548b88a89bb634a685d94c2df75)

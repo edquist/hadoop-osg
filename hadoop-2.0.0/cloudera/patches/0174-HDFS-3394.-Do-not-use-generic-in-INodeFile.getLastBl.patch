@@ -1,7 +1,7 @@
 From d0fea2c0481afdbae92787793fa6a9c83c878314 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Mon, 21 May 2012 18:51:15 +0000
-Subject: [PATCH 174/545] HDFS-3394. Do not use generic in INodeFile.getLastBlock(): the run-time ClassCastException check is useless since generic type information is only available in compile-time.
+Subject: [PATCH 0174/1612] HDFS-3394. Do not use generic in INodeFile.getLastBlock(): the run-time ClassCastException check is useless since generic type information is only available in compile-time.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1341141 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 64f906db2603a53b93e4d5acd719ac8240574b1a)

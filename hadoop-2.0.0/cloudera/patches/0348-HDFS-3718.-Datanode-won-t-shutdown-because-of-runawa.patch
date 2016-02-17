@@ -1,7 +1,7 @@
 From 7c00472c3a58ac9fd8db6efe44e0545e97411c9a Mon Sep 17 00:00:00 2001
 From: Daryn Sharp <daryn@apache.org>
 Date: Tue, 14 Aug 2012 20:56:49 +0000
-Subject: [PATCH 348/545] HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner thread (Kihwal Lee via daryn)
+Subject: [PATCH 0348/1612] HDFS-3718. Datanode won't shutdown because of runaway DataBlockScanner thread (Kihwal Lee via daryn)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1373090 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8b74dd62fa9da6021b8bf03ebe5813ca4aa26c62)

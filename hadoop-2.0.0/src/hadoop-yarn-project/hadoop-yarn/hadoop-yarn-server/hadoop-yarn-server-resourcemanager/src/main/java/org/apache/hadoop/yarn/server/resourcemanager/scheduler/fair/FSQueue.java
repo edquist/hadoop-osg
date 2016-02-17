@@ -20,63 +20,171 @@ package org.apache.hadoop.yarn.server.resourcemanager.scheduler.fair;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.apache.hadoop.classification.InterfaceAudience.Private;
 import org.apache.hadoop.classification.InterfaceStability.Unstable;
+import org.apache.hadoop.security.UserGroupInformation;
+import org.apache.hadoop.security.authorize.AccessControlList;
+import org.apache.hadoop.yarn.api.records.Priority;
+import org.apache.hadoop.yarn.api.records.QueueACL;
+import org.apache.hadoop.yarn.api.records.QueueInfo;
+import org.apache.hadoop.yarn.api.records.QueueState;
+import org.apache.hadoop.yarn.api.records.Resource;
+import org.apache.hadoop.yarn.factories.RecordFactory;
+import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceWeights;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.Queue;
+import org.apache.hadoop.yarn.server.resourcemanager.scheduler.QueueMetrics;
 
-/**
- * A queue containing several applications.
- */
 @Private
 @Unstable
-public class FSQueue {
-  /** Queue name. */
-  private String name;
+public abstract class FSQueue extends Schedulable implements Queue {
+  private final String name;
+  private final QueueManager queueMgr;
+  private final FairScheduler scheduler;
+  private final FSQueueMetrics metrics;
+  
+  protected final FSParentQueue parent;
+  protected final RecordFactory recordFactory =
+      RecordFactoryProvider.getRecordFactory(null);
+  
+  protected SchedulingPolicy policy = SchedulingPolicy.getDefault();
 
-  /** Applications in this specific queue; does not include children queues' jobs. */
-  private Collection<FSSchedulerApp> applications = 
-      new ArrayList<FSSchedulerApp>();
-
-  /** Scheduling mode for jobs inside the queue (fair or FIFO) */
-  private SchedulingMode schedulingMode;
-
-  private FairScheduler scheduler;
-
-  private FSQueueSchedulable queueSchedulable;
-
-  public FSQueue(FairScheduler scheduler, String name) {
+  public FSQueue(String name, QueueManager queueMgr, 
+      FairScheduler scheduler, FSParentQueue parent) {
     this.name = name;
-    this.queueSchedulable = new FSQueueSchedulable(scheduler, this);
+    this.queueMgr = queueMgr;
     this.scheduler = scheduler;
+    this.metrics = FSQueueMetrics.forQueue(getName(), parent, true, scheduler.getConf());
+    metrics.setMinShare(getMinShare());
+    metrics.setMaxShare(getMaxShare());
+    this.parent = parent;
   }
-
-  public Collection<FSSchedulerApp> getApplications() {
-    return applications;
-  }
-
-  public void addApp(FSSchedulerApp app) {
-    applications.add(app);
-    queueSchedulable.addApp(new AppSchedulable(scheduler, app, this));
-  }
-
-  public void removeJob(FSSchedulerApp app) {
-    applications.remove(app);
-    queueSchedulable.removeApp(app);
-  }
-
+  
   public String getName() {
     return name;
   }
-
-  public SchedulingMode getSchedulingMode() {
-    return schedulingMode;
+  
+  @Override
+  public String getQueueName() {
+    return name;
+  }
+  
+  public SchedulingPolicy getPolicy() {
+    return policy;
   }
 
-  public void setSchedulingMode(SchedulingMode schedulingMode) {
-    this.schedulingMode = schedulingMode;
+  protected void throwPolicyDoesnotApplyException(SchedulingPolicy policy)
+      throws AllocationConfigurationException {
+    throw new AllocationConfigurationException("SchedulingPolicy " + policy
+        + " does not apply to queue " + getName());
   }
 
-  public FSQueueSchedulable getQueueSchedulable() {
-    return queueSchedulable;
+  public abstract void setPolicy(SchedulingPolicy policy)
+      throws AllocationConfigurationException;
+
+  @Override
+  public ResourceWeights getWeights() {
+    return queueMgr.getQueueWeight(getName());
+  }
+  
+  @Override
+  public Resource getMinShare() {
+    return queueMgr.getMinResources(getName());
+  }
+  
+  @Override
+  public Resource getMaxShare() {
+    return queueMgr.getMaxResources(getName());
+  }
+
+  @Override
+  public long getStartTime() {
+    return 0;
+  }
+
+  @Override
+  public Priority getPriority() {
+    Priority p = recordFactory.newRecordInstance(Priority.class);
+    p.setPriority(1);
+    return p;
+  }
+  
+  @Override
+  public QueueInfo getQueueInfo(boolean includeChildQueues, boolean recursive) {
+    QueueInfo queueInfo = recordFactory.newRecordInstance(QueueInfo.class);
+    queueInfo.setQueueName(getQueueName());
+    // TODO: we might change these queue metrics around a little bit
+    // to match the semantics of the fair scheduler.
+    queueInfo.setCapacity((float) getFairShare().getMemory() /
+        scheduler.getClusterCapacity().getMemory());
+    queueInfo.setCapacity((float) getResourceUsage().getMemory() /
+        scheduler.getClusterCapacity().getMemory());
+    
+    ArrayList<QueueInfo> childQueueInfos = new ArrayList<QueueInfo>();
+    if (includeChildQueues) {
+      Collection<FSQueue> childQueues = getChildQueues();
+      for (FSQueue child : childQueues) {
+        childQueueInfos.add(child.getQueueInfo(recursive, recursive));
+      }
+    }
+    queueInfo.setChildQueues(childQueueInfos);
+    queueInfo.setQueueState(QueueState.RUNNING);
+    return queueInfo;
+  }
+  
+  @Override
+  public Map<QueueACL, AccessControlList> getQueueAcls() {
+    Map<QueueACL, AccessControlList> acls = queueMgr.getQueueAcls(getName());
+    return new HashMap<QueueACL, AccessControlList>(acls);
+  }
+  
+  @Override
+  public FSQueueMetrics getMetrics() {
+    return metrics;
+  }
+  
+  @Override
+  public void setFairShare(Resource fairShare) {
+    super.setFairShare(fairShare);
+    metrics.setFairShare(fairShare);
+  }
+  
+  public boolean hasAccess(QueueACL acl, UserGroupInformation user) {
+    // Check if the leaf-queue allows access
+    if (queueMgr.getQueueAcls(getName()).get(acl).isUserAllowed(user)) {
+      return true;
+    }
+
+    // Check if parent-queue allows access
+    return parent != null && parent.hasAccess(acl, user);
+  }
+  
+  /**
+   * Recomputes the shares for all child queues and applications based on this
+   * queue's current share
+   */
+  public abstract void recomputeShares();
+  
+  /**
+   * Gets the children of this queue, if any.
+   */
+  public abstract Collection<FSQueue> getChildQueues();
+
+  /**
+   * Helper method to check if the queue should attempt assigning resources
+   * 
+   * @return true if check passes (can assign) or false otherwise
+   */
+  protected boolean assignContainerPreCheck(FSSchedulerNode node) {
+    if (!Resources.fitsIn(getResourceUsage(),
+        queueMgr.getMaxResources(getName()))
+        || node.getReservedContainer() != null) {
+      return false;
+    }
+    return true;
   }
 }

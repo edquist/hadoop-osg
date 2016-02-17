@@ -1,7 +1,7 @@
 From 63a7aff059d7a152788cdabd4a5b0c8353cc06e8 Mon Sep 17 00:00:00 2001
 From: Arun Murthy <acmurthy@apache.org>
 Date: Tue, 17 Jul 2012 01:43:03 +0000
-Subject: [PATCH 444/545] MAPREDUCE-4440. Changed SchedulerApp and SchedulerNode to be a minimal interface to allow schedulers to maintain their own.
+Subject: [PATCH 0444/1612] MAPREDUCE-4440. Changed SchedulerApp and SchedulerNode to be a minimal interface to allow schedulers to maintain their own.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362332 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 74e6f26c6c72bb1b4e1bb7ff8487315c635318fe)

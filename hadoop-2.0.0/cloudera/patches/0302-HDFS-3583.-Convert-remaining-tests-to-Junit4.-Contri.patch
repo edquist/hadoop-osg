@@ -1,7 +1,7 @@
 From d5a2c0b650c425de360f35ac8a8d2bab870ab02f Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 20 Jul 2012 20:44:56 +0000
-Subject: [PATCH 302/545] HDFS-3583. Convert remaining tests to Junit4. Contributed by Andrew Wang.
+Subject: [PATCH 0302/1612] HDFS-3583. Convert remaining tests to Junit4. Contributed by Andrew Wang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1363948 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 1cd4118adf3dd52aecee946a63cc2cbb34d84172)

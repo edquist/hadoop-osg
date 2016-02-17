@@ -1,7 +1,7 @@
 From 9c41e04989cad083a88829beb516aa693f888f73 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Wed, 1 Aug 2012 21:28:49 +0000
-Subject: [PATCH 275/545] HADOOP-8480. The native build should honor -DskipTests. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0275/1612] HADOOP-8480. The native build should honor -DskipTests. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1368257 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 9115b373cebfc416c466d3e580fb24e9903a2c4e)

@@ -19,6 +19,7 @@
 package org.apache.hadoop.hdfs;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
@@ -39,7 +40,7 @@ import org.junit.Test;
 public class TestHftpURLTimeouts {
   @BeforeClass
   public static void setup() {
-    URLUtils.SOCKET_TIMEOUT = 1;
+    URLUtils.SOCKET_TIMEOUT = 5;
   }
   
   @Test
@@ -53,19 +54,23 @@ public class TestHftpURLTimeouts {
     boolean timedout = false;
 
     HftpFileSystem fs = (HftpFileSystem)FileSystem.get(uri, conf);
-    HttpURLConnection conn = fs.openConnection("/", "");
-    timedout = false;
     try {
-      // this will consume the only slot in the backlog
-      conn.getInputStream();
-    } catch (SocketTimeoutException ste) {
-      timedout = true;
-      assertEquals("Read timed out", ste.getMessage());
+      HttpURLConnection conn = fs.openConnection("/", "");
+      timedout = false;
+      try {
+        // this will consume the only slot in the backlog
+        conn.getInputStream();
+      } catch (SocketTimeoutException ste) {
+        timedout = true;
+        assertEquals("Read timed out", ste.getMessage());
+      } finally {
+        if (conn != null) conn.disconnect();
+      }
+      assertTrue("read timedout", timedout);
+      assertTrue("connect timedout", checkConnectTimeout(fs, false));
     } finally {
-      if (conn != null) conn.disconnect();
+      fs.close();
     }
-    assertTrue("read timedout", timedout);
-    assertTrue("connect timedout", checkConnectTimeout(fs, false));
   }
 
   @Test
@@ -79,20 +84,24 @@ public class TestHftpURLTimeouts {
     boolean timedout = false;
 
     HsftpFileSystem fs = (HsftpFileSystem)FileSystem.get(uri, conf);
-    HttpURLConnection conn = null;
-    timedout = false;
     try {
-      // this will consume the only slot in the backlog
-      conn = fs.openConnection("/", "");
-    } catch (SocketTimeoutException ste) {
-      // SSL expects a negotiation, so it will timeout on read, unlike hftp
-      timedout = true;
-      assertEquals("Read timed out", ste.getMessage());
+      HttpURLConnection conn = null;
+      timedout = false;
+      try {
+        // this will consume the only slot in the backlog
+        conn = fs.openConnection("/", "");
+      } catch (SocketTimeoutException ste) {
+        // SSL expects a negotiation, so it will timeout on read, unlike hftp
+        timedout = true;
+        assertEquals("Read timed out", ste.getMessage());
+      } finally {
+        if (conn != null) conn.disconnect();
+      }
+      assertTrue("ssl read connect timedout", timedout);
+      assertTrue("connect timedout", checkConnectTimeout(fs, true));
     } finally {
-      if (conn != null) conn.disconnect();
+      fs.close();
     }
-    assertTrue("ssl read connect timedout", timedout);
-    assertTrue("connect timedout", checkConnectTimeout(fs, true));
   }
   
   private boolean checkConnectTimeout(HftpFileSystem fs, boolean ignoreReadTimeout)
@@ -108,6 +117,7 @@ public class TestHftpURLTimeouts {
           conns.add(fs.openConnection("/", ""));
         } catch (SocketTimeoutException ste) {
           String message = ste.getMessage();
+          assertNotNull(message);
           // https will get a read timeout due to SSL negotiation, but
           // a normal http will not, so need to ignore SSL read timeouts
           // until a connect timeout occurs

@@ -1,7 +1,7 @@
 From 45a56e268bab7c35ed5abb9dc77adcb9ced78bf3 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 17 Aug 2012 23:22:17 +0000
-Subject: [PATCH 360/545] HADOOP-8689. Make trash a server side configuration option. Contributed by Eli Collins
+Subject: [PATCH 0360/1612] HADOOP-8689. Make trash a server side configuration option. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1374472 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4600bb7b82deda70576c1f6affa69310fed1ed2d)

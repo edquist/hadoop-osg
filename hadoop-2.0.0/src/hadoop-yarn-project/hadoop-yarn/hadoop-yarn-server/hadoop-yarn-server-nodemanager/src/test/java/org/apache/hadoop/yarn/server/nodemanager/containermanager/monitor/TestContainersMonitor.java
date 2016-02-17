@@ -18,8 +18,10 @@
 
 package org.apache.hadoop.yarn.server.nodemanager.containermanager.monitor;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
+import static org.mockito.Mockito.mock;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -52,8 +54,11 @@ import org.apache.hadoop.yarn.api.records.LocalResourceVisibility;
 import org.apache.hadoop.yarn.api.records.Resource;
 import org.apache.hadoop.yarn.api.records.URL;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
+import org.apache.hadoop.yarn.event.AsyncDispatcher;
+import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.ExitCode;
 import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor.Signal;
+import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.BaseContainerManagerTest;
 import org.apache.hadoop.yarn.util.ConverterUtils;
 import org.apache.hadoop.yarn.util.LinuxResourceCalculatorPlugin;
@@ -82,7 +87,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
 
   /**
    * Test to verify the check for whether a process tree is over limit or not.
-   * 
+   *
    * @throws IOException
    *           if there was a problem setting up the fake procfs directories or
    *           files.
@@ -132,36 +137,36 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
       // tree rooted at 100 is over limit immediately, as it is
       // twice over the mem limit.
       ProcfsBasedProcessTree pTree = new ProcfsBasedProcessTree(
-                                          "100", true,
+                                          "100",
                                           procfsRootDir.getAbsolutePath());
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertTrue("tree rooted at 100 should be over limit " +
                     "after first iteration.",
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
 
       // the tree rooted at 200 is initially below limit.
-      pTree = new ProcfsBasedProcessTree("200", true,
+      pTree = new ProcfsBasedProcessTree("200",
                                           procfsRootDir.getAbsolutePath());
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertFalse("tree rooted at 200 shouldn't be over limit " +
                     "after one iteration.",
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
       // second iteration - now the tree has been over limit twice,
       // hence it should be declared over limit.
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertTrue(
           "tree rooted at 200 should be over limit after 2 iterations",
                   test.isProcessTreeOverLimit(pTree, "dummyId", limit));
 
       // the tree rooted at 600 is never over limit.
-      pTree = new ProcfsBasedProcessTree("600", true,
+      pTree = new ProcfsBasedProcessTree("600",
                                             procfsRootDir.getAbsolutePath());
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertFalse("tree rooted at 600 should never be over limit.",
                     test.isProcessTreeOverLimit(pTree, "dummyId", limit));
 
       // another iteration does not make any difference.
-      pTree.getProcessTree();
+      pTree.updateProcessTree();
       assertFalse("tree rooted at 600 should never be over limit.",
                     test.isProcessTreeOverLimit(pTree, "dummyId", limit));
     } finally {
@@ -198,7 +203,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
         recordFactory.newRecordInstance(ApplicationId.class);
     appId.setClusterTimestamp(0);
     appId.setId(0);
-    ApplicationAttemptId appAttemptId = 
+    ApplicationAttemptId appAttemptId =
         recordFactory.newRecordInstance(ApplicationAttemptId.class);
     appAttemptId.setApplicationId(appId);
     appAttemptId.setAttemptId(1);
@@ -220,7 +225,7 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     rsrc_alpha.setType(LocalResourceType.FILE);
     rsrc_alpha.setTimestamp(scriptFile.lastModified());
     String destinationFile = "dest_file";
-    Map<String, LocalResource> localResources = 
+    Map<String, LocalResource> localResources =
         new HashMap<String, LocalResource>();
     localResources.put(destinationFile, rsrc_alpha);
     containerLaunchContext.setLocalResources(localResources);
@@ -267,8 +272,8 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     String expectedMsgPattern =
         "Container \\[pid=" + pid + ",containerID=" + cId
             + "\\] is running beyond virtual memory limits. Current usage: "
-            + "[0-9.]+m?b of [0-9.]+m?b physical memory used; "
-            + "[0-9.]+m?b of [0-9.]+m?b virtual memory used. "
+            + "[0-9.]+ ?[KMGTPE]?B of [0-9.]+ ?[KMGTPE]?B physical memory used; "
+            + "[0-9.]+ ?[KMGTPE]?B of [0-9.]+ ?[KMGTPE]?B virtual memory used. "
             + "Killing container.\nDump of the process-tree for "
             + cId + " :\n";
     Pattern pat = Pattern.compile(expectedMsgPattern);
@@ -280,5 +285,55 @@ public class TestContainersMonitor extends BaseContainerManagerTest {
     Assert.assertFalse("Process is still alive!",
         exec.signalContainer(user,
             pid, Signal.NULL));
+  }
+
+  @Test(timeout = 20000)
+  public void testContainerMonitorMemFlags() {
+    ContainersMonitor cm = null;
+
+    long expPmem = 8192 * 1024 * 1024l;
+    long expVmem = (long) (expPmem * 2.1f);
+
+    cm = new ContainersMonitorImpl(mock(ContainerExecutor.class),
+        mock(AsyncDispatcher.class), mock(Context.class));
+    cm.init(getConfForCM(false, false, 8192, 2.1f));
+    assertEquals(expPmem, cm.getPmemAllocatedForContainers());
+    assertEquals(expVmem, cm.getVmemAllocatedForContainers());
+    assertEquals(false, cm.isPmemCheckEnabled());
+    assertEquals(false, cm.isVmemCheckEnabled());
+
+    cm = new ContainersMonitorImpl(mock(ContainerExecutor.class),
+        mock(AsyncDispatcher.class), mock(Context.class));
+    cm.init(getConfForCM(true, false, 8192, 2.1f));
+    assertEquals(expPmem, cm.getPmemAllocatedForContainers());
+    assertEquals(expVmem, cm.getVmemAllocatedForContainers());
+    assertEquals(true, cm.isPmemCheckEnabled());
+    assertEquals(false, cm.isVmemCheckEnabled());
+
+    cm = new ContainersMonitorImpl(mock(ContainerExecutor.class),
+        mock(AsyncDispatcher.class), mock(Context.class));
+    cm.init(getConfForCM(true, true, 8192, 2.1f));
+    assertEquals(expPmem, cm.getPmemAllocatedForContainers());
+    assertEquals(expVmem, cm.getVmemAllocatedForContainers());
+    assertEquals(true, cm.isPmemCheckEnabled());
+    assertEquals(true, cm.isVmemCheckEnabled());
+
+    cm = new ContainersMonitorImpl(mock(ContainerExecutor.class),
+        mock(AsyncDispatcher.class), mock(Context.class));
+    cm.init(getConfForCM(false, true, 8192, 2.1f));
+    assertEquals(expPmem, cm.getPmemAllocatedForContainers());
+    assertEquals(expVmem, cm.getVmemAllocatedForContainers());
+    assertEquals(false, cm.isPmemCheckEnabled());
+    assertEquals(true, cm.isVmemCheckEnabled());
+  }
+
+  private YarnConfiguration getConfForCM(boolean pMemEnabled,
+      boolean vMemEnabled, int nmPmem, float vMemToPMemRatio) {
+    YarnConfiguration conf = new YarnConfiguration();
+    conf.setInt(YarnConfiguration.NM_PMEM_MB, nmPmem);
+    conf.setBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED, pMemEnabled);
+    conf.setBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED, vMemEnabled);
+    conf.setFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO, vMemToPMemRatio);
+    return conf;
   }
 }

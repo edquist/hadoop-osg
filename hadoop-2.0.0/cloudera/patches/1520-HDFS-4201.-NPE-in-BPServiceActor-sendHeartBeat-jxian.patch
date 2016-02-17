@@ -1,0 +1,136 @@
+From 59850ad39156cfadb2aae79186da754cd33f1fae Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Wed, 11 Dec 2013 21:29:53 +0000
+Subject: [PATCH 1520/1612] HDFS-4201. NPE in BPServiceActor#sendHeartBeat (jxiang via cmccabe)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.3@1550267 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 77efdb024ddaf1e73094c45f3fee18071b128511)
+---
+ .../hdfs/server/datanode/BPOfferService.java       |   16 +++++-
+ .../hdfs/server/datanode/TestBPOfferService.java   |   52 ++++++++++++++++++++
+ 2 files changed, 65 insertions(+), 3 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BPOfferService.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BPOfferService.java
+index f59e848..73db345 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BPOfferService.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BPOfferService.java
+@@ -302,12 +302,22 @@ class BPOfferService {
+   synchronized void verifyAndSetNamespaceInfo(NamespaceInfo nsInfo) throws IOException {
+     if (this.bpNSInfo == null) {
+       this.bpNSInfo = nsInfo;
+-      
++      boolean success = false;
++
+       // Now that we know the namespace ID, etc, we can pass this to the DN.
+       // The DN can now initialize its local storage if we are the
+       // first BP to handshake, etc.
+-      dn.initBlockPool(this);
+-      return;
++      try {
++        dn.initBlockPool(this);
++        success = true;
++      } finally {
++        if (!success) {
++          // The datanode failed to initialize the BP. We need to reset
++          // the namespace info so that other BPService actors still have
++          // a chance to set it, and re-initialize the datanode.
++          this.bpNSInfo = null;
++        }
++      }
+     } else {
+       checkNSEquality(bpNSInfo.getBlockPoolID(), nsInfo.getBlockPoolID(),
+           "Blockpool ID");
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
+index 9245cc7..d5110e3 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/datanode/TestBPOfferService.java
+@@ -17,13 +17,17 @@
+  */
+ package org.apache.hadoop.hdfs.server.datanode;
+ 
++import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_DATANODE_DATA_DIR_KEY;
+ import static org.junit.Assert.assertEquals;
+ import static org.junit.Assert.assertNull;
+ import static org.junit.Assert.assertSame;
+ 
++import java.io.File;
+ import java.io.IOException;
+ import java.net.InetSocketAddress;
++import java.util.List;
+ import java.util.Map;
++import java.util.concurrent.atomic.AtomicInteger;
+ 
+ import org.apache.commons.logging.Log;
+ import org.apache.commons.logging.LogFactory;
+@@ -69,6 +73,8 @@ public class TestBPOfferService {
+       TestBPOfferService.class);
+   private static final ExtendedBlock FAKE_BLOCK =
+     new ExtendedBlock(FAKE_BPID, 12345L);
++  private static final String TEST_BUILD_DATA = System.getProperty(
++    "test.build.data", "build/test/data");
+ 
+   static {
+     ((Log4JLogger)DataNode.LOG).getLogger().setLevel(Level.ALL);
+@@ -290,6 +296,47 @@ public class TestBPOfferService {
+     }
+   }
+ 
++  /**
++   * Test datanode block pool initialization error handling.
++   * Failure in initializing a block pool should not cause NPE.
++   */
++  @Test
++  public void testBPInitErrorHandling() throws Exception {
++    final DataNode mockDn = Mockito.mock(DataNode.class);
++    Mockito.doReturn(true).when(mockDn).shouldRun();
++    Configuration conf = new Configuration();
++    File dnDataDir = new File(
++      new File(TEST_BUILD_DATA, "testBPInitErrorHandling"), "data");
++    conf.set(DFS_DATANODE_DATA_DIR_KEY, dnDataDir.toURI().toString());
++    Mockito.doReturn(conf).when(mockDn).getConf();
++    Mockito.doReturn(new DNConf(conf)).when(mockDn).getDnConf();
++    Mockito.doReturn(DataNodeMetrics.create(conf, "fake dn")).
++      when(mockDn).getMetrics();
++    final AtomicInteger count = new AtomicInteger();
++    Mockito.doAnswer(new Answer<Void>() {
++      @Override
++      public Void answer(InvocationOnMock invocation) throws Throwable {
++        if (count.getAndIncrement() == 0) {
++          throw new IOException("faked initBlockPool exception");
++        }
++        // The initBlockPool is called again. Now mock init is done.
++        Mockito.doReturn(mockFSDataset).when(mockDn).getFSDataset();
++        return null;
++      }
++    }).when(mockDn).initBlockPool(Mockito.any(BPOfferService.class));
++    BPOfferService bpos = setupBPOSForNNs(mockDn, mockNN1, mockNN2);
++    bpos.start();
++    try {
++      waitForInitialization(bpos);
++      List<BPServiceActor> actors = bpos.getBPServiceActors();
++      assertEquals(1, actors.size());
++      BPServiceActor actor = actors.get(0);
++      waitForBlockReport(actor.getNameNodeProxy());
++    } finally {
++      bpos.stop();
++    }
++  }
++
+   private void waitForOneToFail(final BPOfferService bpos)
+       throws Exception {
+     GenericTestUtils.waitFor(new Supplier<Boolean>() {
+@@ -307,6 +354,11 @@ public class TestBPOfferService {
+    */
+   private BPOfferService setupBPOSForNNs(
+       DatanodeProtocolClientSideTranslatorPB ... nns) throws IOException {
++    return setupBPOSForNNs(mockDn, nns);
++  }
++
++  private BPOfferService setupBPOSForNNs(DataNode mockDn,
++      DatanodeProtocolClientSideTranslatorPB ... nns) throws IOException {
+     // Set up some fake InetAddresses, then override the connectToNN
+     // function to return the corresponding proxies.
+ 
+-- 
+1.7.0.4
+

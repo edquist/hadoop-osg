@@ -1,7 +1,7 @@
 From 112931fe0bab59be508327a5a78062a55afdc6c9 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Fri, 1 Jun 2012 21:54:49 +0000
-Subject: [PATCH 151/545] MAPREDUCE-4302. NM goes down if error encountered during log aggregation (Daryn Sharp via bobby)
+Subject: [PATCH 0151/1612] MAPREDUCE-4302. NM goes down if error encountered during log aggregation (Daryn Sharp via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1345362 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 973b4b90685ceac34aba9712992e3d8ca69cf741)

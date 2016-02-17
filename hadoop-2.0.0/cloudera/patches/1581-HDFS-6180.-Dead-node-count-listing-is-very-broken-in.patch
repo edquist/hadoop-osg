@@ -1,0 +1,1129 @@
+From c722e3b27a56d99247e8b7599926bab53f7a40e0 Mon Sep 17 00:00:00 2001
+From: Haohui Mai <wheat9@apache.org>
+Date: Mon, 7 Apr 2014 23:55:06 +0000
+Subject: [PATCH 1581/1612] HDFS-6180. Dead node count / listing is very broken in JMX and old GUI. Contributed by Haohui Mai.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1585625 13f79535-47bb-0310-9956-ffa450edef68
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeRegistration.java
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java
+---
+ .../server/blockmanagement/DatanodeManager.java    |   71 ++--
+ .../server/blockmanagement/HostFileManager.java    |  217 ++++++++++++
+ .../hdfs/server/namenode/HostFileManager.java      |  358 --------------------
+ .../hadoop/hdfs/TestDatanodeRegistration.java      |   11 +-
+ .../org/apache/hadoop/hdfs/TestDecommission.java   |  145 --------
+ .../blockmanagement/TestHostFileManager.java       |  157 +++++++++
+ .../server/namenode/NNThroughputBenchmark.java     |   12 +-
+ 7 files changed, 417 insertions(+), 554 deletions(-)
+ create mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/HostFileManager.java
+ delete mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/HostFileManager.java
+ create mode 100644 hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/blockmanagement/TestHostFileManager.java
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java
+index ce648bc..5559a6b 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/DatanodeManager.java
+@@ -49,10 +49,6 @@ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+ import org.apache.hadoop.hdfs.protocol.UnregisteredNodeException;
+ import org.apache.hadoop.hdfs.server.blockmanagement.DatanodeDescriptor.BlockTargetPair;
+-import org.apache.hadoop.hdfs.server.namenode.HostFileManager;
+-import org.apache.hadoop.hdfs.server.namenode.HostFileManager.Entry;
+-import org.apache.hadoop.hdfs.server.namenode.HostFileManager.EntrySet;
+-import org.apache.hadoop.hdfs.server.namenode.HostFileManager.MutableEntrySet;
+ import org.apache.hadoop.hdfs.server.namenode.NameNode;
+ import org.apache.hadoop.hdfs.server.namenode.Namesystem;
+ import org.apache.hadoop.hdfs.server.protocol.BalancerBandwidthCommand;
+@@ -82,6 +78,7 @@ import org.apache.hadoop.util.Time;
+ import com.google.common.annotations.VisibleForTesting;
+ import com.google.common.base.Preconditions;
+ import com.google.common.net.InetAddresses;
++import java.net.InetSocketAddress;
+ 
+ /**
+  * Manage datanodes, include decommission and other activities.
+@@ -205,13 +202,11 @@ public class DatanodeManager {
+     // in the cache; so future calls to resolve will be fast.
+     if (dnsToSwitchMapping instanceof CachedDNSToSwitchMapping) {
+       final ArrayList<String> locations = new ArrayList<String>();
+-      for (Entry entry : hostFileManager.getIncludes()) {
+-        if (!entry.getIpAddress().isEmpty()) {
+-          locations.add(entry.getIpAddress());
+-        }
++      for (InetSocketAddress addr : hostFileManager.getIncludes()) {
++        locations.add(addr.getAddress().getHostAddress());
+       }
+       dnsToSwitchMapping.resolve(locations);
+-    };
++    }
+ 
+     final long heartbeatIntervalSeconds = conf.getLong(
+         DFSConfigKeys.DFS_HEARTBEAT_INTERVAL_KEY,
+@@ -1017,46 +1012,46 @@ public class DatanodeManager {
+     boolean listDeadNodes = type == DatanodeReportType.ALL ||
+                             type == DatanodeReportType.DEAD;
+ 
+-    ArrayList<DatanodeDescriptor> nodes = null;
+-    final MutableEntrySet foundNodes = new MutableEntrySet();
++    ArrayList<DatanodeDescriptor> nodes;
++    final HostFileManager.HostSet foundNodes = new HostFileManager.HostSet();
++    final HostFileManager.HostSet includedNodes = hostFileManager.getIncludes();
++    final HostFileManager.HostSet excludedNodes = hostFileManager.getExcludes();
++
+     synchronized(datanodeMap) {
+       nodes = new ArrayList<DatanodeDescriptor>(datanodeMap.size());
+-      Iterator<DatanodeDescriptor> it = datanodeMap.values().iterator();
+-      while (it.hasNext()) { 
+-        DatanodeDescriptor dn = it.next();
++      for (DatanodeDescriptor dn : datanodeMap.values()) {
+         final boolean isDead = isDatanodeDead(dn);
+-        if ( (isDead && listDeadNodes) || (!isDead && listLiveNodes) ) {
+-          nodes.add(dn);
++        if ((listLiveNodes && !isDead) || (listDeadNodes && isDead)) {
++            nodes.add(dn);
+         }
+-        foundNodes.add(dn);
++        foundNodes.add(HostFileManager.resolvedAddressFromDatanodeID(dn));
+       }
+     }
+ 
+     if (listDeadNodes) {
+-      final EntrySet includedNodes = hostFileManager.getIncludes();
+-      final EntrySet excludedNodes = hostFileManager.getExcludes();
+-      for (Entry entry : includedNodes) {
+-        if ((foundNodes.find(entry) == null) &&
+-            (excludedNodes.find(entry) == null)) {
+-          // The remaining nodes are ones that are referenced by the hosts
+-          // files but that we do not know about, ie that we have never
+-          // head from. Eg. an entry that is no longer part of the cluster
+-          // or a bogus entry was given in the hosts files
+-          //
+-          // If the host file entry specified the xferPort, we use that.
+-          // Otherwise, we guess that it is the default xfer port.
+-          // We can't ask the DataNode what it had configured, because it's
+-          // dead.
+-          DatanodeDescriptor dn =
+-              new DatanodeDescriptor(new DatanodeID(entry.getIpAddress(),
+-                  entry.getPrefix(), "",
+-                  entry.getPort() == 0 ? defaultXferPort : entry.getPort(),
+-                  defaultInfoPort, defaultIpcPort));
+-          dn.setLastUpdate(0); // Consider this node dead for reporting
+-          nodes.add(dn);
++      for (InetSocketAddress addr : includedNodes) {
++        if (foundNodes.matchedBy(addr) || excludedNodes.match(addr)) {
++          continue;
+         }
++        // The remaining nodes are ones that are referenced by the hosts
++        // files but that we do not know about, ie that we have never
++        // head from. Eg. an entry that is no longer part of the cluster
++        // or a bogus entry was given in the hosts files
++        //
++        // If the host file entry specified the xferPort, we use that.
++        // Otherwise, we guess that it is the default xfer port.
++        // We can't ask the DataNode what it had configured, because it's
++        // dead.
++        DatanodeDescriptor dn = new DatanodeDescriptor(new DatanodeID(addr
++                .getAddress().getHostAddress(), addr.getHostName(), "",
++                addr.getPort() == 0 ? defaultXferPort : addr.getPort(),
++                defaultInfoPort, defaultIpcPort));
++  
++        dn.setLastUpdate(0); // Consider this node dead for reporting
++        nodes.add(dn);
+       }
+     }
++
+     if (LOG.isDebugEnabled()) {
+       LOG.debug("getDatanodeListForReport with " +
+           "includedNodes = " + hostFileManager.getIncludes() +
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/HostFileManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/HostFileManager.java
+new file mode 100644
+index 0000000..0b8d6c5
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/HostFileManager.java
+@@ -0,0 +1,217 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hdfs.server.blockmanagement;
++
++import com.google.common.annotations.VisibleForTesting;
++import com.google.common.base.Function;
++import com.google.common.base.Joiner;
++import com.google.common.base.Preconditions;
++import com.google.common.collect.HashMultimap;
++import com.google.common.collect.Iterators;
++import com.google.common.collect.Multimap;
++import com.google.common.collect.UnmodifiableIterator;
++import org.apache.commons.logging.Log;
++import org.apache.commons.logging.LogFactory;
++import org.apache.hadoop.hdfs.protocol.DatanodeID;
++import org.apache.hadoop.util.HostsFileReader;
++
++import javax.annotation.Nullable;
++import java.io.IOException;
++import java.net.InetAddress;
++import java.net.InetSocketAddress;
++import java.net.URI;
++import java.net.URISyntaxException;
++import java.util.Collection;
++import java.util.HashSet;
++import java.util.Iterator;
++import java.util.Map;
++
++/**
++ * This class manages the include and exclude files for HDFS.
++ * <p/>
++ * These files control which DataNodes the NameNode expects to see in the
++ * cluster.  Loosely speaking, the include file, if it exists and is not
++ * empty, is a list of everything we expect to see.  The exclude file is
++ * a list of everything we want to ignore if we do see it.
++ * <p/>
++ * Entries may or may not specify a port.  If they don't, we consider
++ * them to apply to every DataNode on that host. The code canonicalizes the
++ * entries into IP addresses.
++ * <p/>
++ * <p/>
++ * The code ignores all entries that the DNS fails to resolve their IP
++ * addresses. This is okay because by default the NN rejects the registrations
++ * of DNs when it fails to do a forward and reverse lookup. Note that DNS
++ * resolutions are only done during the loading time to minimize the latency.
++ */
++class HostFileManager {
++  private static final Log LOG = LogFactory.getLog(HostFileManager.class);
++  private HostSet includes = new HostSet();
++  private HostSet excludes = new HostSet();
++
++  private static HostSet readFile(String type, String filename)
++          throws IOException {
++    HostSet res = new HostSet();
++    if (!filename.isEmpty()) {
++      HashSet<String> entrySet = new HashSet<String>();
++      HostsFileReader.readFileToSet(type, filename, entrySet);
++      for (String str : entrySet) {
++        InetSocketAddress addr = parseEntry(type, filename, str);
++        if (addr != null) {
++          res.add(addr);
++        }
++      }
++    }
++    return res;
++  }
++
++  @VisibleForTesting
++  static InetSocketAddress parseEntry(String type, String fn, String line) {
++    try {
++      URI uri = new URI("dummy", line, null, null, null);
++      int port = uri.getPort() == -1 ? 0 : uri.getPort();
++      InetSocketAddress addr = new InetSocketAddress(uri.getHost(), port);
++      if (addr.isUnresolved()) {
++        LOG.warn(String.format("Failed to resolve address `%s` in `%s`. " +
++                "Ignoring in the %s list.", line, fn, type));
++        return null;
++      }
++      return addr;
++    } catch (URISyntaxException e) {
++      LOG.warn(String.format("Failed to parse `%s` in `%s`. " + "Ignoring in " +
++              "the %s list.", line, fn, type));
++    }
++    return null;
++  }
++
++  static InetSocketAddress resolvedAddressFromDatanodeID(DatanodeID id) {
++    return new InetSocketAddress(id.getIpAddr(), id.getXferPort());
++  }
++
++  synchronized HostSet getIncludes() {
++    return includes;
++  }
++
++  synchronized HostSet getExcludes() {
++    return excludes;
++  }
++
++  // If the includes list is empty, act as if everything is in the
++  // includes list.
++  synchronized boolean isIncluded(DatanodeID dn) {
++    return includes.isEmpty() || includes.match
++            (resolvedAddressFromDatanodeID(dn));
++  }
++
++  synchronized boolean isExcluded(DatanodeID dn) {
++    return excludes.match(resolvedAddressFromDatanodeID(dn));
++  }
++
++  synchronized boolean hasIncludes() {
++    return !includes.isEmpty();
++  }
++
++  void refresh(String includeFile, String excludeFile) throws IOException {
++    HostSet newIncludes = readFile("included", includeFile);
++    HostSet newExcludes = readFile("excluded", excludeFile);
++    synchronized (this) {
++      includes = newIncludes;
++      excludes = newExcludes;
++    }
++  }
++
++  /**
++   * The HostSet allows efficient queries on matching wildcard addresses.
++   * <p/>
++   * For InetSocketAddress A and B with the same host address,
++   * we define a partial order between A and B, A <= B iff A.getPort() == B
++   * .getPort() || B.getPort() == 0.
++   */
++  static class HostSet implements Iterable<InetSocketAddress> {
++    // Host -> lists of ports
++    private final Multimap<InetAddress, Integer> addrs = HashMultimap.create();
++
++    /**
++     * The function that checks whether there exists an entry foo in the set
++     * so that foo <= addr.
++     */
++    boolean matchedBy(InetSocketAddress addr) {
++      Collection<Integer> ports = addrs.get(addr.getAddress());
++      return addr.getPort() == 0 ? !ports.isEmpty() : ports.contains(addr
++              .getPort());
++    }
++
++    /**
++     * The function that checks whether there exists an entry foo in the set
++     * so that addr <= foo.
++     */
++    boolean match(InetSocketAddress addr) {
++      int port = addr.getPort();
++      Collection<Integer> ports = addrs.get(addr.getAddress());
++      boolean exactMatch = ports.contains(port);
++      boolean genericMatch = ports.contains(0);
++      return exactMatch || genericMatch;
++    }
++
++    boolean isEmpty() {
++      return addrs.isEmpty();
++    }
++
++    int size() {
++      return addrs.size();
++    }
++
++    void add(InetSocketAddress addr) {
++      Preconditions.checkArgument(!addr.isUnresolved());
++      addrs.put(addr.getAddress(), addr.getPort());
++    }
++
++    @Override
++    public Iterator<InetSocketAddress> iterator() {
++      return new UnmodifiableIterator<InetSocketAddress>() {
++        private final Iterator<Map.Entry<InetAddress,
++                Integer>> it = addrs.entries().iterator();
++
++        @Override
++        public boolean hasNext() {
++          return it.hasNext();
++        }
++
++        @Override
++        public InetSocketAddress next() {
++          Map.Entry<InetAddress, Integer> e = it.next();
++          return new InetSocketAddress(e.getKey(), e.getValue());
++        }
++      };
++    }
++
++    @Override
++    public String toString() {
++      StringBuilder sb = new StringBuilder("HostSet(");
++      Joiner.on(",").appendTo(sb, Iterators.transform(iterator(),
++              new Function<InetSocketAddress, String>() {
++        @Override
++        public String apply(@Nullable InetSocketAddress addr) {
++          assert addr != null;
++          return addr.getAddress().getHostAddress() + ":" + addr.getPort();
++        }
++      }));
++      return sb.append(")").toString();
++    }
++  }
++}
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/HostFileManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/HostFileManager.java
+deleted file mode 100644
+index 8bd46b2..0000000
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/HostFileManager.java
++++ /dev/null
+@@ -1,358 +0,0 @@
+-/**
+- * Licensed to the Apache Software Foundation (ASF) under one
+- * or more contributor license agreements.  See the NOTICE file
+- * distributed with this work for additional information
+- * regarding copyright ownership.  The ASF licenses this file
+- * to you under the Apache License, Version 2.0 (the
+- * "License"); you may not use this file except in compliance
+- * with the License.  You may obtain a copy of the License at
+- *
+- *     http://www.apache.org/licenses/LICENSE-2.0
+- *
+- * Unless required by applicable law or agreed to in writing, software
+- * distributed under the License is distributed on an "AS IS" BASIS,
+- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+- * See the License for the specific language governing permissions and
+- * limitations under the License.
+- */
+-package org.apache.hadoop.hdfs.server.namenode;
+-
+-import java.io.IOException;
+-import java.net.InetAddress;
+-import java.net.UnknownHostException;
+-import java.util.HashMap;
+-import java.util.HashSet;
+-import java.util.Iterator;
+-import java.util.Map;
+-import java.util.TreeMap;
+-
+-import org.apache.commons.logging.Log;
+-import org.apache.commons.logging.LogFactory;
+-import org.apache.hadoop.hdfs.protocol.DatanodeID;
+-import org.apache.hadoop.util.HostsFileReader;
+-
+-/**
+- * This class manages the include and exclude files for HDFS.
+- * 
+- * These files control which DataNodes the NameNode expects to see in the
+- * cluster.  Loosely speaking, the include file, if it exists and is not
+- * empty, is a list of everything we expect to see.  The exclude file is 
+- * a list of everything we want to ignore if we do see it.
+- *
+- * Entries may or may not specify a port.  If they don't, we consider
+- * them to apply to every DataNode on that host.  For example, putting 
+- * 192.168.0.100 in the excludes file blacklists both 192.168.0.100:5000 and
+- * 192.168.0.100:6000.  This case comes up in unit tests.
+- *
+- * When reading the hosts files, we try to find the IP address for each
+- * entry.  This is important because it allows us to de-duplicate entries.
+- * If the user specifies a node as foo.bar.com in the include file, but
+- * 192.168.0.100 in the exclude file, we need to realize that these are 
+- * the same node.  Resolving the IP address also allows us to give more
+- * information back to getDatanodeListForReport, which makes the web UI 
+- * look nicer (among other things.)  See HDFS-3934 for more details.
+- *
+- * DNS resolution can be slow.  For this reason, we ONLY do it when (re)reading
+- * the hosts files.  In all other cases, we rely on the cached values either
+- * in the DatanodeID objects, or in HostFileManager#Entry.
+- * We also don't want to be holding locks when doing this.
+- * See HDFS-3990 for more discussion of DNS overheads.
+- * 
+- * Not all entries in the hosts files will have an associated IP address. 
+- * Some entries may be "registration names."  The "registration name" of 
+- * a DataNode is either the actual hostname, or an arbitrary string configured
+- * by dfs.datanode.hostname.  It's possible to add registration names to the
+- * include or exclude files.  If we can't find an IP address associated with
+- * a host file entry, we assume it's a registered hostname and act accordingly.
+- * The "registration name" feature is a little odd and it may be removed in the
+- * future (I hope?)
+- */
+-public class HostFileManager {
+-  private static final Log LOG = LogFactory.getLog(HostFileManager.class);
+-
+-  public static class Entry {
+-    /**
+-     * This what the user put on the line before the colon, or the whole line
+-     * if there is no colon.
+-     */
+-    private final String prefix;
+-    
+-    /**
+-     * This is the port which was specified after the colon.  It is 0 if no
+-     * port was given.
+-     */
+-    private final int port;
+-
+-    /**
+-     * If we can resolve the IP address, this is it.  Otherwise, it is the 
+-     * empty string.
+-     */
+-    private final String ipAddress;
+-
+-    /**
+-     * Parse a hosts file Entry.
+-     */
+-    static Entry parse(String fileName, String entry) throws IOException {
+-      final String prefix;
+-      final int port;
+-      String ipAddress = "";
+-      
+-      int idx = entry.indexOf(':');
+-      if (-1 == idx) {
+-        prefix = entry;
+-        port = 0;
+-      } else {
+-        prefix = entry.substring(0, idx);
+-        String portStr = entry.substring(idx + 1);
+-        try {
+-          port = Integer.valueOf(portStr);
+-        } catch (NumberFormatException e) {
+-          throw new IOException("unable to parse port number for " +
+-              "'" + entry + "'", e);
+-        }
+-      }
+-      try {
+-        // Let's see if we can resolve this prefix to an IP address.
+-        // This may fail; one example is with a registered hostname
+-        // which is not actually a real DNS name.
+-        InetAddress addr = InetAddress.getByName(prefix);
+-        ipAddress = addr.getHostAddress();
+-      } catch (UnknownHostException e) {
+-        LOG.info("When reading " + fileName + ", could not look up " +
+-            "IP address for " + prefix + ".  We will assume this is a " +
+-            "registration name.", e);
+-      }
+-      return new Entry(prefix, port, ipAddress);
+-    }
+-
+-    public String getIdentifier() {
+-      return ipAddress.isEmpty() ? prefix : ipAddress;
+-    }
+-
+-    public Entry(String prefix, int port, String ipAddress) {
+-      this.prefix = prefix;
+-      this.port = port;
+-      this.ipAddress = ipAddress;
+-    }
+-
+-    public String getPrefix() {
+-      return prefix;
+-    }
+-
+-    public int getPort() {
+-      return port;
+-    }
+-
+-    public String getIpAddress() {
+-      return ipAddress;
+-    }
+-
+-    public String toString() {
+-      StringBuilder bld = new StringBuilder();
+-      bld.append("Entry{").append(prefix).append(", port=").
+-          append(port).append(", ipAddress=").append(ipAddress).append("}");
+-      return bld.toString();
+-    }
+-  }
+-
+-  public static class EntrySet implements Iterable<Entry> {
+-    /**
+-     * The index.  Each Entry appears in here exactly once.
+-     *
+-     * It may be indexed by one of:
+-     *     ipAddress:port
+-     *     ipAddress
+-     *     registeredHostname:port
+-     *     registeredHostname
+-     *     
+-     * The different indexing strategies reflect the fact that we may or may
+-     * not have a port or IP address for each entry.
+-     */
+-    TreeMap<String, Entry> index = new TreeMap<String, Entry>();
+-
+-    public boolean isEmpty() {
+-      return index.isEmpty();
+-    }
+-
+-    public Entry find(DatanodeID datanodeID) {
+-      Entry entry;
+-      int xferPort = datanodeID.getXferPort();
+-      assert(xferPort > 0);
+-      String datanodeIpAddr = datanodeID.getIpAddr();
+-      if (datanodeIpAddr != null) {
+-        entry = index.get(datanodeIpAddr + ":" + xferPort);
+-        if (entry != null) {
+-          return entry;
+-        }
+-        entry = index.get(datanodeIpAddr);
+-        if (entry != null) {
+-          return entry;
+-        }
+-      }
+-      String registeredHostName = datanodeID.getHostName();
+-      if (registeredHostName != null) {
+-        entry = index.get(registeredHostName + ":" + xferPort);
+-        if (entry != null) {
+-          return entry;
+-        }
+-        entry = index.get(registeredHostName);
+-        if (entry != null) {
+-          return entry;
+-        }
+-      }
+-      return null;
+-    }
+-
+-    public Entry find(Entry toFind) {
+-      int port = toFind.getPort();
+-      if (port != 0) {
+-        return index.get(toFind.getIdentifier() + ":" + port);
+-      } else {
+-        // An Entry with no port matches any entry with the same identifer.
+-        // In other words, we treat 0 as "any port."
+-        Map.Entry<String, Entry> ceil =
+-            index.ceilingEntry(toFind.getIdentifier());
+-        if ((ceil != null) &&
+-            (ceil.getValue().getIdentifier().equals(
+-                toFind.getIdentifier()))) {
+-          return ceil.getValue();
+-        }
+-        return null;
+-      }
+-    }
+-
+-    public String toString() {
+-      StringBuilder bld = new StringBuilder();
+-      
+-      bld.append("HostSet(");
+-      for (Map.Entry<String, Entry> entry : index.entrySet()) {
+-        bld.append("\n\t");
+-        bld.append(entry.getKey()).append("->").
+-            append(entry.getValue().toString());
+-      }
+-      bld.append("\n)");
+-      return bld.toString();
+-    }
+-
+-    @Override
+-    public Iterator<Entry> iterator() {
+-      return index.values().iterator();
+-    }
+-  }
+-
+-  public static class MutableEntrySet extends EntrySet {
+-    public void add(DatanodeID datanodeID) {
+-      Entry entry = new Entry(datanodeID.getHostName(),
+-          datanodeID.getXferPort(), datanodeID.getIpAddr());
+-      index.put(datanodeID.getIpAddr() + ":" + datanodeID.getXferPort(),
+-          entry);
+-    }
+-
+-    public void add(Entry entry) {
+-      int port = entry.getPort();
+-      if (port != 0) {
+-        index.put(entry.getIdentifier() + ":" + port, entry);
+-      } else {
+-        index.put(entry.getIdentifier(), entry);
+-      }
+-    }
+-
+-    void readFile(String type, String filename) throws IOException {
+-      if (filename.isEmpty()) {
+-        return;
+-      }
+-      HashSet<String> entrySet = new HashSet<String>();
+-      HostsFileReader.readFileToSet(type, filename, entrySet);
+-      for (String str : entrySet) {
+-        Entry entry = Entry.parse(filename, str);
+-        add(entry);
+-      }
+-    }
+-  }
+-
+-  private EntrySet includes = new EntrySet();
+-  private EntrySet excludes = new EntrySet();
+-
+-  public HostFileManager() {
+-  }
+-
+-  public void refresh(String includeFile, String excludeFile)
+-      throws IOException {
+-    MutableEntrySet newIncludes = new MutableEntrySet();
+-    IOException includeException = null;
+-    try {
+-      newIncludes.readFile("included", includeFile);
+-    } catch (IOException e) {
+-      includeException = e;
+-    }
+-    MutableEntrySet newExcludes = new MutableEntrySet();
+-    IOException excludeException = null;
+-    try {
+-      newExcludes.readFile("excluded", excludeFile);
+-    } catch (IOException e) {
+-      excludeException = e;
+-    }
+-    synchronized(this) {
+-      if (includeException == null) {
+-        includes = newIncludes;
+-      }
+-      if (excludeException == null) {
+-        excludes = newExcludes;
+-      }
+-    }
+-    if (includeException == null) {
+-      LOG.info("read includes:\n" + newIncludes);
+-    } else {
+-      LOG.error("failed to read include file '" + includeFile + "'. " +
+-          "Continuing to use previous include list.",
+-          includeException);
+-    }
+-    if (excludeException == null) {
+-      LOG.info("read excludes:\n" + newExcludes);
+-    } else {
+-      LOG.error("failed to read exclude file '" + excludeFile + "'." +
+-          "Continuing to use previous exclude list.",
+-          excludeException);
+-    }
+-    if (includeException != null) {
+-      throw new IOException("error reading hosts file " + includeFile,
+-          includeException);
+-    }
+-    if (excludeException != null) {
+-      throw new IOException("error reading exclude file " + excludeFile,
+-          excludeException);
+-    }
+-  }
+-
+-  public synchronized boolean isIncluded(DatanodeID dn) {
+-    if (includes.isEmpty()) {
+-      // If the includes list is empty, act as if everything is in the
+-      // includes list.
+-      return true;
+-    } else {
+-      return includes.find(dn) != null;
+-    }
+-  }
+-
+-  public synchronized boolean isExcluded(DatanodeID dn) {
+-    return excludes.find(dn) != null;
+-  }
+-
+-  public synchronized boolean hasIncludes() {
+-    return !includes.isEmpty();
+-  }
+-
+-  /**
+-   * @return          the includes as an immutable set.
+-   */
+-  public synchronized EntrySet getIncludes() {
+-    return includes;
+-  }
+-
+-  /**
+-   * @return          the excludes as an immutable set.
+-   */
+-  public synchronized EntrySet getExcludes() {
+-    return excludes;
+-  }
+-}
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeRegistration.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeRegistration.java
+index ec58fc5..d0ebbb9 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeRegistration.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDatanodeRegistration.java
+@@ -17,10 +17,7 @@
+  */
+ package org.apache.hadoop.hdfs;
+ 
+-import static org.junit.Assert.*;
+-import static org.mockito.Mockito.doReturn;
+-import static org.mockito.Mockito.mock;
+-
++import java.net.InetAddress;
+ import java.net.InetSocketAddress;
+ import java.security.Permission;
+ 
+@@ -40,6 +37,10 @@ import org.apache.hadoop.test.GenericTestUtils;
+ import org.apache.hadoop.util.VersionInfo;
+ import org.junit.Test;
+ 
++import static org.junit.Assert.*;
++import static org.mockito.Mockito.doReturn;
++import static org.mockito.Mockito.mock;
++
+ /**
+  * This class tests that a file need not be closed before its
+  * data can be read by another client.
+@@ -223,6 +224,7 @@ public class TestDatanodeRegistration {
+       
+       DatanodeRegistration mockDnReg = mock(DatanodeRegistration.class);
+       doReturn(HdfsConstants.LAYOUT_VERSION).when(mockDnReg).getVersion();
++      doReturn("127.0.0.1").when(mockDnReg).getIpAddr();
+       doReturn(123).when(mockDnReg).getXferPort();
+       doReturn("fake-storage-id").when(mockDnReg).getStorageID();
+       doReturn(mockStorageInfo).when(mockDnReg).getStorageInfo();
+@@ -277,6 +279,7 @@ public class TestDatanodeRegistration {
+       // Should succeed when software versions are the same and CTimes are the
+       // same.
+       doReturn(VersionInfo.getVersion()).when(mockDnReg).getSoftwareVersion();
++      doReturn("127.0.0.1").when(mockDnReg).getIpAddr();
+       doReturn(123).when(mockDnReg).getXferPort();
+       rpcServer.registerDatanode(mockDnReg);
+       
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java
+index 05d2296..be91de3 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java
+@@ -24,9 +24,7 @@ import static org.junit.Assert.assertTrue;
+ import java.io.IOException;
+ import java.util.ArrayList;
+ import java.util.Collection;
+-import java.util.HashMap;
+ import java.util.Iterator;
+-import java.util.Map;
+ import java.util.Random;
+ 
+ import org.apache.commons.logging.Log;
+@@ -550,147 +548,4 @@ public class TestDecommission {
+       assertEquals(bogusIp, info[1].getHostName());
+     }
+   }
+-
+-  @Test(timeout=360000)
+-  public void testDuplicateHostsEntries() throws IOException,
+-      InterruptedException {
+-    Configuration hdfsConf = new Configuration(conf);
+-    cluster = new MiniDFSCluster.Builder(hdfsConf)
+-        .numDataNodes(1).setupHostsFile(true).build();
+-    cluster.waitActive();
+-    int dnPort = cluster.getDataNodes().get(0).getXferPort();
+-
+-    // pick some random ports that don't overlap with our DN's port
+-    // or with each other.
+-    Random random = new Random(System.currentTimeMillis());
+-    int port1 = dnPort;
+-    while (port1 == dnPort) {
+-      port1 = random.nextInt(6000) + 1000;
+-    }
+-    int port2 = dnPort;
+-    while ((port2 == dnPort) || (port2 == port1)) {
+-      port2 = random.nextInt(6000) + 1000;
+-    }
+-
+-    // Now empty hosts file and ensure the datanode is disallowed
+-    // from talking to namenode, resulting in it's shutdown.
+-    ArrayList<String> nodes = new ArrayList<String>();
+-
+-    // These entries will be de-duped by the NameNode, since they refer
+-    // to the same IP address + port combo.
+-    nodes.add("127.0.0.1:" + port1);
+-    nodes.add("localhost:" + port1);
+-    nodes.add("127.0.0.1:" + port1);
+-
+-    // The following entries should not be de-duped.
+-    nodes.add("127.0.0.1:" + port2);
+-    nodes.add("127.0.30.1:" + port1);
+-    writeConfigFile(hostsFile,  nodes);
+-
+-    refreshNodes(cluster.getNamesystem(0), hdfsConf);
+-
+-    DFSClient client = getDfsClient(cluster.getNameNode(0), hdfsConf);
+-    DatanodeInfo[] info = client.datanodeReport(DatanodeReportType.LIVE);
+-    for (int i = 0 ; i < 5 && info.length != 0; i++) {
+-      LOG.info("Waiting for datanode to be marked dead");
+-      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
+-      info = client.datanodeReport(DatanodeReportType.LIVE);
+-    }
+-    assertEquals("Number of live nodes should be 0", 0, info.length);
+-
+-    // Test that non-live and bogus hostnames are considered "dead".
+-    // The dead report should have an entry for (1) the DN  that is
+-    // now considered dead because it is no longer allowed to connect
+-    // and (2) the bogus entries in the hosts file.
+-    DatanodeInfo deadDns[] = client.datanodeReport(DatanodeReportType.DEAD);
+-    HashMap<String, DatanodeInfo> deadByXferAddr =
+-        new HashMap<String, DatanodeInfo>();
+-    for (DatanodeInfo dn : deadDns) {
+-      LOG.info("DEAD DatanodeInfo: xferAddr = " + dn.getXferAddr() +
+-          ", ipAddr = " + dn.getIpAddr() +
+-          ", hostname = " + dn.getHostName());
+-      deadByXferAddr.put(dn.getXferAddr(), dn);
+-    }
+-    // The real DataNode should be included in the list.
+-    String realDnIpPort = cluster.getDataNodes().get(0).
+-        getXferAddress().getAddress().getHostAddress() + ":" +
+-        cluster.getDataNodes().get(0).getXferPort();
+-    Assert.assertNotNull("failed to find real datanode IP " + realDnIpPort,
+-        deadByXferAddr.remove(realDnIpPort));
+-    // The fake datanode with address 127.0.30.1 should be included in this list.
+-    Assert.assertNotNull(deadByXferAddr.remove(
+-        "127.0.30.1:" + port1));
+-    // Now look for the two copies of 127.0.0.1 with port1 and port2.
+-    Iterator<Map.Entry<String, DatanodeInfo>> iter =
+-            deadByXferAddr.entrySet().iterator();
+-    boolean foundPort1 = false, foundPort2 = false;
+-    while (iter.hasNext()) {
+-      Map.Entry<String, DatanodeInfo> entry = iter.next();
+-      DatanodeInfo dn = entry.getValue();
+-      if (dn.getXferPort() == port1) {
+-        foundPort1 = true;
+-        iter.remove();
+-      } else if (dn.getXferPort() == port2) {
+-        foundPort2 = true;
+-        iter.remove();
+-      }
+-    }
+-    Assert.assertTrue("did not find a dead entry with port " + port1,
+-        foundPort1);
+-    Assert.assertTrue("did not find a dead entry with port " + port2,
+-        foundPort2);
+-    Assert.assertTrue(deadByXferAddr.isEmpty());
+-  }
+-
+-  @Test(timeout=360000)
+-  public void testIncludeByRegistrationName() throws IOException,
+-      InterruptedException {
+-    Configuration hdfsConf = new Configuration(conf);
+-    final String registrationName = "--registration-name--";
+-    final String nonExistentDn = "127.0.0.40";
+-    hdfsConf.set(DFSConfigKeys.DFS_DATANODE_HOST_NAME_KEY, registrationName);
+-    cluster = new MiniDFSCluster.Builder(hdfsConf)
+-        .numDataNodes(1).checkDataNodeHostConfig(true)
+-        .setupHostsFile(true).build();
+-    cluster.waitActive();
+-
+-    // Set up an includes file that doesn't have our datanode.
+-    ArrayList<String> nodes = new ArrayList<String>();
+-    nodes.add(nonExistentDn);
+-    writeConfigFile(hostsFile,  nodes);
+-    refreshNodes(cluster.getNamesystem(0), hdfsConf);
+-
+-    // Wait for the DN to be marked dead.
+-    DFSClient client = getDfsClient(cluster.getNameNode(0), hdfsConf);
+-    while (true) {
+-      DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.DEAD);
+-      if (info.length == 1) {
+-        break;
+-      }
+-      LOG.info("Waiting for datanode to be marked dead");
+-      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
+-    }
+-
+-    // Use a non-empty include file with our registration name.
+-    // It should work.
+-    int dnPort = cluster.getDataNodes().get(0).getXferPort();
+-    nodes = new ArrayList<String>();
+-    nodes.add(registrationName + ":" + dnPort);
+-    writeConfigFile(hostsFile,  nodes);
+-    refreshNodes(cluster.getNamesystem(0), hdfsConf);
+-    cluster.restartDataNode(0);
+-
+-    // Wait for the DN to come back.
+-    while (true) {
+-      DatanodeInfo info[] = client.datanodeReport(DatanodeReportType.LIVE);
+-      if (info.length == 1) {
+-        Assert.assertFalse(info[0].isDecommissioned());
+-        Assert.assertFalse(info[0].isDecommissionInProgress());
+-        assertEquals(registrationName, info[0].getHostName());
+-        break;
+-      }
+-      LOG.info("Waiting for datanode to come back");
+-      Thread.sleep(HEARTBEAT_INTERVAL * 1000);
+-    }
+-  }
+ }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/blockmanagement/TestHostFileManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/blockmanagement/TestHostFileManager.java
+new file mode 100644
+index 0000000..60aaf6f
+--- /dev/null
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/blockmanagement/TestHostFileManager.java
+@@ -0,0 +1,157 @@
++/**
++ * Licensed to the Apache Software Foundation (ASF) under one
++ * or more contributor license agreements.  See the NOTICE file
++ * distributed with this work for additional information
++ * regarding copyright ownership.  The ASF licenses this file
++ * to you under the Apache License, Version 2.0 (the
++ * "License"); you may not use this file except in compliance
++ * with the License.  You may obtain a copy of the License at
++ *
++ *     http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++package org.apache.hadoop.hdfs.server.blockmanagement;
++
++import org.apache.hadoop.conf.Configuration;
++import org.apache.hadoop.hdfs.protocol.DatanodeID;
++import org.apache.hadoop.hdfs.protocol.HdfsConstants;
++import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
++import org.junit.Assert;
++import org.junit.Test;
++import org.mockito.internal.util.reflection.Whitebox;
++
++import java.io.IOException;
++import java.net.InetSocketAddress;
++import java.util.Map;
++
++import static org.mockito.Mockito.doReturn;
++import static org.mockito.Mockito.mock;
++
++public class TestHostFileManager {
++  private static InetSocketAddress entry(String e) {
++    return HostFileManager.parseEntry("dummy", "dummy", e);
++  }
++
++  @Test
++  public void testDeduplication() {
++    HostFileManager.HostSet s = new HostFileManager.HostSet();
++    // These entries will be de-duped, since they refer to the same IP
++    // address + port combo.
++    s.add(entry("127.0.0.1:12345"));
++    s.add(entry("localhost:12345"));
++    Assert.assertEquals(1, s.size());
++    s.add(entry("127.0.0.1:12345"));
++    Assert.assertEquals(1, s.size());
++
++    // The following entries should not be de-duped.
++    s.add(entry("127.0.0.1:12346"));
++    Assert.assertEquals(2, s.size());
++    s.add(entry("127.0.0.1"));
++    Assert.assertEquals(3, s.size());
++    s.add(entry("127.0.0.10"));
++    Assert.assertEquals(4, s.size());
++  }
++
++  @Test
++  public void testRelation() {
++    HostFileManager.HostSet s = new HostFileManager.HostSet();
++    s.add(entry("127.0.0.1:123"));
++    Assert.assertTrue(s.match(entry("127.0.0.1:123")));
++    Assert.assertFalse(s.match(entry("127.0.0.1:12")));
++    Assert.assertFalse(s.match(entry("127.0.0.1")));
++    Assert.assertFalse(s.matchedBy(entry("127.0.0.1:12")));
++    Assert.assertTrue(s.matchedBy(entry("127.0.0.1")));
++    Assert.assertTrue(s.matchedBy(entry("127.0.0.1:123")));
++    Assert.assertFalse(s.match(entry("127.0.0.2")));
++    Assert.assertFalse(s.match(entry("127.0.0.2:123")));
++    Assert.assertFalse(s.matchedBy(entry("127.0.0.2")));
++    Assert.assertFalse(s.matchedBy(entry("127.0.0.2:123")));
++
++    s.add(entry("127.0.0.1"));
++    Assert.assertTrue(s.match(entry("127.0.0.1:123")));
++    Assert.assertTrue(s.match(entry("127.0.0.1:12")));
++    Assert.assertTrue(s.match(entry("127.0.0.1")));
++    Assert.assertFalse(s.matchedBy(entry("127.0.0.1:12")));
++    Assert.assertTrue(s.matchedBy(entry("127.0.0.1")));
++    Assert.assertTrue(s.matchedBy(entry("127.0.0.1:123")));
++    Assert.assertFalse(s.match(entry("127.0.0.2")));
++    Assert.assertFalse(s.match(entry("127.0.0.2:123")));
++    Assert.assertFalse(s.matchedBy(entry("127.0.0.2")));
++    Assert.assertFalse(s.matchedBy(entry("127.0.0.2:123")));
++
++    s.add(entry("127.0.0.2:123"));
++    Assert.assertTrue(s.match(entry("127.0.0.1:123")));
++    Assert.assertTrue(s.match(entry("127.0.0.1:12")));
++    Assert.assertTrue(s.match(entry("127.0.0.1")));
++    Assert.assertFalse(s.matchedBy(entry("127.0.0.1:12")));
++    Assert.assertTrue(s.matchedBy(entry("127.0.0.1")));
++    Assert.assertTrue(s.matchedBy(entry("127.0.0.1:123")));
++    Assert.assertFalse(s.match(entry("127.0.0.2")));
++    Assert.assertTrue(s.match(entry("127.0.0.2:123")));
++    Assert.assertTrue(s.matchedBy(entry("127.0.0.2")));
++    Assert.assertTrue(s.matchedBy(entry("127.0.0.2:123")));
++  }
++
++  @Test
++  @SuppressWarnings("unchecked")
++  public void testIncludeExcludeLists() throws IOException {
++    BlockManager bm = mock(BlockManager.class);
++    FSNamesystem fsn = mock(FSNamesystem.class);
++    Configuration conf = new Configuration();
++    HostFileManager hm = mock(HostFileManager.class);
++    HostFileManager.HostSet includedNodes = new HostFileManager.HostSet();
++    HostFileManager.HostSet excludedNodes = new HostFileManager.HostSet();
++
++    includedNodes.add(entry("127.0.0.1:12345"));
++    includedNodes.add(entry("localhost:12345"));
++    includedNodes.add(entry("127.0.0.1:12345"));
++
++    includedNodes.add(entry("127.0.0.2"));
++    excludedNodes.add(entry("127.0.0.1:12346"));
++    excludedNodes.add(entry("127.0.30.1:12346"));
++
++    Assert.assertEquals(2, includedNodes.size());
++    Assert.assertEquals(2, excludedNodes.size());
++
++    doReturn(includedNodes).when(hm).getIncludes();
++    doReturn(excludedNodes).when(hm).getExcludes();
++
++    DatanodeManager dm = new DatanodeManager(bm, fsn, conf);
++    Whitebox.setInternalState(dm, "hostFileManager", hm);
++    Map<String, DatanodeDescriptor> dnMap = (Map<String,
++            DatanodeDescriptor>) Whitebox.getInternalState(dm, "datanodeMap");
++
++    // After the de-duplication, there should be only one DN from the included
++    // nodes declared as dead.
++    Assert.assertEquals(2, dm.getDatanodeListForReport(HdfsConstants
++            .DatanodeReportType.ALL).size());
++    Assert.assertEquals(2, dm.getDatanodeListForReport(HdfsConstants
++            .DatanodeReportType.DEAD).size());
++    dnMap.put("uuid-foo", new DatanodeDescriptor(new DatanodeID("127.0.0.1",
++            "localhost", "uuid-foo", 12345, 1020, 1022)));
++    Assert.assertEquals(1, dm.getDatanodeListForReport(HdfsConstants
++            .DatanodeReportType.DEAD).size());
++    dnMap.put("uuid-bar", new DatanodeDescriptor(new DatanodeID("127.0.0.2",
++            "127.0.0.2", "uuid-bar", 12345, 1020, 1022)));
++    Assert.assertEquals(0, dm.getDatanodeListForReport(HdfsConstants
++            .DatanodeReportType.DEAD).size());
++    DatanodeDescriptor spam = new DatanodeDescriptor(new DatanodeID("127.0.0" +
++            ".3", "127.0.0.3", "uuid-spam", 12345, 1020, 1022));
++    spam.setLastUpdate(0);
++    includedNodes.add(entry("127.0.0.3:12345"));
++    dnMap.put("uuid-spam", spam);
++    Assert.assertEquals(1, dm.getDatanodeListForReport(HdfsConstants
++            .DatanodeReportType.DEAD).size());
++    dnMap.remove("uuid-spam");
++    Assert.assertEquals(1, dm.getDatanodeListForReport(HdfsConstants
++            .DatanodeReportType.DEAD).size());
++    excludedNodes.add(entry("127.0.0.3"));
++    Assert.assertEquals(0, dm.getDatanodeListForReport(HdfsConstants
++            .DatanodeReportType.DEAD).size());
++  }
++}
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/NNThroughputBenchmark.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/NNThroughputBenchmark.java
+index a744b0b..1cb9f7a 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/NNThroughputBenchmark.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/NNThroughputBenchmark.java
+@@ -25,6 +25,7 @@ import java.util.Arrays;
+ import java.util.EnumSet;
+ import java.util.List;
+ 
++import com.google.common.base.Preconditions;
+ import org.apache.commons.logging.Log;
+ import org.apache.commons.logging.LogFactory;
+ import org.apache.commons.logging.impl.Log4JLogger;
+@@ -802,16 +803,9 @@ public class NNThroughputBenchmark {
+     long[] blockReportList;
+     int dnIdx;
+ 
+-    /**
+-     * Return a a 6 digit integer port.
+-     * This is necessary in order to provide lexocographic ordering.
+-     * Host names are all the same, the ordering goes by port numbers.
+-     */
+     private static int getNodePort(int num) throws IOException {
+-      int port = 100000 + num;
+-      if (String.valueOf(port).length() > 6) {
+-        throw new IOException("Too many data-nodes");
+-      }
++      int port = 1 + num;
++      Preconditions.checkState(port < Short.MAX_VALUE);
+       return port;
+     }
+ 
+-- 
+1.7.0.4
+

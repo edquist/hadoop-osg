@@ -1,7 +1,7 @@
 From 03b2ed5538ea9aa1be90cc5249550a49998697ac Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Fri, 27 Jul 2012 21:51:07 +0000
-Subject: [PATCH 257/545] HDFS-3679. fuse_dfs notrash option sets usetrash. Contributed by Conrad Meyer.
+Subject: [PATCH 0257/1612] HDFS-3679. fuse_dfs notrash option sets usetrash. Contributed by Conrad Meyer.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1366545 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e95b0f2071e0f71e528441a4862c295a937ec489)

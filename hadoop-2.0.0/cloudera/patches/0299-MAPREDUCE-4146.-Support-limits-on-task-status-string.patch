@@ -1,7 +1,7 @@
 From a245fb9995284559329547934448a11b40de94a7 Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Tue, 29 May 2012 14:43:40 +0000
-Subject: [PATCH 299/545] MAPREDUCE-4146. Support limits on task status string length and number of block locations in branch-2. Contributed by Ahmed Radwan.
+Subject: [PATCH 0299/1612] MAPREDUCE-4146. Support limits on task status string length and number of block locations in branch-2. Contributed by Ahmed Radwan.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1343755 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit afd5f3eea0a10a4666238bfe18b623bee0ca4c8d)

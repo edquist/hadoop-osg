@@ -228,12 +228,14 @@ public class QJournalProtocolTranslatorPB implements ProtocolMetaInterface,
 
   @Override
   public GetEditLogManifestResponseProto getEditLogManifest(String jid,
-      long sinceTxId) throws IOException {
+      long sinceTxId, boolean inProgressOk)
+      throws IOException {
     try {
       return rpcProxy.getEditLogManifest(NULL_CONTROLLER,
           GetEditLogManifestRequestProto.newBuilder()
             .setJid(convertJournalId(jid))
             .setSinceTxId(sinceTxId)
+            .setInProgressOk(inProgressOk)
             .build());
     } catch (ServiceException e) {
       throw ProtobufHelper.getRemoteException(e);

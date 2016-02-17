@@ -1,7 +1,7 @@
 From 68821fe660ea6a6786c29f5df00ad5a81974a27f Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 21 Aug 2012 17:46:07 +0000
-Subject: [PATCH 423/545] MAPREDUCE-4570. ProcfsBasedProcessTree#constructProcessInfo() prints a warning if procfsDir/<pid>/stat is not found. (Ahmed Radwan via bobby)
+Subject: [PATCH 0423/1612] MAPREDUCE-4570. ProcfsBasedProcessTree#constructProcessInfo() prints a warning if procfsDir/<pid>/stat is not found. (Ahmed Radwan via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1375687 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8fdb4aa485eb78037d1626f1bcedd77a538efd55)

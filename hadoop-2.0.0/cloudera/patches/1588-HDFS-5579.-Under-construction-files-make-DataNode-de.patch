@@ -1,0 +1,193 @@
+From 21a3c93b96f15181de6bba0cdfd0ee9f7ce4a76d Mon Sep 17 00:00:00 2001
+From: Jing Zhao <jing9@apache.org>
+Date: Tue, 14 Jan 2014 02:02:15 +0000
+Subject: [PATCH 1588/1612] HDFS-5579. Under construction files make DataNode decommission take very long hours. Contributed by zhaoyunjiong.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1557904 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 4e9b7f87fe16c1ab518e772f8c1cfef0f9f4dfc3)
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java
+---
+ .../server/blockmanagement/BlockCollection.java    |    2 +-
+ .../hdfs/server/blockmanagement/BlockManager.java  |   21 ++++++---
+ .../hadoop/hdfs/server/namenode/INodeFile.java     |    2 +-
+ .../org/apache/hadoop/hdfs/TestDecommission.java   |   50 ++++++++++++++++++++
+ .../blockmanagement/TestReplicationPolicy.java     |    5 +-
+ 5 files changed, 69 insertions(+), 11 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockCollection.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockCollection.java
+index f344833..23aadb6 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockCollection.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockCollection.java
+@@ -31,7 +31,7 @@ public interface BlockCollection {
+   /**
+    * Get the last block of the collection.
+    */
+-  public BlockInfo getLastBlock() throws IOException;
++  public BlockInfo getLastBlock();
+ 
+   /** 
+    * Get content summary.
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+index d958596..a503d73 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/blockmanagement/BlockManager.java
+@@ -1172,8 +1172,10 @@ public class BlockManager {
+             // block should belong to a file
+             bc = blocksMap.getBlockCollection(block);
+             // abandoned block or block reopened for append
+-            if(bc == null || bc instanceof MutableBlockCollection) {
+-              neededReplications.remove(block, priority); // remove from neededReplications
++            if (bc == null
++                || (bc instanceof MutableBlockCollection && block.equals(bc.getLastBlock()))) {
++              // remove from neededReplications
++              neededReplications.remove(block, priority);
+               continue;
+             }
+ 
+@@ -1255,7 +1257,7 @@ public class BlockManager {
+           // block should belong to a file
+           bc = blocksMap.getBlockCollection(block);
+           // abandoned block or block reopened for append
+-          if(bc == null || bc instanceof MutableBlockCollection) {
++          if(bc == null || (bc instanceof MutableBlockCollection && block.equals(bc.getLastBlock()))) {
+             neededReplications.remove(block, priority); // remove from neededReplications
+             rw.targets = null;
+             continue;
+@@ -2878,9 +2880,17 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+         NumberReplicas num = countNodes(block);
+         int curReplicas = num.liveReplicas();
+         int curExpectedReplicas = getReplication(block);
++                
+         if (isNeededReplication(block, curExpectedReplicas, curReplicas)) {
+           if (curExpectedReplicas > curReplicas) {
+-            //Log info about one block for this node which needs replication
++            if (bc instanceof MutableBlockCollection) {
++              if (block.equals(bc.getLastBlock()) && curReplicas > minReplication) {
++                continue;
++              }
++              underReplicatedInOpenFiles++;
++            }
++            
++            // Log info about one block for this node which needs replication
+             if (!status) {
+               status = true;
+               logBlockReplicationInfo(block, srcNode, num);
+@@ -2889,9 +2899,6 @@ assert storedBlock.findDatanode(dn) < 0 : "Block " + block
+             if ((curReplicas == 0) && (num.decommissionedReplicas() > 0)) {
+               decommissionOnlyReplicas++;
+             }
+-            if (bc instanceof MutableBlockCollection) {
+-              underReplicatedInOpenFiles++;
+-            }
+           }
+           if (!neededReplications.contains(block) &&
+             pendingReplications.getNumReplicas(block) == 0) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/INodeFile.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/INodeFile.java
+index 7c65f9f..a87edc2 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/INodeFile.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/INodeFile.java
+@@ -243,7 +243,7 @@ class INodeFile extends INode implements BlockCollection {
+   }
+ 
+   @Override
+-  public BlockInfo getLastBlock() throws IOException {
++  public BlockInfo getLastBlock() {
+     return blocks == null || blocks.length == 0? null: blocks[blocks.length-1];
+   }
+ 
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java
+index be91de3..e3d45d6 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestDecommission.java
+@@ -40,6 +40,7 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
+ import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
+ import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
+ import org.apache.hadoop.hdfs.protocol.LocatedBlock;
++import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
+ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+ import org.apache.hadoop.hdfs.server.namenode.NameNode;
+ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+@@ -548,4 +549,53 @@ public class TestDecommission {
+       assertEquals(bogusIp, info[1].getHostName());
+     }
+   }
++  
++  @Test(timeout=120000)
++  public void testDecommissionWithOpenfile() throws IOException, InterruptedException {
++    LOG.info("Starting test testDecommissionWithOpenfile");
++    
++    //At most 4 nodes will be decommissioned
++    startCluster(1, 7, conf);
++        
++    FileSystem fileSys = cluster.getFileSystem(0);
++    FSNamesystem ns = cluster.getNamesystem(0);
++    
++    String openFile = "/testDecommissionWithOpenfile.dat";
++           
++    writeFile(fileSys, new Path(openFile), (short)3);   
++    // make sure the file was open for write
++    FSDataOutputStream fdos =  fileSys.append(new Path(openFile)); 
++    
++    LocatedBlocks lbs = NameNodeAdapter.getBlockLocations(cluster.getNameNode(0), openFile, 0, fileSize);
++              
++    DatanodeInfo[] dnInfos4LastBlock = lbs.getLastLocatedBlock().getLocations();
++    DatanodeInfo[] dnInfos4FirstBlock = lbs.get(0).getLocations();
++    
++    ArrayList<String> nodes = new ArrayList<String>();
++    ArrayList<DatanodeInfo> dnInfos = new ArrayList<DatanodeInfo>();
++   
++    for (DatanodeInfo datanodeInfo : dnInfos4FirstBlock) {
++      DatanodeInfo found = datanodeInfo;
++      for (DatanodeInfo dif: dnInfos4LastBlock) {
++        if (datanodeInfo.equals(dif)) {
++         found = null;         
++        }
++      }
++      if (found != null) {
++        nodes.add(found.getXferAddr());
++        dnInfos.add(found);
++      }
++    }
++    //decommission one of the 3 nodes which have last block
++    nodes.add(dnInfos4LastBlock[0].getXferAddr());
++    dnInfos.add(dnInfos4LastBlock[0]);
++    
++    writeConfigFile(excludeFile, nodes);
++    refreshNodes(ns, conf);  
++    for (DatanodeInfo dn : dnInfos) {
++      waitNodeState(dn, AdminStates.DECOMMISSIONED);
++    }           
++
++    fdos.close();
++  }
+ }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/blockmanagement/TestReplicationPolicy.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/blockmanagement/TestReplicationPolicy.java
+index bbc44fd..84088be 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/blockmanagement/TestReplicationPolicy.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/blockmanagement/TestReplicationPolicy.java
+@@ -44,6 +44,7 @@ import org.apache.hadoop.hdfs.LogVerificationAppender;
+ import org.apache.hadoop.hdfs.MiniDFSCluster;
+ import org.apache.hadoop.hdfs.protocol.Block;
+ import org.apache.hadoop.hdfs.protocol.HdfsConstants;
++import org.apache.hadoop.hdfs.server.blockmanagement.BlockManager.StatefulBlockInfo;
+ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.BlockUCState;
+ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.ReplicaState;
+ import org.apache.hadoop.hdfs.server.datanode.DataNode;
+@@ -1095,8 +1096,8 @@ public class TestReplicationPolicy {
+ 
+     // Adding this block will increase its current replication, and that will
+     // remove it from the queue.
+-    bm.addStoredBlockUnderConstruction(info,
+-        TestReplicationPolicy.dataNodes[0], ReplicaState.FINALIZED);
++    bm.addStoredBlockUnderConstruction(new StatefulBlockInfo(info, info,
++          ReplicaState.FINALIZED), TestReplicationPolicy.dataNodes[0]);
+ 
+     // Choose 1 block from UnderReplicatedBlocks. Then it should pick 1 block
+     // from QUEUE_VERY_UNDER_REPLICATED.
+-- 
+1.7.0.4
+

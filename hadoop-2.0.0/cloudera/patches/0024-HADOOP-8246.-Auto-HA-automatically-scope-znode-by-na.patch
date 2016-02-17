@@ -1,7 +1,7 @@
 From e3b8f0fa3be4bce0670210be9065a8e9700dbc69 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Sat, 7 Apr 2012 17:16:05 -0700
-Subject: [PATCH 024/545] HADOOP-8246. Auto-HA: automatically scope znode by nameservice ID. Contributed by Todd Lipcon.
+Subject: [PATCH 0024/1612] HADOOP-8246. Auto-HA: automatically scope znode by nameservice ID. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1310919 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 986e287106f1e3b2a40276db85da8b06421b57bf)

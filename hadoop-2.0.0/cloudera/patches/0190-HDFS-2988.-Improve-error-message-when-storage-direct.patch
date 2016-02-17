@@ -1,7 +1,7 @@
 From 6100e68545a244fc29e7ede89db6ad17497ab291 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Sun, 8 Jul 2012 00:40:02 +0000
-Subject: [PATCH 190/545] HDFS-2988. Improve error message when storage directory lock fails.
+Subject: [PATCH 0190/1612] HDFS-2988. Improve error message when storage directory lock fails.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1358685 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 81e29e6e30d4d82d13962f2a835d8055d1091805)

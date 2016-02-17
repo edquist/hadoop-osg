@@ -1,7 +1,7 @@
-From 244246876b7fb981e91844719af114eb730b80ad Mon Sep 17 00:00:00 2001
+From 76e58d56ad5bbc6fd0cd901c688aa27109a15332 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 20 Aug 2012 21:10:44 +0000
-Subject: [PATCH 499/545] HADOOP-8614. IOUtils#skipFully hangs forever on EOF. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0499/1612] HADOOP-8614. IOUtils#skipFully hangs forever on EOF. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1375216 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2bbf983483860c2fcf02192d96921f987acbf279)

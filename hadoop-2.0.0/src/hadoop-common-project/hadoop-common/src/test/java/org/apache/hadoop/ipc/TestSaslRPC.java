@@ -41,6 +41,7 @@ import org.apache.commons.logging.LogFactory;
 import org.apache.commons.logging.impl.Log4JLogger;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.CommonConfigurationKeys;
+import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.ipc.Client.ConnectionId;
 import org.apache.hadoop.net.NetUtils;
@@ -230,9 +231,11 @@ public class TestSaslRPC {
   @Test
   public void testDigestRpc() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    final Server server = RPC.getServer(TestSaslProtocol.class,
-        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
-
+    final Server server = new RPC.Builder(conf)
+        .setProtocol(TestSaslProtocol.class).setInstance(new TestSaslImpl())
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .setSecretManager(sm).build();
+    
     doDigestRpc(server, sm);
   }
 
@@ -241,9 +244,10 @@ public class TestSaslRPC {
     TestTokenSecretManager sm = new TestTokenSecretManager();
     try {
       SecurityUtil.setSecurityInfoProviders(new CustomSecurityInfo());
-      final Server server = RPC.getServer(TestSaslProtocol.class,
-                                          new TestSaslImpl(), ADDRESS, 0, 5, 
-                                          true, conf, sm);
+      final Server server = new RPC.Builder(conf)
+          .setProtocol(TestSaslProtocol.class).setInstance(new TestSaslImpl())
+          .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5)
+          .setVerbose(true).setSecretManager(sm).build();
       doDigestRpc(server, sm);
     } finally {
       SecurityUtil.setSecurityInfoProviders(new SecurityInfo[0]);
@@ -252,8 +256,9 @@ public class TestSaslRPC {
 
   @Test
   public void testSecureToInsecureRpc() throws Exception {
-    Server server = RPC.getServer(TestSaslProtocol.class,
-        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, null);
+    Server server = new RPC.Builder(conf).setProtocol(TestSaslProtocol.class)
+        .setInstance(new TestSaslImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(5).setVerbose(true).build();
     server.disableSecurity();
     TestTokenSecretManager sm = new TestTokenSecretManager();
     doDigestRpc(server, sm);
@@ -262,8 +267,10 @@ public class TestSaslRPC {
   @Test
   public void testErrorMessage() throws Exception {
     BadTokenSecretManager sm = new BadTokenSecretManager();
-    final Server server = RPC.getServer(TestSaslProtocol.class,
-        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
+    final Server server = new RPC.Builder(conf)
+        .setProtocol(TestSaslProtocol.class).setInstance(new TestSaslImpl())
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .setSecretManager(sm).build();
 
     boolean succeeded = false;
     try {
@@ -350,8 +357,10 @@ public class TestSaslRPC {
   @Test
   public void testPerConnectionConf() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    final Server server = RPC.getServer(TestSaslProtocol.class,
-        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
+    final Server server = new RPC.Builder(conf)
+        .setProtocol(TestSaslProtocol.class).setInstance(new TestSaslImpl())
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .setSecretManager(sm).build();
     server.start();
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();
     final InetSocketAddress addr = NetUtils.getConnectAddress(server);
@@ -363,7 +372,8 @@ public class TestSaslRPC {
     current.addToken(token);
 
     Configuration newConf = new Configuration(conf);
-    newConf.set("hadoop.rpc.socket.factory.class.default", "");
+    newConf.set(CommonConfigurationKeysPublic.
+        HADOOP_RPC_SOCKET_FACTORY_CLASS_DEFAULT_KEY, "");
     newConf.set(SERVER_PRINCIPAL_KEY, SERVER_PRINCIPAL_1);
 
     TestSaslProtocol proxy1 = null;
@@ -413,8 +423,10 @@ public class TestSaslRPC {
     UserGroupInformation current = UserGroupInformation.getCurrentUser();
     System.out.println("UGI: " + current);
 
-    Server server = RPC.getServer(TestSaslProtocol.class, new TestSaslImpl(),
-        ADDRESS, 0, 5, true, newConf, null);
+    Server server = new RPC.Builder(newConf)
+        .setProtocol(TestSaslProtocol.class).setInstance(new TestSaslImpl())
+        .setBindAddress(ADDRESS).setPort(0).setNumHandlers(5).setVerbose(true)
+        .build();
     TestSaslProtocol proxy = null;
 
     server.start();
@@ -436,8 +448,9 @@ public class TestSaslRPC {
   @Test
   public void testDigestAuthMethod() throws Exception {
     TestTokenSecretManager sm = new TestTokenSecretManager();
-    Server server = RPC.getServer(TestSaslProtocol.class,
-        new TestSaslImpl(), ADDRESS, 0, 5, true, conf, sm);
+    Server server = new RPC.Builder(conf).setProtocol(TestSaslProtocol.class)
+        .setInstance(new TestSaslImpl()).setBindAddress(ADDRESS).setPort(0)
+        .setNumHandlers(5).setVerbose(true).setSecretManager(sm).build();      
     server.start();
 
     final UserGroupInformation current = UserGroupInformation.getCurrentUser();

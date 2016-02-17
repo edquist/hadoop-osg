@@ -1,7 +1,7 @@
 From a610dd926f5a453eaa74eff757eb13919854276b Mon Sep 17 00:00:00 2001
 From: Steve Loughran <stevel@apache.org>
 Date: Fri, 9 Mar 2012 13:17:04 +0000
-Subject: [PATCH 277/545] HDFS-2966. TestNameNodeMetrics tests can fail under load.
+Subject: [PATCH 0277/1612] HDFS-2966. TestNameNodeMetrics tests can fail under load.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1298820 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5e9101ebe8cdb7a088bbd20c9b82a9a496bdebd5)

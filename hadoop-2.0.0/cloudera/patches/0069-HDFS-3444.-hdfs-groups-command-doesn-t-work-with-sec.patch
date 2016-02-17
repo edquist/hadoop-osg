@@ -1,7 +1,7 @@
 From c65d8637210da178924d949bd9d8945c3cebf3fc Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 18 May 2012 21:25:21 +0000
-Subject: [PATCH 069/545] HDFS-3444. hdfs groups command doesn't work with security enabled. Contributed by Aaron T. Myers.
+Subject: [PATCH 0069/1612] HDFS-3444. hdfs groups command doesn't work with security enabled. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1340260 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f9ecb31f168a2fbd4a4b0574116eea3a4ef04865)

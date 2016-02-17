@@ -1,7 +1,7 @@
 From 66af13949a83691c41cf2c07c06c1eabed36e9ff Mon Sep 17 00:00:00 2001
 From: Daryn Sharp <daryn@apache.org>
 Date: Wed, 18 Jul 2012 23:21:30 +0000
-Subject: [PATCH 238/545] HDFS-3646. LeaseRenewer can hold reference to inactive DFSClient instances forever (Kihwal Lee via daryn)
+Subject: [PATCH 0238/1612] HDFS-3646. LeaseRenewer can hold reference to inactive DFSClient instances forever (Kihwal Lee via daryn)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363170 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2c3777a188ae449d0af64c30bb9cdeea3962bff2)

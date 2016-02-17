@@ -29,6 +29,7 @@ import org.apache.hadoop.hdfs.protocol.proto.HdfsProtos;
 import org.apache.hadoop.hdfs.security.token.block.BlockTokenIdentifier;
 import org.apache.hadoop.hdfs.util.ExactSizeInputStream;
 import org.apache.hadoop.io.Text;
+import org.apache.hadoop.util.DataChecksum;
 import org.apache.hadoop.security.token.Token;
 
 import com.google.common.collect.Lists;
@@ -153,6 +154,14 @@ public abstract class HdfsProtoUtil {
       ret[i++] = fromProto(proto);
     }
     return ret;
+  }
+
+  public static int fromProto(HdfsProtos.ChecksumTypeProto type) {
+    return type.getNumber();
+  }
+
+  public static HdfsProtos.ChecksumTypeProto toProto(int type) {
+    return HdfsProtos.ChecksumTypeProto.valueOf(type);
   }
 
   public static InputStream vintPrefixed(final InputStream input)

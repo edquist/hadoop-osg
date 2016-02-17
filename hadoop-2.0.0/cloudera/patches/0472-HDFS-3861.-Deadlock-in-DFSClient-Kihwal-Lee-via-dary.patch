@@ -1,7 +1,7 @@
 From 94777ffc56a0d6bcb914e7a19d854f598d8ad856 Mon Sep 17 00:00:00 2001
 From: Daryn Sharp <daryn@apache.org>
 Date: Thu, 30 Aug 2012 19:46:14 +0000
-Subject: [PATCH 472/545] HDFS-3861. Deadlock in DFSClient (Kihwal Lee via daryn)
+Subject: [PATCH 0472/1612] HDFS-3861. Deadlock in DFSClient (Kihwal Lee via daryn)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1379093 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8e7caa298d5024ba3c7e4bdc6bc81b0ccd8e1e90)

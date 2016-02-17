@@ -1,0 +1,72 @@
+From e7a3afaaf3f1f86d62eb759ca94e63ea139af89e Mon Sep 17 00:00:00 2001
+From: Jing Zhao <jing9@apache.org>
+Date: Fri, 16 Aug 2013 22:42:04 +0000
+Subject: [PATCH 1608/1612] HADOOP-9880. Merge change r1514915 from branch-2.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.1-beta@1514916 13f79535-47bb-0310-9956-ffa450edef68
+
+Conflicts:
+	hadoop-common-project/hadoop-common/CHANGES.txt
+	hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/SaslRpcServer.java
+---
+ .../main/java/org/apache/hadoop/ipc/Server.java    |   10 ++++++++-
+ .../delegation/DelegationTokenSecretManager.java   |   22 ++++++++++++++++++++
+ 2 files changed, 31 insertions(+), 1 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Server.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Server.java
+index 4b578f0..a63f90f 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Server.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/ipc/Server.java
+@@ -1253,7 +1253,15 @@ public abstract class Server {
+           Throwable cause = e;
+           while (cause != null) {
+             if (cause instanceof InvalidToken) {
+-              sendToClient = (InvalidToken) cause;
++              // FIXME: hadoop method signatures are restricting the SASL
++              // callbacks to only returning InvalidToken, but some services
++              // need to throw other exceptions (ex. NN + StandyException),
++              // so for now we'll tunnel the real exceptions via an
++              // InvalidToken's cause which normally is not set 
++              if (cause.getCause() != null) {
++                cause = cause.getCause();
++              }
++              sendToClient = (IOException) cause;
+               break;
+             }
+             cause = cause.getCause();
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
+index 2350006..a402744 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/security/token/delegation/DelegationTokenSecretManager.java
+@@ -88,6 +88,28 @@ public class DelegationTokenSecretManager
+     return new DelegationTokenIdentifier();
+   }
+   
++  @Override
++  public synchronized byte[] retrievePassword(
++      DelegationTokenIdentifier identifier) throws InvalidToken {
++    try {
++      // this check introduces inconsistency in the authentication to a
++      // HA standby NN.  non-token auths are allowed into the namespace which
++      // decides whether to throw a StandbyException.  tokens are a bit
++      // different in that a standby may be behind and thus not yet know
++      // of all tokens issued by the active NN.  the following check does
++      // not allow ANY token auth, however it should allow known tokens in
++      checkAvailableForRead();
++    } catch (StandbyException se) {
++      // FIXME: this is a hack to get around changing method signatures by
++      // tunneling a non-InvalidToken exception as the cause which the
++      // RPC server will unwrap before returning to the client
++      InvalidToken wrappedStandby = new InvalidToken("StandbyException");
++      wrappedStandby.initCause(se);
++      throw wrappedStandby;
++    }
++    return super.retrievePassword(identifier);
++  }
++  
+   @Override //SecretManager
+   public void checkAvailableForRead() throws StandbyException {
+     namesystem.checkOperation(OperationCategory.READ);
+-- 
+1.7.0.4
+

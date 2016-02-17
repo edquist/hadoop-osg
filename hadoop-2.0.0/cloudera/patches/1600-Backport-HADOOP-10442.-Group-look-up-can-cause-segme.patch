@@ -1,0 +1,30 @@
+From 21969e1775d4629fa0cf03965dc91717cce2be36 Mon Sep 17 00:00:00 2001
+From: Jonathan Turner Eagles <jeagles@apache.org>
+Date: Thu, 27 Mar 2014 19:56:26 +0000
+Subject: [PATCH 1600/1612] Backport HADOOP-10442. Group look-up can cause segmentation fault when certain JNI-based mapping module is used. (Kihwal Lee via jeagles)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1582451 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 997caba8d69659e9f3909d2d281caa51652170
+---
+ .../org/apache/hadoop/security/hadoop_user_info.c  |    5 +++++
+ 1 files changed, 5 insertions(+), 0 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/security/hadoop_user_info.c b/hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/security/hadoop_user_info.c
+index 5c58b96..1bd7bdc 100644
+--- a/hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/security/hadoop_user_info.c
++++ b/hadoop-common-project/hadoop-common/src/main/native/src/org/apache/hadoop/security/hadoop_user_info.c
+@@ -178,6 +178,11 @@ int hadoop_user_info_getgroups(struct hadoop_user_info *uinfo)
+       return ret;
+     }
+     return 0;
++  } else if (ret != -1) {
++    // Any return code that is not -1 is considered as error.
++    // Since the user lookup was successful, there should be at least one
++    // group for this user.
++    return EIO;
+   }
+   ngids = realloc(uinfo->gids, sizeof(uinfo->gids[0]) * ngroups);
+   if (!ngids) {
+-- 
+1.7.0.4
+

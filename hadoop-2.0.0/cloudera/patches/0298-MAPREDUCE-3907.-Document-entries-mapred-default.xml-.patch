@@ -1,7 +1,7 @@
 From 68524bfaa31f4510abad0baa0696361f79f78a97 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Mon, 9 Jul 2012 02:01:54 +0000
-Subject: [PATCH 298/545] MAPREDUCE-3907. Document entries mapred-default.xml for the jobhistory server. Contributed by Eugene Koontz. (harsh)
+Subject: [PATCH 0298/1612] MAPREDUCE-3907. Document entries mapred-default.xml for the jobhistory server. Contributed by Eugene Koontz. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1358892 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit dee90f3e0be32ff98d4b3f4a22ac31d2359628c1)

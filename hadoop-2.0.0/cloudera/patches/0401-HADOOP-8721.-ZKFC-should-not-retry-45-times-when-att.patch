@@ -1,7 +1,7 @@
 From fab28885f3a23d594b6c366dc65b05c95e7e904c Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 22 Aug 2012 18:56:02 +0000
-Subject: [PATCH 401/545] HADOOP-8721. ZKFC should not retry 45 times when attempting a graceful fence during a failover. Contributed by Vinayakumar B.
+Subject: [PATCH 0401/1612] HADOOP-8721. ZKFC should not retry 45 times when attempting a graceful fence during a failover. Contributed by Vinayakumar B.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1376195 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8d60c96c9afb511be6ce6ddc8df4691b3d05370c)

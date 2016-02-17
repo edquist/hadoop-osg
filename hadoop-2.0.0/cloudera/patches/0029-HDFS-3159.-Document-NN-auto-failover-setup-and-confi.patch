@@ -1,7 +1,7 @@
 From 9e41e78629c4e073f4cb2f702f48f75806774fa9 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Thu, 12 Apr 2012 14:57:06 -0700
-Subject: [PATCH 029/545] HDFS-3159. Document NN auto-failover setup and configuration. Contributed by Todd Lipcon.
+Subject: [PATCH 0029/1612] HDFS-3159. Document NN auto-failover setup and configuration. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1325539 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 3b33ca50ea3cffd7451193a83adaa4e66753a082)

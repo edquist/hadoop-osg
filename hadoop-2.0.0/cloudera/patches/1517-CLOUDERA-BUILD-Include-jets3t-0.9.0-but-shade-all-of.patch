@@ -1,0 +1,195 @@
+From 9144a62802854667e7fb53e36651d6e649c56fdd Mon Sep 17 00:00:00 2001
+From: Aaron T. Myers <atm@cloudera.com>
+Date: Thu, 14 Nov 2013 00:24:19 -0800
+Subject: [PATCH 1517/1612] CLOUDERA-BUILD: Include jets3t 0.9.0 but shade all of its dependencies in an uberjar.
+
+---
+ hadoop-common-project/cloudera-jets3t/pom.xml  |  102 ++++++++++++++++++++++++
+ hadoop-common-project/hadoop-common/pom.xml    |    5 +
+ hadoop-common-project/pom.xml                  |    1 +
+ hadoop-hdfs-project/hadoop-hdfs-httpfs/pom.xml |    8 ++
+ hadoop-project/pom.xml                         |    5 +
+ 5 files changed, 121 insertions(+), 0 deletions(-)
+ create mode 100644 hadoop-common-project/cloudera-jets3t/pom.xml
+
+diff --git a/hadoop-common-project/cloudera-jets3t/pom.xml b/hadoop-common-project/cloudera-jets3t/pom.xml
+new file mode 100644
+index 0000000..a56f783
+--- /dev/null
++++ b/hadoop-common-project/cloudera-jets3t/pom.xml
+@@ -0,0 +1,102 @@
++<?xml version="1.0" encoding="UTF-8"?>
++<!--
++  Licensed under the Apache License, Version 2.0 (the "License");
++  you may not use this file except in compliance with the License.
++  You may obtain a copy of the License at
++
++    http://www.apache.org/licenses/LICENSE-2.0
++
++  Unless required by applicable law or agreed to in writing, software
++  distributed under the License is distributed on an "AS IS" BASIS,
++  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++  See the License for the specific language governing permissions and
++  limitations under the License. See accompanying LICENSE file.
++-->
++<project>
++  <modelVersion>4.0.0</modelVersion>
++  <parent>
++    <groupId>org.apache.hadoop</groupId>
++    <artifactId>hadoop-project</artifactId>
++    <version>2.0.0-cdh4.6.0-SNAPSHOT</version>
++    <relativePath>../../hadoop-project</relativePath>
++  </parent>
++
++  <groupId>org.apache.hadoop</groupId>
++  <artifactId>cloudera-jets3t</artifactId>
++  <version>2.0.0-cdh4.6.0-SNAPSHOT</version>
++  <packaging>jar</packaging>
++
++  <name>Jets3t Cloudera Dependencies</name>
++  <description>Jets3t and all its dependencies shaded by Cloudera</description>
++
++  <dependencies>
++    <dependency>
++      <groupId>net.java.dev.jets3t</groupId>
++      <artifactId>jets3t</artifactId>
++      <version>0.9.0</version>
++      <scope>compile</scope>
++    </dependency>
++  </dependencies>
++  <build>
++    <plugins>
++      <plugin>
++        <groupId>org.apache.maven.plugins</groupId>
++        <artifactId>maven-shade-plugin</artifactId>
++        <version>1.5</version>
++        <executions>
++          <execution>
++            <phase>package</phase>
++            <goals>
++              <goal>shade</goal>
++            </goals>
++            <configuration>
++              <createDependencyReducedPom>false</createDependencyReducedPom>
++              <artifactSet>
++                <includes>
++                  <include>com.jamesmurty.utils:java-xmlbuilder:jar:*</include>
++                  <include>net.java.dev.jets3t:jets3t:jar:*</include>
++                  <include>org.apache.httpcomponents:httpclient:jar:*</include>
++                  <include>org.apache.httpcomponents:httpcore:jar:*</include>
++                  <!-- 
++                  Not including the below in the uberjar since these are
++                  provided by other parts of the build.
++                  -->
++                  <!--
++                  <include>commons-codec:commons-codec:jar:1.4</include>
++                  <include>commons-logging:commons-logging:jar:1.1.1</include>
++                  -->
++                </includes>
++              </artifactSet>
++              <relocations>
++                <relocation>
++                  <pattern>org.apache.http</pattern>
++                  <shadedPattern>com.cloudera.org.apache.http</shadedPattern>
++                </relocation>
++                <relocation>
++                  <pattern>org.apache.commons.httpclient</pattern>
++                  <shadedPattern>com.cloudera.org.apache.commons.httpclient</shadedPattern>
++                </relocation>
++                <relocation>
++                  <pattern>contribs.mx</pattern>
++                  <shadedPattern>com.cloudera.contribs.mx</shadedPattern>
++                </relocation>
++                <relocation>
++                  <pattern>com.jamesmurty</pattern>
++                  <shadedPattern>com.cloudera.com.jamesmurty</shadedPattern>
++                </relocation>
++                <relocation>
++                  <pattern>net.iharder</pattern>
++                  <shadedPattern>com.cloudera.net.iharder</shadedPattern>
++                </relocation>
++                <relocation>
++                  <pattern>org.jets3t</pattern>
++                  <shadedPattern>com.cloudera.org.jets3t</shadedPattern>
++                </relocation>
++              </relocations>
++            </configuration>
++          </execution>
++        </executions>
++      </plugin>
++    </plugins>
++  </build>
++</project>
+diff --git a/hadoop-common-project/hadoop-common/pom.xml b/hadoop-common-project/hadoop-common/pom.xml
+index 0ca2edc..e6a37b7 100644
+--- a/hadoop-common-project/hadoop-common/pom.xml
++++ b/hadoop-common-project/hadoop-common/pom.xml
+@@ -142,6 +142,11 @@
+       <scope>compile</scope>
+     </dependency>
+     <dependency>
++      <groupId>org.apache.hadoop</groupId>
++      <artifactId>cloudera-jets3t</artifactId>
++      <scope>compile</scope>
++    </dependency>
++    <dependency>
+       <groupId>net.java.dev.jets3t</groupId>
+       <artifactId>jets3t</artifactId>
+       <scope>compile</scope>
+diff --git a/hadoop-common-project/pom.xml b/hadoop-common-project/pom.xml
+index 01ddf67..329e756 100644
+--- a/hadoop-common-project/pom.xml
++++ b/hadoop-common-project/pom.xml
+@@ -32,6 +32,7 @@
+     <module>hadoop-auth-examples</module>
+     <module>hadoop-common</module>
+     <module>hadoop-annotations</module>
++    <module>cloudera-jets3t</module>
+   </modules>
+ 
+   <build>
+diff --git a/hadoop-hdfs-project/hadoop-hdfs-httpfs/pom.xml b/hadoop-hdfs-project/hadoop-hdfs-httpfs/pom.xml
+index 06996b9..e850a8a 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs-httpfs/pom.xml
++++ b/hadoop-hdfs-project/hadoop-hdfs-httpfs/pom.xml
+@@ -144,6 +144,10 @@
+           <artifactId>jets3t</artifactId>
+         </exclusion>
+         <exclusion>
++          <groupId>org.apache.hadoop</groupId>
++          <artifactId>cloudera-jets3t</artifactId>
++        </exclusion>
++        <exclusion>
+           <groupId>org.eclipse.jdt</groupId>
+           <artifactId>core</artifactId>
+         </exclusion>
+@@ -207,6 +211,10 @@
+           <artifactId>jets3t</artifactId>
+         </exclusion>
+         <exclusion>
++          <groupId>org.apache.hadoop</groupId>
++          <artifactId>cloudera-jets3t</artifactId>
++        </exclusion>
++        <exclusion>
+           <groupId>org.eclipse.jdt</groupId>
+           <artifactId>core</artifactId>
+         </exclusion>
+diff --git a/hadoop-project/pom.xml b/hadoop-project/pom.xml
+index 6398008..a286c8d 100644
+--- a/hadoop-project/pom.xml
++++ b/hadoop-project/pom.xml
+@@ -74,6 +74,11 @@
+       </dependency>
+       <dependency>
+         <groupId>org.apache.hadoop</groupId>
++        <artifactId>cloudera-jets3t</artifactId>
++        <version>${project.version}</version>
++      </dependency>
++      <dependency>
++        <groupId>org.apache.hadoop</groupId>
+         <artifactId>hadoop-common</artifactId>
+         <version>${project.version}</version>
+       </dependency>
+-- 
+1.7.0.4
+

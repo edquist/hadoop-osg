@@ -1,7 +1,7 @@
 From 23cef42fa414c398b48bb5fef14d528fe465fa01 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sun, 15 Jul 2012 19:43:39 +0000
-Subject: [PATCH 154/545] HDFS-3663. MiniDFSCluster should capture the code path that led to the first ExitException. Contributed by Eli Collins
+Subject: [PATCH 0154/1612] HDFS-3663. MiniDFSCluster should capture the code path that led to the first ExitException. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1361775 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 56b363781b78c013f4d34f52ebe688978b15728c)

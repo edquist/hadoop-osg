@@ -1,7 +1,7 @@
 From cae2c413f0c3e19b4c65158daf85514cd642f576 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 31 Jul 2012 21:08:40 +0000
-Subject: [PATCH 451/545] MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is  bad (Jason Lowe via bobby)
+Subject: [PATCH 0451/1612] MAPREDUCE-4444. nodemanager fails to start when one of the local-dirs is  bad (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367783 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8ceb625775c5c8006efa33d4263b53ca4fc2d0f8)

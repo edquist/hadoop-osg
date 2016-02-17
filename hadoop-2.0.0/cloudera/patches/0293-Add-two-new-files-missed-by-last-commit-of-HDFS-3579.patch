@@ -1,7 +1,7 @@
 From 8fa0af7d5c15d77fe3939aaec32a864eac20cc92 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Mon, 6 Aug 2012 21:04:33 +0000
-Subject: [PATCH 293/545] Add two new files missed by last commit of HDFS-3579.
+Subject: [PATCH 0293/1612] Add two new files missed by last commit of HDFS-3579.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1370017 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit ea575e5ac8b6f0687094fe5851e4cfff4dcf6981)

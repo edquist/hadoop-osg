@@ -1,7 +1,7 @@
 From 6403e57f11d442bab0b2fd637aebf961878ee979 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Sat, 3 Mar 2012 02:02:23 +0000
-Subject: [PATCH 097/545] HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. Contributed by Henry Robinson.
+Subject: [PATCH 0097/1612] HADOOP-8135. Add ByteBufferReadable interface to FSDataInputStream. Contributed by Henry Robinson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1296556 13f79535-47bb-0310-9956-ffa450edef68
 (cherry-picked from commit 6e51b33573ad8324a0a01c0c680544cd6387280e)

@@ -1,7 +1,7 @@
 From 94d213b09e96fb0954903026652a7de5ba0ddf50 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 18 Jul 2012 00:51:32 +0000
-Subject: [PATCH 430/545] HADOOP-8537. Fix TFile tests to pass even when native zlib support is not compiled. Contributed by Todd Lipcon.
+Subject: [PATCH 0430/1612] HADOOP-8537. Fix TFile tests to pass even when native zlib support is not compiled. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362729 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 885ad08eb34ea69b2a482c6c593a23d303c98bec)

@@ -1,7 +1,7 @@
 From cb472c12f45b9d7160ebbfe66a79b19bd4e96aba Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 4 Apr 2012 23:36:29 +0000
-Subject: [PATCH 099/545] HADOOP-8244. Improve comments on ByteBufferReadable.read. Contributed by Henry Robinson.
+Subject: [PATCH 0099/1612] HADOOP-8244. Improve comments on ByteBufferReadable.read. Contributed by Henry Robinson.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1309625 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4418682a55665634db17ad11a84f9f9c73d043f4)

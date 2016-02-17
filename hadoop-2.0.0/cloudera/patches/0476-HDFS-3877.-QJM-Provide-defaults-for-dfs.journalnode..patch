@@ -1,7 +1,7 @@
 From 9d3eaa700a28c77c26eea31e38db05047873bc2b Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Sat, 1 Sep 2012 00:35:19 +0000
-Subject: [PATCH 476/545] HDFS-3877. QJM: Provide defaults for dfs.journalnode.*address. Contributed by Eli Collins
+Subject: [PATCH 0476/1612] HDFS-3877. QJM: Provide defaults for dfs.journalnode.*address. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1379681 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 2810da12a8dd810cc6718d63411a961d74a9f371)

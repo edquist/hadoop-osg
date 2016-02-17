@@ -1,7 +1,7 @@
 From 7f3fab9b9b1b5f714a83eec8f45043bcbc75ef9b Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 19 Jul 2012 18:37:47 +0000
-Subject: [PATCH 242/545] HDFS-1249. With fuse-dfs, chown which only has owner (or only group) argument fails with Input/output error. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0242/1612] HDFS-1249. With fuse-dfs, chown which only has owner (or only group) argument fails with Input/output error. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363466 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4533dd219fdc4f2fe1115df237901bfdfb4b055f)

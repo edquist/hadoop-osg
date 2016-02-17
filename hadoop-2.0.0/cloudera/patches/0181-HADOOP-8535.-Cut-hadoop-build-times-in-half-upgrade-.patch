@@ -1,7 +1,7 @@
 From a623b026d9c7b29471df3cae32aa1e47c575f269 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Thu, 28 Jun 2012 14:23:56 +0000
-Subject: [PATCH 181/545] HADOOP-8535. Cut hadoop build times in half (upgrade maven-compiler-plugin to 2.5.1).
+Subject: [PATCH 0181/1612] HADOOP-8535. Cut hadoop build times in half (upgrade maven-compiler-plugin to 2.5.1).
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1355020 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0ac90bf2fc0ffdb160af7311c2ac610b48ebaa1c)

@@ -28,7 +28,7 @@ import java.util.Map.Entry;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.conf.Configuration;
-import org.apache.hadoop.util.StringUtils;
+import org.apache.hadoop.util.StringUtils.TraditionalBinaryPrefix;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.AsyncDispatcher;
@@ -37,7 +37,7 @@ import org.apache.hadoop.yarn.server.nodemanager.ContainerExecutor;
 import org.apache.hadoop.yarn.server.nodemanager.Context;
 import org.apache.hadoop.yarn.server.nodemanager.containermanager.container.ContainerKillEvent;
 import org.apache.hadoop.yarn.service.AbstractService;
-import org.apache.hadoop.yarn.util.ProcfsBasedProcessTree;
+import org.apache.hadoop.yarn.util.ResourceCalculatorProcessTree;
 import org.apache.hadoop.yarn.util.ResourceCalculatorPlugin;
 
 import com.google.common.base.Preconditions;
@@ -60,15 +60,16 @@ public class ContainersMonitorImpl extends AbstractService implements
   private final Dispatcher eventDispatcher;
   private final Context context;
   private ResourceCalculatorPlugin resourceCalculatorPlugin;
+  private Configuration conf;
+  private Class<? extends ResourceCalculatorProcessTree> processTreeClass;
 
-  private long maxVmemAllottedForContainers = DISABLED_MEMORY_LIMIT;
-  private long maxPmemAllottedForContainers = DISABLED_MEMORY_LIMIT;
+  private long maxVmemAllottedForContainers = UNKNOWN_MEMORY_LIMIT;
+  private long maxPmemAllottedForContainers = UNKNOWN_MEMORY_LIMIT;
 
-  /**
-   * A value which if set for memory related configuration options, indicates
-   * that the options are turned off.
-   */
-  public static final long DISABLED_MEMORY_LIMIT = -1L;
+  private boolean pmemCheckEnabled;
+  private boolean vmemCheckEnabled;
+
+  private static final long UNKNOWN_MEMORY_LIMIT = -1L;
 
   public ContainersMonitorImpl(ContainerExecutor exec,
       AsyncDispatcher dispatcher, Context context) {
@@ -96,74 +97,75 @@ public class ContainersMonitorImpl extends AbstractService implements
         ResourceCalculatorPlugin.getResourceCalculatorPlugin(clazz, conf);
     LOG.info(" Using ResourceCalculatorPlugin : "
         + this.resourceCalculatorPlugin);
+    processTreeClass = conf.getClass(YarnConfiguration.NM_CONTAINER_MON_PROCESS_TREE, null,
+            ResourceCalculatorProcessTree.class);
+    this.conf = conf;
+    LOG.info(" Using ResourceCalculatorProcessTree : "
+        + this.processTreeClass);
 
-    long totalPhysicalMemoryOnNM = DISABLED_MEMORY_LIMIT;
-    if (this.resourceCalculatorPlugin != null) {
-      totalPhysicalMemoryOnNM =
-          this.resourceCalculatorPlugin.getPhysicalMemorySize();
-      if (totalPhysicalMemoryOnNM <= 0) {
-        LOG.warn("NodeManager's totalPmem could not be calculated. "
-            + "Setting it to " + DISABLED_MEMORY_LIMIT);
-        totalPhysicalMemoryOnNM = DISABLED_MEMORY_LIMIT;
-      }
-    }
+    long configuredPMemForContainers = conf.getLong(
+        YarnConfiguration.NM_PMEM_MB,
+        YarnConfiguration.DEFAULT_NM_PMEM_MB) * 1024 * 1024l;
 
+    // Setting these irrespective of whether checks are enabled. Required in
+    // the UI.
     // ///////// Physical memory configuration //////
-    this.maxPmemAllottedForContainers =
-        conf.getLong(YarnConfiguration.NM_PMEM_MB, YarnConfiguration.DEFAULT_NM_PMEM_MB);
-    this.maxPmemAllottedForContainers =
-        this.maxPmemAllottedForContainers * 1024 * 1024L; //Normalize to bytes
-
-    if (totalPhysicalMemoryOnNM != DISABLED_MEMORY_LIMIT &&
-        this.maxPmemAllottedForContainers >
-        totalPhysicalMemoryOnNM * 0.80f) {
-      LOG.warn("NodeManager configured with " +
-          StringUtils.humanReadableInt(maxPmemAllottedForContainers) +
-          " physical memory allocated to containers, which is more than " +
-          "80% of the total physical memory available (" +
-          StringUtils.humanReadableInt(totalPhysicalMemoryOnNM) +
-          "). Thrashing might happen.");
-    }
+    this.maxPmemAllottedForContainers = configuredPMemForContainers;
 
     // ///////// Virtual memory configuration //////
-    float vmemRatio = conf.getFloat(
-        YarnConfiguration.NM_VMEM_PMEM_RATIO,
+    float vmemRatio = conf.getFloat(YarnConfiguration.NM_VMEM_PMEM_RATIO,
         YarnConfiguration.DEFAULT_NM_VMEM_PMEM_RATIO);
     Preconditions.checkArgument(vmemRatio > 0.99f,
-        YarnConfiguration.NM_VMEM_PMEM_RATIO +
-        " should be at least 1.0");
+        YarnConfiguration.NM_VMEM_PMEM_RATIO + " should be at least 1.0");
     this.maxVmemAllottedForContainers =
-      (long)(vmemRatio * maxPmemAllottedForContainers);
+        (long) (vmemRatio * configuredPMemForContainers);
 
+    pmemCheckEnabled = conf.getBoolean(YarnConfiguration.NM_PMEM_CHECK_ENABLED,
+        YarnConfiguration.DEFAULT_NM_PMEM_CHECK_ENABLED);
+    vmemCheckEnabled = conf.getBoolean(YarnConfiguration.NM_VMEM_CHECK_ENABLED,
+        YarnConfiguration.DEFAULT_NM_VMEM_CHECK_ENABLED);
+    LOG.info("Physical memory check enabled: " + pmemCheckEnabled);
+    LOG.info("Virtual memory check enabled: " + vmemCheckEnabled);
+
+    if (pmemCheckEnabled) {
+      // Logging if actual pmem cannot be determined.
+      long totalPhysicalMemoryOnNM = UNKNOWN_MEMORY_LIMIT;
+      if (this.resourceCalculatorPlugin != null) {
+        totalPhysicalMemoryOnNM = this.resourceCalculatorPlugin
+            .getPhysicalMemorySize();
+        if (totalPhysicalMemoryOnNM <= 0) {
+          LOG.warn("NodeManager's totalPmem could not be calculated. "
+              + "Setting it to " + UNKNOWN_MEMORY_LIMIT);
+          totalPhysicalMemoryOnNM = UNKNOWN_MEMORY_LIMIT;
+        }
+      }
+
+      if (totalPhysicalMemoryOnNM != UNKNOWN_MEMORY_LIMIT &&
+          this.maxPmemAllottedForContainers > totalPhysicalMemoryOnNM * 0.80f) {
+        LOG.warn("NodeManager configured with "
+            + TraditionalBinaryPrefix.long2String(maxPmemAllottedForContainers,
+                "", 1)
+            + " physical memory allocated to containers, which is more than "
+            + "80% of the total physical memory available ("
+            + TraditionalBinaryPrefix.long2String(totalPhysicalMemoryOnNM, "",
+                1) + "). Thrashing might happen.");
+      }
+    }
     super.init(conf);
   }
 
-  /**
-   * Is the total physical memory check enabled?
-   * 
-   * @return true if total physical memory check is enabled.
-   */
-  boolean isPhysicalMemoryCheckEnabled() {
-    return !(this.maxPmemAllottedForContainers == DISABLED_MEMORY_LIMIT);
-  }
-
-  /**
-   * Is the total virtual memory check enabled?
-   * 
-   * @return true if total virtual memory check is enabled.
-   */
-  boolean isVirtualMemoryCheckEnabled() {
-    return !(this.maxVmemAllottedForContainers == DISABLED_MEMORY_LIMIT);
-  }
-
   private boolean isEnabled() {
-    if (!ProcfsBasedProcessTree.isAvailable()) {
-      LOG.info("ProcessTree implementation is missing on this system. "
-          + this.getClass().getName() + " is disabled.");
-      return false;
+    if (resourceCalculatorPlugin == null) {
+            LOG.info("ResourceCalculatorPlugin is unavailable on this system. "
+                + this.getClass().getName() + " is disabled.");
+            return false;
     }
-
-    if (!(isPhysicalMemoryCheckEnabled() || isVirtualMemoryCheckEnabled())) {
+    if (ResourceCalculatorProcessTree.getResourceCalculatorProcessTree("0", processTreeClass, conf) == null) {
+        LOG.info("ResourceCalculatorProcessTree is unavailable on this system. "
+                + this.getClass().getName() + " is disabled.");
+            return false;
+    }
+    if (!(isPmemCheckEnabled() || isVmemCheckEnabled())) {
       LOG.info("Neither virutal-memory nor physical-memory monitoring is " +
           "needed. Not running the monitor-thread");
       return false;
@@ -196,12 +198,12 @@ public class ContainersMonitorImpl extends AbstractService implements
   private static class ProcessTreeInfo {
     private ContainerId containerId;
     private String pid;
-    private ProcfsBasedProcessTree pTree;
+    private ResourceCalculatorProcessTree pTree;
     private long vmemLimit;
     private long pmemLimit;
 
     public ProcessTreeInfo(ContainerId containerId, String pid,
-        ProcfsBasedProcessTree pTree, long vmemLimit, long pmemLimit) {
+        ResourceCalculatorProcessTree pTree, long vmemLimit, long pmemLimit) {
       this.containerId = containerId;
       this.pid = pid;
       this.pTree = pTree;
@@ -221,11 +223,11 @@ public class ContainersMonitorImpl extends AbstractService implements
       this.pid = pid;
     }
 
-    public ProcfsBasedProcessTree getProcessTree() {
+    public ResourceCalculatorProcessTree getProcessTree() {
       return this.pTree;
     }
 
-    public void setProcessTree(ProcfsBasedProcessTree pTree) {
+    public void setProcessTree(ResourceCalculatorProcessTree pTree) {
       this.pTree = pTree;
     }
 
@@ -245,20 +247,20 @@ public class ContainersMonitorImpl extends AbstractService implements
   /**
    * Check whether a container's process tree's current memory usage is over
    * limit.
-   * 
+   *
    * When a java process exec's a program, it could momentarily account for
    * double the size of it's memory, because the JVM does a fork()+exec()
    * which at fork time creates a copy of the parent's memory. If the
    * monitoring thread detects the memory used by the container tree at the
    * same instance, it could assume it is over limit and kill the tree, for no
    * fault of the process itself.
-   * 
+   *
    * We counter this problem by employing a heuristic check: - if a process
    * tree exceeds the memory limit by more than twice, it is killed
    * immediately - if a process tree has processes older than the monitoring
    * interval exceeding the memory limit by even 1 time, it is killed. Else it
    * is given the benefit of doubt to lie around for one more iteration.
-   * 
+   *
    * @param containerId
    *          Container Id for the container tree
    * @param currentMemUsage
@@ -295,7 +297,7 @@ public class ContainersMonitorImpl extends AbstractService implements
   }
 
   // method provided just for easy testing purposes
-  boolean isProcessTreeOverLimit(ProcfsBasedProcessTree pTree,
+  boolean isProcessTreeOverLimit(ResourceCalculatorProcessTree pTree,
       String containerId, long limit) {
     long currentMemUsage = pTree.getCumulativeVmem();
     // as processes begin with an age 1, we want to see if there are processes
@@ -370,9 +372,8 @@ public class ContainersMonitorImpl extends AbstractService implements
                 LOG.debug("Tracking ProcessTree " + pId
                     + " for the first time");
 
-                ProcfsBasedProcessTree pt =
-                    new ProcfsBasedProcessTree(pId,
-                        ContainerExecutor.isSetsidAvailable);
+                ResourceCalculatorProcessTree pt =
+                    ResourceCalculatorProcessTree.getResourceCalculatorProcessTree(pId, processTreeClass, conf);
                 ptInfo.setPid(pId);
                 ptInfo.setProcessTree(pt);
               }
@@ -385,10 +386,8 @@ public class ContainersMonitorImpl extends AbstractService implements
 
             LOG.debug("Constructing ProcessTree for : PID = " + pId
                 + " ContainerId = " + containerId);
-            ProcfsBasedProcessTree pTree = ptInfo.getProcessTree();
-            pTree = pTree.getProcessTree(); // get the updated process-tree
-            ptInfo.setProcessTree(pTree); // update ptInfo with proces-tree of
-                                          // updated state
+            ResourceCalculatorProcessTree pTree = ptInfo.getProcessTree();
+            pTree.updateProcessTree();    // update process-tree
             long currentVmemUsage = pTree.getCumulativeVmem();
             long currentPmemUsage = pTree.getCumulativeRssmem();
             // as processes begin with an age 1, we want to see if there
@@ -404,7 +403,7 @@ public class ContainersMonitorImpl extends AbstractService implements
 
             boolean isMemoryOverLimit = false;
             String msg = "";
-            if (isVirtualMemoryCheckEnabled()
+            if (isVmemCheckEnabled()
                 && isProcessTreeOverLimit(containerId.toString(),
                     currentVmemUsage, curMemUsageOfAgedProcesses, vmemLimit)) {
               // Container (the root process) is still alive and overflowing
@@ -415,7 +414,7 @@ public class ContainersMonitorImpl extends AbstractService implements
                   currentPmemUsage, pmemLimit,
                   pId, containerId, pTree);
               isMemoryOverLimit = true;
-            } else if (isPhysicalMemoryCheckEnabled()
+            } else if (isPmemCheckEnabled()
                 && isProcessTreeOverLimit(containerId.toString(),
                     currentPmemUsage, curRssMemUsageOfAgedProcesses,
                     pmemLimit)) {
@@ -471,7 +470,7 @@ public class ContainersMonitorImpl extends AbstractService implements
     private String formatErrorMessage(String memTypeExceeded,
         long currentVmemUsage, long vmemLimit,
         long currentPmemUsage, long pmemLimit,
-        String pId, ContainerId containerId, ProcfsBasedProcessTree pTree) {
+        String pId, ContainerId containerId, ResourceCalculatorProcessTree pTree) {
       return
         String.format("Container [pid=%s,containerID=%s] is running beyond %s memory limits. ",
             pId, containerId, memTypeExceeded) +
@@ -485,12 +484,12 @@ public class ContainersMonitorImpl extends AbstractService implements
 
     private String formatUsageString(long currentVmemUsage, long vmemLimit,
         long currentPmemUsage, long pmemLimit) {
-      return String.format("%sb of %sb physical memory used; " +
-          "%sb of %sb virtual memory used",
-          StringUtils.humanReadableInt(currentPmemUsage),
-          StringUtils.humanReadableInt(pmemLimit),
-          StringUtils.humanReadableInt(currentVmemUsage),
-          StringUtils.humanReadableInt(vmemLimit));
+      return String.format("%sB of %sB physical memory used; " +
+          "%sB of %sB virtual memory used",
+          TraditionalBinaryPrefix.long2String(currentPmemUsage, "", 1),
+          TraditionalBinaryPrefix.long2String(pmemLimit, "", 1),
+          TraditionalBinaryPrefix.long2String(currentVmemUsage, "", 1),
+          TraditionalBinaryPrefix.long2String(vmemLimit, "", 1));
     }
   }
 
@@ -499,9 +498,29 @@ public class ContainersMonitorImpl extends AbstractService implements
     return this.maxVmemAllottedForContainers;
   }
 
+  /**
+   * Is the total physical memory check enabled?
+   *
+   * @return true if total physical memory check is enabled.
+   */
+  @Override
+  public boolean isPmemCheckEnabled() {
+    return this.pmemCheckEnabled;
+  }
+
   @Override
   public long getPmemAllocatedForContainers() {
     return this.maxPmemAllottedForContainers;
+  }
+
+  /**
+   * Is the total virtual memory check enabled?
+   *
+   * @return true if total virtual memory check is enabled.
+   */
+  @Override
+  public boolean isVmemCheckEnabled() {
+    return this.vmemCheckEnabled;
   }
 
   @Override

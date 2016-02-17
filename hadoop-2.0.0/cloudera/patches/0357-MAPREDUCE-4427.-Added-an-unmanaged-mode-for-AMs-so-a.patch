@@ -1,7 +1,7 @@
 From 626cc39f777ab20500ad13f35236ae06de7cb2fa Mon Sep 17 00:00:00 2001
 From: Arun Murthy <acmurthy@apache.org>
 Date: Sun, 15 Jul 2012 21:46:07 +0000
-Subject: [PATCH 357/545] MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease development of new applications. Contributed by Bikas Saha.
+Subject: [PATCH 0357/1612] MAPREDUCE-4427. Added an 'unmanaged' mode for AMs so as to ease development of new applications. Contributed by Bikas Saha.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1361813 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 06859f2dcb6776686d8ed4bf1f76579b7c42c900)

@@ -1,7 +1,7 @@
 From 3e61a7a9ce9b971627219a74241f1bcaab69a645 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Mon, 2 Jul 2012 07:39:02 +0000
-Subject: [PATCH 229/545] HDFS-3157. Error in deleting block is keep on coming from DN even after  the block report and directory scanning has happened.
+Subject: [PATCH 0229/1612] HDFS-3157. Error in deleting block is keep on coming from DN even after  the block report and directory scanning has happened.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1356095 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 206f29cf793976f81a0f232208e1869e0063bfe3)

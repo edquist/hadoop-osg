@@ -1,7 +1,7 @@
 From 76c80bb394146b6d0d33eb79e4eb004b745d26f2 Mon Sep 17 00:00:00 2001
 From: Thomas White <tomwhite@apache.org>
 Date: Thu, 30 Aug 2012 10:02:31 +0000
-Subject: [PATCH 464/545] Merge -r 1378872:1378873 from trunk to branch-2. Fixes: MAPREDUCE-4608. hadoop-mapreduce-client is missing some dependencies.
+Subject: [PATCH 0464/1612] Merge -r 1378872:1378873 from trunk to branch-2. Fixes: MAPREDUCE-4608. hadoop-mapreduce-client is missing some dependencies.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1378874 13f79535-47bb-0310-9956-ffa450edef68
 ---

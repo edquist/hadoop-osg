@@ -130,19 +130,21 @@
 <FONT color="green">127</FONT>      }<a name="line.127"></a>
 <FONT color="green">128</FONT>    <a name="line.128"></a>
 <FONT color="green">129</FONT>      public void resetState() throws IOException {<a name="line.129"></a>
-<FONT color="green">130</FONT>        super.resetState();<a name="line.130"></a>
-<FONT color="green">131</FONT>      }<a name="line.131"></a>
-<FONT color="green">132</FONT>    <a name="line.132"></a>
-<FONT color="green">133</FONT>      private int rawReadInt() throws IOException {<a name="line.133"></a>
-<FONT color="green">134</FONT>        int b1 = in.read();<a name="line.134"></a>
-<FONT color="green">135</FONT>        int b2 = in.read();<a name="line.135"></a>
-<FONT color="green">136</FONT>        int b3 = in.read();<a name="line.136"></a>
-<FONT color="green">137</FONT>        int b4 = in.read();<a name="line.137"></a>
-<FONT color="green">138</FONT>        if ((b1 | b2 | b3 | b4) &lt; 0)<a name="line.138"></a>
-<FONT color="green">139</FONT>          throw new EOFException();<a name="line.139"></a>
-<FONT color="green">140</FONT>        return ((b1 &lt;&lt; 24) + (b2 &lt;&lt; 16) + (b3 &lt;&lt; 8) + (b4 &lt;&lt; 0));<a name="line.140"></a>
-<FONT color="green">141</FONT>      }<a name="line.141"></a>
-<FONT color="green">142</FONT>    }<a name="line.142"></a>
+<FONT color="green">130</FONT>        originalBlockSize = 0;<a name="line.130"></a>
+<FONT color="green">131</FONT>        noUncompressedBytes = 0;<a name="line.131"></a>
+<FONT color="green">132</FONT>        super.resetState();<a name="line.132"></a>
+<FONT color="green">133</FONT>      }<a name="line.133"></a>
+<FONT color="green">134</FONT>    <a name="line.134"></a>
+<FONT color="green">135</FONT>      private int rawReadInt() throws IOException {<a name="line.135"></a>
+<FONT color="green">136</FONT>        int b1 = in.read();<a name="line.136"></a>
+<FONT color="green">137</FONT>        int b2 = in.read();<a name="line.137"></a>
+<FONT color="green">138</FONT>        int b3 = in.read();<a name="line.138"></a>
+<FONT color="green">139</FONT>        int b4 = in.read();<a name="line.139"></a>
+<FONT color="green">140</FONT>        if ((b1 | b2 | b3 | b4) &lt; 0)<a name="line.140"></a>
+<FONT color="green">141</FONT>          throw new EOFException();<a name="line.141"></a>
+<FONT color="green">142</FONT>        return ((b1 &lt;&lt; 24) + (b2 &lt;&lt; 16) + (b3 &lt;&lt; 8) + (b4 &lt;&lt; 0));<a name="line.142"></a>
+<FONT color="green">143</FONT>      }<a name="line.143"></a>
+<FONT color="green">144</FONT>    }<a name="line.144"></a>
 
 
 

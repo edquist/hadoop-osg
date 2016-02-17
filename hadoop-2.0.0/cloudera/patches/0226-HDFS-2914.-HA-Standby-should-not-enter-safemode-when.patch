@@ -1,7 +1,7 @@
 From 95cbf48df827d2688f7660286cacbdcc065727c9 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 8 Jun 2012 07:04:58 +0000
-Subject: [PATCH 226/545] HDFS-2914. HA: Standby should not enter safemode when resources are low. Contributed by Vinay.
+Subject: [PATCH 0226/1612] HDFS-2914. HA: Standby should not enter safemode when resources are low. Contributed by Vinay.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1347898 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b1d9ce1345ad00cecbb096b032e0220e35ace9fb)

@@ -1,7 +1,7 @@
 From 27e4c7f8930156ea6a66854da3544bf2d8a5518f Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 16 Jul 2012 21:26:58 +0000
-Subject: [PATCH 158/545] HDFS-3666. Plumb more exception messages to terminate. Contributed by Eli Collins
+Subject: [PATCH 0158/1612] HDFS-3666. Plumb more exception messages to terminate. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362270 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 15d4e6c8c0e113383ace43f93eeaa0c5dd04f87d)

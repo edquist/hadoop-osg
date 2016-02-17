@@ -1,0 +1,36 @@
+From 42b687cb4b5e066d4ac37294a22ad98eaf3e76f1 Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Mon, 16 Dec 2013 18:30:58 +0000
+Subject: [PATCH 1524/1612] HDFS-5666. Fix inconsistent synchronization in BPOfferService (jxiang via cmccabe)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.3@1551299 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 9a0e10fe831cfad822e7e508b17c5b4d21a444d9)
+---
+ .../hdfs/server/datanode/BPOfferService.java       |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BPOfferService.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BPOfferService.java
+index 73db345..711907e 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BPOfferService.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/datanode/BPOfferService.java
+@@ -148,7 +148,7 @@ class BPOfferService {
+     return false;
+   }
+   
+-  String getBlockPoolId() {
++  synchronized String getBlockPoolId() {
+     if (bpNSInfo != null) {
+       return bpNSInfo.getBlockPoolID();
+     } else {
+@@ -163,7 +163,7 @@ class BPOfferService {
+   }
+   
+   @Override
+-  public String toString() {
++  public synchronized String toString() {
+     if (bpNSInfo == null) {
+       // If we haven't yet connected to our NN, we don't yet know our
+       // own block pool ID.
+-- 
+1.7.0.4
+

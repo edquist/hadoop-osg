@@ -23,8 +23,9 @@ import junit.framework.Assert;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacityScheduler;
-import org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.CapacitySchedulerConfiguration;
+import org.apache.hadoop.yarn.server.resourcemanager.RMContextImpl;
+import org.apache.hadoop.yarn.server.resourcemanager.security.ClientToAMTokenSecretManagerInRM;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 import org.junit.Test;
 
 public class TestQueueParsing {
@@ -42,7 +43,9 @@ public class TestQueueParsing {
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
     capacityScheduler.setConf(conf);
-    capacityScheduler.reinitialize(conf, null, null);
+    capacityScheduler.reinitialize(conf, new RMContextImpl(null, null,
+      null, null, null, null, new RMContainerTokenSecretManager(conf),
+      new ClientToAMTokenSecretManagerInRM()));
     
     CSQueue a = capacityScheduler.getQueue("a");
     Assert.assertEquals(0.10, a.getAbsoluteCapacity(), DELTA);
@@ -63,8 +66,7 @@ public class TestQueueParsing {
     
     // Define top-level queues
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
-    
+
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 10);
     conf.setMaximumCapacity(A, 15);
@@ -138,14 +140,13 @@ public class TestQueueParsing {
 
     CapacityScheduler capacityScheduler = new CapacityScheduler();
     capacityScheduler.setConf(new YarnConfiguration());
-    capacityScheduler.reinitialize(conf, null, null);
+    capacityScheduler.reinitialize(conf, null);
   }
   
   public void testMaxCapacity() throws Exception {
     CapacitySchedulerConfiguration conf = new CapacitySchedulerConfiguration();
 
     conf.setQueues(CapacitySchedulerConfiguration.ROOT, new String[] {"a", "b", "c"});
-    conf.setCapacity(CapacitySchedulerConfiguration.ROOT, 100);
 
     final String A = CapacitySchedulerConfiguration.ROOT + ".a";
     conf.setCapacity(A, 50);
@@ -161,7 +162,7 @@ public class TestQueueParsing {
     try {
       capacityScheduler = new CapacityScheduler();
       capacityScheduler.setConf(new YarnConfiguration());
-      capacityScheduler.reinitialize(conf, null, null);
+      capacityScheduler.reinitialize(conf, null);
     } catch (IllegalArgumentException iae) {
       fail = true;
     }
@@ -173,7 +174,7 @@ public class TestQueueParsing {
     // Now this should work
     capacityScheduler = new CapacityScheduler();
     capacityScheduler.setConf(new YarnConfiguration());
-    capacityScheduler.reinitialize(conf, null, null);
+    capacityScheduler.reinitialize(conf, null);
     
     fail = false;
     try {

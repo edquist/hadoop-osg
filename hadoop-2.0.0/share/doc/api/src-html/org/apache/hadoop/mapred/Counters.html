@@ -64,7 +64,7 @@
 <FONT color="green">061</FONT>    public class Counters<a name="line.61"></a>
 <FONT color="green">062</FONT>        extends AbstractCounters&lt;Counters.Counter, Counters.Group&gt; {<a name="line.62"></a>
 <FONT color="green">063</FONT>      <a name="line.63"></a>
-<FONT color="green">064</FONT>      public static int MAX_COUNTER_LIMIT = Limits.COUNTERS_MAX;<a name="line.64"></a>
+<FONT color="green">064</FONT>      public static int MAX_COUNTER_LIMIT = Limits.getCountersMax();<a name="line.64"></a>
 <FONT color="green">065</FONT>      <a name="line.65"></a>
 <FONT color="green">066</FONT>      public Counters() {<a name="line.66"></a>
 <FONT color="green">067</FONT>        super(groupFactory);<a name="line.67"></a>

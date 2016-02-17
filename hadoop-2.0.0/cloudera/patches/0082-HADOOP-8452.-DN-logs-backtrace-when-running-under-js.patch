@@ -1,7 +1,7 @@
 From 0505373bb214faeafc66788d8207e00d10ac481f Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Thu, 31 May 2012 14:10:16 +0000
-Subject: [PATCH 082/545] HADOOP-8452. DN logs backtrace when running under jsvc and /jmx is loaded (Andy Isaacson via bobby)
+Subject: [PATCH 0082/1612] HADOOP-8452. DN logs backtrace when running under jsvc and /jmx is loaded (Andy Isaacson via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1344733 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d1d80231592ae89133b48e343b25f7ea70ae25ec)

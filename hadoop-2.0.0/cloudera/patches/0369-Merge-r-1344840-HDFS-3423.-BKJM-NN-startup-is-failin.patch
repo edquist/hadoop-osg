@@ -1,7 +1,7 @@
 From 6d1efb9fdfb215d00c32398418c51e39e5d5367d Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:29:04 -0700
-Subject: [PATCH 369/545] Merge r:1344840 HDFS-3423. BKJM: NN startup is failing, when tries to recoverUnfinalizedSegments() a bad inProgress_ ZNodes. Contributed by Ivan and Uma.
+Subject: [PATCH 0369/1612] Merge r:1344840 HDFS-3423. BKJM: NN startup is failing, when tries to recoverUnfinalizedSegments() a bad inProgress_ ZNodes. Contributed by Ivan and Uma.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1344852 13f79535-47bb-0310-9956-ffa450edef68
 

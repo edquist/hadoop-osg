@@ -1,7 +1,7 @@
 From b08830817b7de1da9d49133116f0121842ff8849 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Mon, 9 Jul 2012 19:19:00 +0000
-Subject: [PATCH 147/545] MAPREDUCE-3993. Graceful handling of codec errors during decompression (kkambatl via tucu)
+Subject: [PATCH 0147/1612] MAPREDUCE-3993. Graceful handling of codec errors during decompression (kkambatl via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1359345 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5fd49fdede41f9c1d2c606069a2c2d6d5b7bc2dd)

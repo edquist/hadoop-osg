@@ -17,8 +17,29 @@ DAEMON="hadoop-hdfs-$HADOOP_NAME"
 DESC="Hadoop $HADOOP_NAME"
 EXEC_PATH="/usr/lib/hadoop/sbin/hadoop-daemon.sh"
 SVC_USER="hdfs"
+WORKING_DIR="/var/lib/hadoop-hdfs"
 DAEMON_FLAGS="$HADOOP_NAME"
 CONF_DIR="/etc/hadoop/conf"
 PIDFILE="/var/run/hadoop-hdfs/hadoop-$SVC_USER-$HADOOP_NAME.pid"
-LOCKDIR="/var/lock/subsys"
-LOCKFILE="hadoop-$HADOOP_NAME"
+
+
+
+generate_extra_commands() {
+
+cat <<'__EOT__'
+    init)
+      check_for_root
+      checkstatusofproc
+      if [ "$?" = "$STATUS_RUNNING" ] ; then
+        echo "Error: $DESC is running. Stop it first."
+        exit 1
+      else
+        su -s /bin/bash $SVC_USER -c "hdfs zkfc -formatZK"
+      fi
+      ;;
+    *)
+      echo $"Usage: $0 {start|stop|status|restart|try-restart|condrestart|init}"
+      exit 1
+__EOT__
+
+}

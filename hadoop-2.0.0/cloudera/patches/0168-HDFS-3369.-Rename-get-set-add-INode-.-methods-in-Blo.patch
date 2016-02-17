@@ -1,7 +1,7 @@
 From a572f8aa5c3557bd7b7830873f1b8d49ce0af4f8 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Thu, 10 May 2012 21:41:25 +0000
-Subject: [PATCH 168/545] HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and BlocksMap to {get|set|add}BlockCollection(..).  Contributed by John George
+Subject: [PATCH 0168/1612] HDFS-3369. Rename {get|set|add}INode(..) methods in BlockManager and BlocksMap to {get|set|add}BlockCollection(..).  Contributed by John George
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336909 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit fae0ef6d35a792734f11360d5d8bfa0728b6beb8)

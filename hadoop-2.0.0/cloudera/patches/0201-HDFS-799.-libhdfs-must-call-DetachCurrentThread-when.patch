@@ -1,7 +1,7 @@
 From 3aa5543ab669faaaade827fb19123e474905a6ea Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 13 Jul 2012 00:10:26 +0000
-Subject: [PATCH 201/545] HDFS-799. libhdfs must call DetachCurrentThread when a thread is destroyed. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0201/1612] HDFS-799. libhdfs must call DetachCurrentThread when a thread is destroyed. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1361009 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit e50fa926e4892859740add458b62dfb6699a915e)

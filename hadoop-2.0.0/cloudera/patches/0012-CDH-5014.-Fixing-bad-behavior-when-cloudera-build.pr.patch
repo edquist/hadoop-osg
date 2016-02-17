@@ -1,7 +1,7 @@
 From 00dfb076f85ed604ca298f968f854a8d2771208b Mon Sep 17 00:00:00 2001
 From: Andrew Bayer <andrew@cloudera.com>
 Date: Mon, 2 Apr 2012 16:08:40 -0700
-Subject: [PATCH 012/545] CDH-5014. Fixing bad behavior when cloudera/build.properties doesn't exist.
+Subject: [PATCH 0012/1612] CDH-5014. Fixing bad behavior when cloudera/build.properties doesn't exist.
 
 ---
  hadoop-common-project/hadoop-common/pom.xml        |    1 +

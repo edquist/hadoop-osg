@@ -1,7 +1,7 @@
 From 39819f4657b2905ad1627c299f2e7ab3b24dabfa Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Mon, 11 Jun 2012 21:20:28 +0000
-Subject: [PATCH 110/545] HADOOP-8491. Check for short writes when using FileChannel#write and related methods. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0110/1612] HADOOP-8491. Check for short writes when using FileChannel#write and related methods. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1349019 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a92b49c6143b7d5b23e21ce117a9413435662754)

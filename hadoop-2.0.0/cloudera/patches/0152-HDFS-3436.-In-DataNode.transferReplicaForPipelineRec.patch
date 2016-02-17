@@ -1,7 +1,7 @@
 From ff36544c1d72e750bd1db5bf8c7c6af24b120a29 Mon Sep 17 00:00:00 2001
 From: Tsz-wo Sze <szetszwo@apache.org>
 Date: Wed, 23 May 2012 17:59:30 +0000
-Subject: [PATCH 152/545] HDFS-3436. In DataNode.transferReplicaForPipelineRecovery(..), it should use the stored generation stamp to check if the block is valid.  Contributed by Vinay
+Subject: [PATCH 0152/1612] HDFS-3436. In DataNode.transferReplicaForPipelineRecovery(..), it should use the stored generation stamp to check if the block is valid.  Contributed by Vinay
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1341961 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 67abd469010545ef410317c7c0622c8fd76ba233)

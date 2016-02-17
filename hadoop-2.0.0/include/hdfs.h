@@ -81,6 +81,43 @@ extern  "C" {
      */
     int hdfsFileIsOpenForWrite(hdfsFile file);
 
+    struct hdfsReadStatistics {
+      uint64_t totalBytesRead;
+      uint64_t totalLocalBytesRead;
+      uint64_t totalShortCircuitBytesRead;
+    };
+
+    /**
+     * Get read statistics about a file.  This is only applicable to files
+     * opened for reading.
+     *
+     * @param file     The HDFS file
+     * @param stats    (out parameter) on a successful return, the read
+     *                 statistics.  Unchanged otherwise.  You must free the
+     *                 returned statistics with hdfsFileFreeReadStatistics.
+     * @return         0 if the statistics were successfully returned,
+     *                 -1 otherwise.  On a failure, please check errno against
+     *                 ENOTSUP.  webhdfs, LocalFilesystem, and so forth may
+     *                 not support read statistics.
+     */
+    int hdfsFileGetReadStatistics(hdfsFile file,
+                                  struct hdfsReadStatistics **stats);
+
+    /**
+     * @param stats    HDFS read statistics for a file.
+     *
+     * @return the number of remote bytes read.
+     */
+    int64_t hdfsReadStatisticsGetRemoteBytesRead(
+                            const struct hdfsReadStatistics *stats);
+
+    /**
+     * Free some HDFS read statistics.
+     *
+     * @param stats    The HDFS read statistics to free.
+     */
+    void hdfsFileFreeReadStatistics(struct hdfsReadStatistics *stats);
+
     /** 
      * hdfsConnectAsUser - Connect to a hdfs file system as a specific user
      * Connect to the hdfs.
@@ -391,6 +428,17 @@ extern  "C" {
      * @return 0 on success, -1 on error and sets errno
      */
     int hdfsHFlush(hdfsFS fs, hdfsFile file);
+
+
+    /**
+     * hdfsHSync - Similar to posix fsync, Flush out the data in client's 
+     * user buffer. all the way to the disk device (but the disk may have 
+     * it in its cache).
+     * @param fs configured filesystem handle
+     * @param file file handle
+     * @return 0 on success, -1 on error and sets errno
+     */
+    int hdfsHSync(hdfsFS fs, hdfsFile file);
 
 
     /**

@@ -1,7 +1,7 @@
 From 04976b36ee4caaa0bad078e9197111bbec725fd2 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Mon, 30 Jul 2012 18:11:32 +0000
-Subject: [PATCH 419/545] HADOOP-8550. hadoop fs -touchz automatically created parent directories (John George via bobby)
+Subject: [PATCH 0419/1612] HADOOP-8550. hadoop fs -touchz automatically created parent directories (John George via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1367202 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8b08fb4412a0c0b6abc4be849032ec930af086fc)

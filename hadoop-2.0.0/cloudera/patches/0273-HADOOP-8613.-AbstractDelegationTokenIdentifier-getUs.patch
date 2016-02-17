@@ -1,7 +1,7 @@
 From ef71ae4b519c9b905dad77b4874931f8aea4f9e5 Mon Sep 17 00:00:00 2001
 From: Daryn Sharp <daryn@apache.org>
 Date: Fri, 27 Jul 2012 16:39:51 +0000
-Subject: [PATCH 273/545] HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token auth type. (daryn)
+Subject: [PATCH 0273/1612] HADOOP-8613. AbstractDelegationTokenIdentifier#getUser() should set token auth type. (daryn)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1366440 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit be6067fb928cbd2771fb8d9f566ec7fb1fd8b861)

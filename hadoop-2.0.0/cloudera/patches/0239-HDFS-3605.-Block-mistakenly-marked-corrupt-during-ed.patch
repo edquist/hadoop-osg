@@ -1,7 +1,7 @@
 From a74ea90481e48d1cd3b316a7e921136177e298ea Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 18 Jul 2012 23:42:13 +0000
-Subject: [PATCH 239/545] HDFS-3605. Block mistakenly marked corrupt during edit log catchup phase of failover. Contributed by Todd Lipcon and Brahma Reddy Battula.
+Subject: [PATCH 0239/1612] HDFS-3605. Block mistakenly marked corrupt during edit log catchup phase of failover. Contributed by Todd Lipcon and Brahma Reddy Battula.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1363175 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a532172b3162ebc4d14ec0af0cc874dfc04b29f6)

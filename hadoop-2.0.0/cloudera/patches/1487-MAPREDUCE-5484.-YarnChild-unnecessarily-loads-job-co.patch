@@ -1,0 +1,73 @@
+From 61142158d90cc24f6d8ed2f6420d1cfeea37d04b Mon Sep 17 00:00:00 2001
+From: Sanford Ryza <sandy@apache.org>
+Date: Thu, 29 Aug 2013 23:45:16 +0000
+Subject: [PATCH 1487/1612] MAPREDUCE-5484. YarnChild unnecessarily loads job conf twice (Sandy Ryza)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1518857 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit e56d967f0381ad11ff30511e222a414f0a523ab0)
+
+Conflicts:
+
+	hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-app/src/main/java/org/apache/hadoop/mapred/YarnChild.java
+---
+ .../java/org/apache/hadoop/mapred/YarnChild.java   |   16 +++++++---------
+ 1 files changed, 7 insertions(+), 9 deletions(-)
+
+diff --git a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-app/src/main/java/org/apache/hadoop/mapred/YarnChild.java b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-app/src/main/java/org/apache/hadoop/mapred/YarnChild.java
+index 84676f2..c6053a8 100644
+--- a/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-app/src/main/java/org/apache/hadoop/mapred/YarnChild.java
++++ b/hadoop-mapreduce-project/hadoop-mapreduce-client/hadoop-mapreduce-client-app/src/main/java/org/apache/hadoop/mapred/YarnChild.java
+@@ -73,9 +73,9 @@ class YarnChild {
+     Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
+     LOG.debug("Child starting");
+ 
+-    final JobConf defaultConf = new JobConf();
+-    defaultConf.addResource(MRJobConfig.JOB_CONF_FILE);
+-    UserGroupInformation.setConfiguration(defaultConf);
++    final JobConf job = new JobConf();
++    job.addResource(MRJobConfig.JOB_CONF_FILE);
++    UserGroupInformation.setConfiguration(job);
+ 
+     String host = args[0];
+     int port = Integer.parseInt(args[1]);
+@@ -109,7 +109,7 @@ class YarnChild {
+       @Override
+       public TaskUmbilicalProtocol run() throws Exception {
+         return (TaskUmbilicalProtocol)RPC.getProxy(TaskUmbilicalProtocol.class,
+-            TaskUmbilicalProtocol.versionID, address, defaultConf);
++            TaskUmbilicalProtocol.versionID, address, job);
+       }
+     });
+ 
+@@ -138,7 +138,7 @@ class YarnChild {
+       YarnChild.taskid = task.getTaskID();
+ 
+       // Create the job-conf and set credentials
+-      final JobConf job = configureTask(task, credentials, jt);
++      configureTask(job, task, credentials, jt);
+ 
+       // Initiate Java VM metrics
+       JvmMetrics.initSingleton(jvmId.toString(), job.getSessionId());
+@@ -249,9 +249,8 @@ class YarnChild {
+     job.set(MRJobConfig.JOB_LOCAL_DIR,workDir.toString());
+   }
+ 
+-  private static JobConf configureTask(Task task, Credentials credentials,
+-      Token<JobTokenIdentifier> jt) throws IOException {
+-    final JobConf job = new JobConf(MRJobConfig.JOB_CONF_FILE);
++  private static void configureTask(JobConf job, Task task,
++      Credentials credentials, Token<JobTokenIdentifier> jt) throws IOException {
+     job.setCredentials(credentials);
+     
+     String appAttemptIdEnv = System
+@@ -285,7 +284,6 @@ class YarnChild {
+     writeLocalJobFile(localTaskFile, job);
+     task.setJobFile(localTaskFile.toString());
+     task.setConf(job);
+-    return job;
+   }
+ 
+   /**
+-- 
+1.7.0.4
+

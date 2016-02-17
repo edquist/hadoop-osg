@@ -1,0 +1,127 @@
+From d9e92dde88200283cfe2b21ec77c9601b73f9dcd Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Sat, 2 Nov 2013 00:48:29 +0000
+Subject: [PATCH 1506/1612] HADOOP-10079. log a warning message if group resolution takes too long (cmccabe)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1538114 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 899a06bf69674eecee75aaf86e1639827a6d65dd)
+---
+ .../hadoop/fs/CommonConfigurationKeysPublic.java   |    8 +++++
+ .../java/org/apache/hadoop/security/Groups.java    |   29 ++++++++++++++-----
+ .../src/main/resources/core-default.xml            |    9 ++++++
+ 3 files changed, 38 insertions(+), 8 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/CommonConfigurationKeysPublic.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/CommonConfigurationKeysPublic.java
+index d6774b8..84c1084 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/CommonConfigurationKeysPublic.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/CommonConfigurationKeysPublic.java
+@@ -231,6 +231,14 @@ public class CommonConfigurationKeysPublic {
+   public static final String  HADOOP_SECURITY_GROUPS_CACHE_SECS =
+     "hadoop.security.groups.cache.secs";
+   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
++  public static final long HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT =
++    300;
++  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
++  public static final String HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS =
++    "hadoop.security.groups.cache.warn.after.ms";
++  public static final long HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS_DEFAULT =
++    5000;
++  /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+   public static final String  HADOOP_SECURITY_AUTHENTICATION =
+     "hadoop.security.authentication";
+   /** See <a href="{@docRoot}/../core-default.html">core-default.xml</a> */
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/Groups.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/Groups.java
+index 51cdce6..d9d8781 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/Groups.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/Groups.java
+@@ -50,6 +50,7 @@ public class Groups {
+   private final Map<String, CachedGroups> userToGroupsMap = 
+     new ConcurrentHashMap<String, CachedGroups>();
+   private final long cacheTimeout;
++  private final long warningDeltaMs;
+ 
+   public Groups(Configuration conf) {
+     impl = 
+@@ -60,11 +61,16 @@ public class Groups {
+           conf);
+     
+     cacheTimeout = 
+-      conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 5*60) * 1000;
++      conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS, 
++          CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_SECS_DEFAULT) * 1000;
++    warningDeltaMs =
++      conf.getLong(CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS,
++        CommonConfigurationKeys.HADOOP_SECURITY_GROUPS_CACHE_WARN_AFTER_MS_DEFAULT);
+     
+     if(LOG.isDebugEnabled())
+       LOG.debug("Group mapping impl=" + impl.getClass().getName() + 
+-          "; cacheTimeout=" + cacheTimeout);
++          "; cacheTimeout=" + cacheTimeout + "; warningDeltaMs=" +
++          warningDeltaMs);
+   }
+   
+   /**
+@@ -76,17 +82,24 @@ public class Groups {
+   public List<String> getGroups(String user) throws IOException {
+     // Return cached value if available
+     CachedGroups groups = userToGroupsMap.get(user);
+-    long now = Time.now();
++    long startMs = Time.monotonicNow();
+     // if cache has a value and it hasn't expired
+-    if (groups != null && (groups.getTimestamp() + cacheTimeout > now)) {
++    if (groups != null && (groups.getTimestamp() + cacheTimeout > startMs)) {
+       if(LOG.isDebugEnabled()) {
+         LOG.debug("Returning cached groups for '" + user + "'");
+       }
+       return groups.getGroups();
+     }
+-    
++
+     // Create and cache user's groups
+-    groups = new CachedGroups(impl.getGroups(user));
++    List<String> groupList = impl.getGroups(user);
++    long endMs = Time.monotonicNow();
++    long deltaMs = endMs - startMs ;
++    if (deltaMs > warningDeltaMs) {
++      LOG.warn("Potential performance problem: getGroups(user=" + user +") " +
++          "took " + deltaMs + " milliseconds.");
++    }
++    groups = new CachedGroups(groupList, endMs);
+     if (groups.getGroups().isEmpty()) {
+       throw new IOException("No groups found for user " + user);
+     }
+@@ -133,9 +146,9 @@ public class Groups {
+     /**
+      * Create and initialize group cache
+      */
+-    CachedGroups(List<String> groups) {
++    CachedGroups(List<String> groups, long timestamp) {
+       this.groups = groups;
+-      this.timestamp = Time.now();
++      this.timestamp = timestamp;
+     }
+ 
+     /**
+diff --git a/hadoop-common-project/hadoop-common/src/main/resources/core-default.xml b/hadoop-common-project/hadoop-common/src/main/resources/core-default.xml
+index 5393193..15a89de 100644
+--- a/hadoop-common-project/hadoop-common/src/main/resources/core-default.xml
++++ b/hadoop-common-project/hadoop-common/src/main/resources/core-default.xml
+@@ -106,6 +106,15 @@
+ </property>
+ 
+ <property>
++  <name>hadoop.security.groups.cache.warn.after.ms</name>
++  <value>5000</value>
++  <description>
++    If looking up a single user to group takes longer than this amount of
++    milliseconds, we will log a warning message.
++  </description>
++</property>
++
++<property>
+   <name>hadoop.security.group.mapping.ldap.url</name>
+   <value></value>
+   <description>
+-- 
+1.7.0.4
+

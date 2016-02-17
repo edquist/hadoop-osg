@@ -40,7 +40,6 @@ import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterRequest
 import org.apache.hadoop.yarn.api.protocolrecords.FinishApplicationMasterResponse;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterRequest;
 import org.apache.hadoop.yarn.api.protocolrecords.RegisterApplicationMasterResponse;
-import org.apache.hadoop.yarn.api.records.AMResponse;
 import org.apache.hadoop.yarn.api.records.Container;
 import org.apache.hadoop.yarn.api.records.ContainerId;
 import org.apache.hadoop.yarn.api.records.NodeId;
@@ -207,9 +206,9 @@ public class MRAppBenchmark {
                 RegisterApplicationMasterResponse response =
                     Records.newRecord(RegisterApplicationMasterResponse.class);
                 response.setMinimumResourceCapability(BuilderUtils
-                  .newResource(1024));
+                  .newResource(1024, 1));
                 response.setMaximumResourceCapability(BuilderUtils
-                  .newResource(10240));
+                  .newResource(10240, 1));
                 return response;
               }
 
@@ -231,7 +230,7 @@ public class MRAppBenchmark {
                 List<ResourceRequest> askList = request.getAskList();
                 List<Container> containers = new ArrayList<Container>();
                 for (ResourceRequest req : askList) {
-                  if (req.getHostName() != "*") {
+                  if (!ResourceRequest.isAnyLocation(req.getHostName())) {
                     continue;
                   }
                   int numContainers = req.getNumContainers();
@@ -248,10 +247,8 @@ public class MRAppBenchmark {
                   }
                 }
 
-                AMResponse amResponse = Records.newRecord(AMResponse.class);
-                amResponse.setAllocatedContainers(containers);
-                amResponse.setResponseId(request.getResponseId() + 1);
-                response.setAMResponse(amResponse);
+                response.setAllocatedContainers(containers);
+                response.setResponseId(request.getResponseId() + 1);
                 response.setNumClusterNodes(350);
                 return response;
               }

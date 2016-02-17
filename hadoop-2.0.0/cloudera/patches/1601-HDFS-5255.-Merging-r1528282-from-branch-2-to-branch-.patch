@@ -1,0 +1,397 @@
+From dc015043e1c949923da87cf04b5239a581d208b3 Mon Sep 17 00:00:00 2001
+From: Arpit Agarwal <arp@apache.org>
+Date: Wed, 2 Oct 2013 00:12:53 +0000
+Subject: [PATCH 1601/1612] HDFS-5255. Merging r1528282 from branch-2 to branch-2.1-beta
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.1-beta@1528283 13f79535-47bb-0310-9956-ffa450edef68
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HftpFileSystem.java
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpDelegationToken.java
+	hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpFileSystem.java
+---
+ .../org/apache/hadoop/hdfs/HftpFileSystem.java     |   60 +++++++++++---------
+ .../org/apache/hadoop/hdfs/HsftpFileSystem.java    |   23 ++++----
+ .../hdfs/server/namenode/FileChecksumServlets.java |   11 +++-
+ .../hdfs/server/namenode/FileDataServlet.java      |   11 +++-
+ .../hadoop/hdfs/TestHftpDelegationToken.java       |    8 ++-
+ .../org/apache/hadoop/hdfs/TestHftpFileSystem.java |   24 +++-----
+ 6 files changed, 75 insertions(+), 62 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HftpFileSystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HftpFileSystem.java
+index a6f7449..07d769a 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HftpFileSystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HftpFileSystem.java
+@@ -91,7 +91,6 @@ public class HftpFileSystem extends FileSystem
+   private URI hftpURI;
+ 
+   protected URI nnUri;
+-  protected URI nnSecureUri;
+ 
+   public static final String HFTP_TIMEZONE = "UTC";
+   public static final String HFTP_DATE_FORMAT = "yyyy-MM-dd'T'HH:mm:ssZ";
+@@ -131,34 +130,33 @@ public class HftpFileSystem extends FileSystem
+         DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT);
+   }
+ 
+-  protected int getDefaultSecurePort() {
+-    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
+-        DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
+-  }
+-
++  /**
++   *  We generate the address with one of the following ports, in
++   *  order of preference.
++   *  1. Port from the hftp URI e.g. hftp://namenode:4000/ will return 4000.
++   *  2. Port configured via DFS_NAMENODE_HTTP_PORT_KEY
++   *  3. DFS_NAMENODE_HTTP_PORT_DEFAULT i.e. 50070.
++   *
++   * @param uri
++   * @return
++   */
+   protected InetSocketAddress getNamenodeAddr(URI uri) {
+     // use authority so user supplied uri can override port
+     return NetUtils.createSocketAddr(uri.getAuthority(), getDefaultPort());
+   }
+ 
+-  protected InetSocketAddress getNamenodeSecureAddr(URI uri) {
+-    // must only use the host and the configured https port
+-    return NetUtils.createSocketAddrForHost(uri.getHost(), getDefaultSecurePort());
+-  }
+-
+   protected URI getNamenodeUri(URI uri) {
+-    return DFSUtil.createUri("http", getNamenodeAddr(uri));
+-  }
+-
+-  protected URI getNamenodeSecureUri(URI uri) {
+-    return DFSUtil.createUri("http", getNamenodeSecureAddr(uri));
++    return DFSUtil.createUri(getUnderlyingProtocol(), getNamenodeAddr(uri));
+   }
+ 
++  /**
++   * See the documentation of {@Link #getNamenodeAddr(URI)} for the logic
++   * behind selecting the canonical service name.
++   * @return
++   */
+   @Override
+   public String getCanonicalServiceName() {
+-    // unlike other filesystems, hftp's service is the secure port, not the
+-    // actual port in the uri
+-    return SecurityUtil.buildTokenService(nnSecureUri).toString();
++    return SecurityUtil.buildTokenService(nnUri).toString();
+   }
+   
+   @Override
+@@ -184,7 +182,6 @@ public class HftpFileSystem extends FileSystem
+     setConf(conf);
+     this.ugi = UserGroupInformation.getCurrentUser(); 
+     this.nnUri = getNamenodeUri(name);
+-    this.nnSecureUri = getNamenodeSecureUri(name);
+     try {
+       this.hftpURI = new URI(name.getScheme(), name.getAuthority(),
+                              null, null, null);
+@@ -222,7 +219,7 @@ public class HftpFileSystem extends FileSystem
+ 
+   protected Token<DelegationTokenIdentifier> selectDelegationToken(
+       UserGroupInformation ugi) {
+-  	return hftpTokenSelector.selectToken(nnSecureUri, ugi.getTokens(), getConf());
++    return hftpTokenSelector.selectToken(nnUri, ugi.getTokens(), getConf());
+   }
+   
+ 
+@@ -231,6 +228,13 @@ public class HftpFileSystem extends FileSystem
+     return renewToken;
+   }
+ 
++  /**
++   * Return the underlying protocol that is used to talk to the namenode.
++   */
++  protected String getUnderlyingProtocol() {
++    return "http";
++  }
++
+   @Override
+   public synchronized <T extends TokenIdentifier> void setDelegationToken(Token<T> token) {
+     renewToken = token;
+@@ -254,7 +258,7 @@ public class HftpFileSystem extends FileSystem
+       return ugi.doAs(new PrivilegedExceptionAction<Token<?>>() {
+         @Override
+         public Token<?> run() throws IOException {
+-          final String nnHttpUrl = nnSecureUri.toString();
++          final String nnHttpUrl = nnUri.toString();
+           Credentials c;
+           try {
+             c = DelegationTokenFetcher.getDTfromRemote(nnHttpUrl, renewer);
+@@ -296,7 +300,7 @@ public class HftpFileSystem extends FileSystem
+    * @throws IOException on error constructing the URL
+    */
+   protected URL getNamenodeURL(String path, String query) throws IOException {
+-    final URL url = new URL("http", nnUri.getHost(),
++    final URL url = new URL(getUnderlyingProtocol(), nnUri.getHost(),
+           nnUri.getPort(), path + '?' + query);
+     if (LOG.isTraceEnabled()) {
+       LOG.trace("url=" + url);
+@@ -696,17 +700,20 @@ public class HftpFileSystem extends FileSystem
+       return true;
+     }
+ 
++    protected String getUnderlyingProtocol() {
++      return "http";
++    }
++
+     @SuppressWarnings("unchecked")
+     @Override
+     public long renew(Token<?> token, 
+                       Configuration conf) throws IOException {
+       // update the kerberos credentials, if they are coming from a keytab
+       UserGroupInformation.getLoginUser().reloginFromKeytab();
+-      // use http to renew the token
+       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
+       return 
+         DelegationTokenFetcher.renewDelegationToken
+-        (DFSUtil.createUri("http", serviceAddr).toString(),
++        (DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr).toString(),
+          (Token<DelegationTokenIdentifier>) token);
+     }
+ 
+@@ -716,10 +723,9 @@ public class HftpFileSystem extends FileSystem
+                        Configuration conf) throws IOException {
+       // update the kerberos credentials, if they are coming from a keytab
+       UserGroupInformation.getLoginUser().checkTGTAndReloginFromKeytab();
+-      // use http to cancel the token
+       InetSocketAddress serviceAddr = SecurityUtil.getTokenServiceAddr(token);
+       DelegationTokenFetcher.cancelDelegationToken
+-        (DFSUtil.createUri("http", serviceAddr).toString(),
++        (DFSUtil.createUri(getUnderlyingProtocol(), serviceAddr).toString(),
+          (Token<DelegationTokenIdentifier>) token);
+     }    
+   }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HsftpFileSystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HsftpFileSystem.java
+index 4150c5c..933355a 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HsftpFileSystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/HsftpFileSystem.java
+@@ -70,6 +70,14 @@ public class HsftpFileSystem extends HftpFileSystem {
+     return "hsftp";
+   }
+ 
++  /**
++   * Return the underlying protocol that is used to talk to the namenode.
++   */
++  @Override
++  protected String getUnderlyingProtocol() {
++    return "https";
++  }
++
+   @Override
+   public void initialize(URI name, Configuration conf) throws IOException {
+     super.initialize(name, conf);
+@@ -136,24 +144,15 @@ public class HsftpFileSystem extends HftpFileSystem {
+ 
+   @Override
+   protected int getDefaultPort() {
+-    return getDefaultSecurePort();
++    return getConf().getInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY,
++                            DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT);
+   }
+ 
+   @Override
+-  protected InetSocketAddress getNamenodeSecureAddr(URI uri) {
+-    return getNamenodeAddr(uri);
+-  }
+-
+-  @Override
+-  protected URI getNamenodeUri(URI uri) {
+-    return getNamenodeSecureUri(uri);
+-  }
+-  
+-  @Override
+   protected HttpURLConnection openConnection(String path, String query)
+       throws IOException {
+     query = addDelegationTokenParam(query);
+-    final URL url = new URL("https", nnUri.getHost(), 
++    final URL url = new URL(getUnderlyingProtocol(), nnUri.getHost(),
+         nnUri.getPort(), path + '?' + query);
+     HttpsURLConnection conn = (HttpsURLConnection)URLUtils.openConnection(url);
+     // bypass hostname verification
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FileChecksumServlets.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FileChecksumServlets.java
+index eb6efd3..ba3a33a 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FileChecksumServlets.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FileChecksumServlets.java
+@@ -58,9 +58,14 @@ public class FileChecksumServlets {
+       final String hostname = host instanceof DatanodeInfo 
+           ? ((DatanodeInfo)host).getHostName() : host.getIpAddr();
+       final String scheme = request.getScheme();
+-      final int port = "https".equals(scheme)
+-          ? (Integer)getServletContext().getAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY)
+-          : host.getInfoPort();
++      int port = host.getInfoPort();
++      if ("https".equals(scheme)) {
++        final Integer portObject = (Integer) getServletContext().getAttribute(
++            DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY);
++        if (portObject != null) {
++          port = portObject;
++        }
++      }
+       final String encodedPath = ServletUtil.getRawPath(request, "/fileChecksum");
+ 
+       String dtParam = "";
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FileDataServlet.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FileDataServlet.java
+index 511250f..78560dc 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FileDataServlet.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FileDataServlet.java
+@@ -62,9 +62,14 @@ public class FileDataServlet extends DfsServlet {
+     } else {
+       hostname = host.getIpAddr();
+     }
+-    final int port = "https".equals(scheme)
+-      ? (Integer)getServletContext().getAttribute(DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY)
+-      : host.getInfoPort();
++    int port = host.getInfoPort();
++    if ("https".equals(scheme)) {
++      final Integer portObject = (Integer) getServletContext().getAttribute(
++          DFSConfigKeys.DFS_DATANODE_HTTPS_PORT_KEY);
++      if (portObject != null) {
++        port = portObject;
++      }
++    }
+ 
+     String dtParam = "";
+     if (dt != null) {
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpDelegationToken.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpDelegationToken.java
+index 727b4bb..3ce7c0e 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpDelegationToken.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpDelegationToken.java
+@@ -90,19 +90,21 @@ public class TestHftpDelegationToken {
+     URI fsUri = URI.create("hftp://localhost");
+     MyHftpFileSystem fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
+     assertEquals(httpPort, fs.getCanonicalUri().getPort());
+-    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
++    checkTokenSelection(fs, httpPort, conf);
+ 
+     // test with explicit default port
++    // Make sure it uses the port from the hftp URI.
+     fsUri = URI.create("hftp://localhost:"+httpPort);
+     fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
+     assertEquals(httpPort, fs.getCanonicalUri().getPort());
+-    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
++    checkTokenSelection(fs, httpPort, conf);
+     
+     // test with non-default port
++    // Make sure it uses the port from the hftp URI.
+     fsUri = URI.create("hftp://localhost:"+(httpPort+1));
+     fs = (MyHftpFileSystem) FileSystem.newInstance(fsUri, conf);
+     assertEquals(httpPort+1, fs.getCanonicalUri().getPort());
+-    checkTokenSelection(fs, httpsPort, conf); // should still use secure port
++    checkTokenSelection(fs, httpPort + 1, conf);
+     
+     conf.setInt(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_KEY, 5);
+   }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpFileSystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpFileSystem.java
+index af62f3c..b5d49e1 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpFileSystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/TestHftpFileSystem.java
+@@ -294,11 +294,13 @@ public class TestHftpFileSystem {
+     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
+ 
+     assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fs.getDefaultPort());
+-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
+ 
+     assertEquals(uri, fs.getUri());
++
++    // HFTP uses http to get the token so canonical service name should
++    // return the http port.
+     assertEquals(
+-        "127.0.0.1:"+DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
++        "127.0.0.1:" + DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT,
+         fs.getCanonicalServiceName()
+     );
+   }
+@@ -307,17 +309,18 @@ public class TestHftpFileSystem {
+   public void testHftpCustomDefaultPorts() throws IOException {
+     Configuration conf = new Configuration();
+     conf.setInt("dfs.http.port", 123);
+-    conf.setInt("dfs.https.port", 456);
+ 
+     URI uri = URI.create("hftp://localhost");
+     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
+ 
+     assertEquals(123, fs.getDefaultPort());
+-    assertEquals(456, fs.getDefaultSecurePort());
+     
+     assertEquals(uri, fs.getUri());
++
++    // HFTP uses http to get the token so canonical service name should
++    // return the http port.
+     assertEquals(
+-        "127.0.0.1:456",
++        "127.0.0.1:123",
+         fs.getCanonicalServiceName()
+     );
+   }
+@@ -329,11 +332,10 @@ public class TestHftpFileSystem {
+     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
+ 
+     assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTP_PORT_DEFAULT, fs.getDefaultPort());
+-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
+ 
+     assertEquals(uri, fs.getUri());
+     assertEquals(
+-        "127.0.0.1:"+DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT,
++        "127.0.0.1:123",
+         fs.getCanonicalServiceName()
+     );
+   }
+@@ -342,17 +344,15 @@ public class TestHftpFileSystem {
+   public void testHftpCustomUriPortWithCustomDefaultPorts() throws IOException {
+     Configuration conf = new Configuration();
+     conf.setInt("dfs.http.port", 123);
+-    conf.setInt("dfs.https.port", 456);
+ 
+     URI uri = URI.create("hftp://localhost:789");
+     HftpFileSystem fs = (HftpFileSystem) FileSystem.get(uri, conf);
+ 
+     assertEquals(123, fs.getDefaultPort());
+-    assertEquals(456, fs.getDefaultSecurePort());
+    
+     assertEquals(uri, fs.getUri()); 
+     assertEquals(
+-        "127.0.0.1:456",
++        "127.0.0.1:789",
+         fs.getCanonicalServiceName()
+     );
+   }
+@@ -366,7 +366,6 @@ public class TestHftpFileSystem {
+     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
+ 
+     assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultPort());
+-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
+ 
+     assertEquals(uri, fs.getUri());
+     assertEquals(
+@@ -385,7 +384,6 @@ public class TestHftpFileSystem {
+     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
+ 
+     assertEquals(456, fs.getDefaultPort());
+-    assertEquals(456, fs.getDefaultSecurePort());
+     
+     assertEquals(uri, fs.getUri());
+     assertEquals(
+@@ -401,7 +399,6 @@ public class TestHftpFileSystem {
+     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
+ 
+     assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultPort());
+-    assertEquals(DFSConfigKeys.DFS_NAMENODE_HTTPS_PORT_DEFAULT, fs.getDefaultSecurePort());
+ 
+     assertEquals(uri, fs.getUri());
+     assertEquals(
+@@ -420,7 +417,6 @@ public class TestHftpFileSystem {
+     HsftpFileSystem fs = (HsftpFileSystem) FileSystem.get(uri, conf);
+ 
+     assertEquals(456, fs.getDefaultPort());
+-    assertEquals(456, fs.getDefaultSecurePort());
+ 
+     assertEquals(uri, fs.getUri());
+     assertEquals(
+-- 
+1.7.0.4
+

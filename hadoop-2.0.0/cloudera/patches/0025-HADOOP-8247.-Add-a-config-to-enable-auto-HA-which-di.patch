@@ -1,7 +1,7 @@
 From 2bf923b7825c5b56664190f6ff14261da4e22867 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Tue, 10 Apr 2012 23:00:26 -0700
-Subject: [PATCH 025/545] HADOOP-8247. Add a config to enable auto-HA, which disables manual FailoverController. Contributed by Todd Lipcon.
+Subject: [PATCH 0025/1612] HADOOP-8247. Add a config to enable auto-HA, which disables manual FailoverController. Contributed by Todd Lipcon.
 
 Modified from upstream:
 - addressed merge conflicts as done in upstream merge r1327724 to linearize history

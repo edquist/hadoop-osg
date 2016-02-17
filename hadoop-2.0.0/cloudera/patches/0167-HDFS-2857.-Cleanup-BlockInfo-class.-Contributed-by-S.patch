@@ -1,7 +1,7 @@
 From 5955a455bdc14779016d0d2b7cef8e80e1eb8778 Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Tue, 31 Jan 2012 18:59:58 +0000
-Subject: [PATCH 167/545] HDFS-2857. Cleanup BlockInfo class. Contributed by Suresh Srinivas.
+Subject: [PATCH 0167/1612] HDFS-2857. Cleanup BlockInfo class. Contributed by Suresh Srinivas.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1238747 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit b3a590249bbf29b7383cfa1bfbe33d3f656185f3)

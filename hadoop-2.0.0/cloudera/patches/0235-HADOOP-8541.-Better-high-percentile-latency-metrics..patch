@@ -1,7 +1,7 @@
 From 5df491617a2a73e29eb46c61f0731bc948077280 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Thu, 12 Jul 2012 01:34:41 +0000
-Subject: [PATCH 235/545] HADOOP-8541. Better high-percentile latency metrics. Contributed by Andrew Wang.
+Subject: [PATCH 0235/1612] HADOOP-8541. Better high-percentile latency metrics. Contributed by Andrew Wang.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1360502 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 279f74076101211ade8f1964ee97b040f3945fb1)

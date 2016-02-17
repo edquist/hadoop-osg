@@ -27,12 +27,16 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.mapred.JobConf;
 import org.apache.hadoop.mapreduce.MRConfig;
 import org.apache.hadoop.mapreduce.v2.jobhistory.JHAdminConfig;
+import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+import org.apache.hadoop.metrics2.source.JvmMetrics;
 import org.apache.hadoop.security.SecurityUtil;
 import org.apache.hadoop.util.ShutdownHookManager;
 import org.apache.hadoop.util.StringUtils;
 import org.apache.hadoop.yarn.YarnException;
+import org.apache.hadoop.yarn.YarnUncaughtExceptionHandler;
 import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.event.Dispatcher;
+import org.apache.hadoop.yarn.logaggregation.AggregatedLogDeletionService;
 import org.apache.hadoop.yarn.service.CompositeService;
 
 /******************************************************************
@@ -47,11 +51,14 @@ public class JobHistoryServer extends CompositeService {
    */
   public static final int SHUTDOWN_HOOK_PRIORITY = 30;
 
+  public static final long historyServerTimeStamp = System.currentTimeMillis();
+
   private static final Log LOG = LogFactory.getLog(JobHistoryServer.class);
   private HistoryContext historyContext;
   private HistoryClientService clientService;
   private JobHistory jobHistoryService;
   private JHSDelegationTokenSecretManager jhsDTSecretManager;
+  private AggregatedLogDeletionService aggLogDelService;
 
   public JobHistoryServer() {
     super(JobHistoryServer.class.getName());
@@ -73,8 +80,10 @@ public class JobHistoryServer extends CompositeService {
     this.jhsDTSecretManager = createJHSSecretManager(conf);
     clientService = new HistoryClientService(historyContext, 
         this.jhsDTSecretManager);
+    aggLogDelService = new AggregatedLogDeletionService();
     addService(jobHistoryService);
     addService(clientService);
+    addService(aggLogDelService);
     super.init(config);
   }
 
@@ -101,6 +110,8 @@ public class JobHistoryServer extends CompositeService {
 
   @Override
   public void start() {
+    DefaultMetricsSystem.initialize("JobHistoryServer");
+    JvmMetrics.initSingleton("JobHistoryServer", null);
     try {
       jhsDTSecretManager.startThreads();
     } catch(IOException io) {
@@ -113,6 +124,7 @@ public class JobHistoryServer extends CompositeService {
   @Override
   public void stop() {
     jhsDTSecretManager.stopThreads();
+    DefaultMetricsSystem.shutdown();
     super.stop();
   }
 
@@ -122,6 +134,7 @@ public class JobHistoryServer extends CompositeService {
   }
 
   public static void main(String[] args) {
+    Thread.setDefaultUncaughtExceptionHandler(new YarnUncaughtExceptionHandler());
     StringUtils.startupShutdownMessage(JobHistoryServer.class, args, LOG);
     try {
       JobHistoryServer jobHistoryServer = new JobHistoryServer();

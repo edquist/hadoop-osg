@@ -1,7 +1,7 @@
 From 91774ff255d1816a868c0d5703cfe8007fd871ea Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Fri, 1 Jun 2012 18:18:16 +0000
-Subject: [PATCH 161/545] HADOOP-8460. Document proper setting of HADOOP_PID_DIR and HADOOP_SECURE_DN_PID_DIR (bobby)
+Subject: [PATCH 0161/1612] HADOOP-8460. Document proper setting of HADOOP_PID_DIR and HADOOP_SECURE_DN_PID_DIR (bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1345304 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 53b88658e2e41c38457d18f4d574bca56b994e00)

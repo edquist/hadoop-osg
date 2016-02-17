@@ -35,7 +35,6 @@ import org.apache.hadoop.conf.Configurable;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.security.AccessControlException;
 import org.apache.hadoop.security.UserGroupInformation;
-import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.Lock;
 import org.apache.hadoop.yarn.api.records.ApplicationAttemptId;
 import org.apache.hadoop.yarn.api.records.Container;
@@ -50,7 +49,8 @@ import org.apache.hadoop.yarn.factory.providers.RecordFactoryProvider;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger;
 import org.apache.hadoop.yarn.server.resourcemanager.RMAuditLogger.AuditConstants;
 import org.apache.hadoop.yarn.server.resourcemanager.RMContext;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.recovery.RMStateStore.RMState;
+import org.apache.hadoop.yarn.server.resourcemanager.resource.ResourceCalculator;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.rmapp.attempt.RMAppAttemptEventType;
@@ -75,7 +75,7 @@ import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeAddedSc
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeRemovedSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.NodeUpdateSchedulerEvent;
 import org.apache.hadoop.yarn.server.resourcemanager.scheduler.event.SchedulerEvent;
-import org.apache.hadoop.yarn.server.security.ContainerTokenSecretManager;
+import org.apache.hadoop.yarn.server.resourcemanager.security.RMContainerTokenSecretManager;
 
 @LimitedPrivate("yarn")
 @Evolving
@@ -111,22 +111,18 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     }
   };
 
+  @Override
   public void setConf(Configuration conf) {
-    if (conf instanceof YarnConfiguration) {
-      yarnConf = (YarnConfiguration) conf;
-    } else {
-      throw new IllegalArgumentException("Can only configure with " +
-					 "YarnConfiguration");
-    }
+      yarnConf = conf;
   }
 
+  @Override
   public Configuration getConf() {
     return yarnConf;
   }
 
   private CapacitySchedulerConfiguration conf;
-  private YarnConfiguration yarnConf;
-  private ContainerTokenSecretManager containerTokenSecretManager;
+  private Configuration yarnConf;
   private RMContext rmContext;
 
   private Map<String, CSQueue> queues = new ConcurrentHashMap<String, CSQueue>();
@@ -146,6 +142,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
 
   private boolean initialized = false;
 
+  private ResourceCalculator calculator;
+  
   public CapacityScheduler() {}
 
   @Override
@@ -163,8 +161,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
 
   @Override
-  public ContainerTokenSecretManager getContainerTokenSecretManager() {
-    return containerTokenSecretManager;
+  public RMContainerTokenSecretManager getContainerTokenSecretManager() {
+    return this.rmContext.getContainerTokenSecretManager();
   }
 
   @Override
@@ -175,6 +173,21 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   @Override
   public Resource getMaximumResourceCapability() {
     return maximumAllocation;
+  }
+
+  @Override
+  public Comparator<FiCaSchedulerApp> getApplicationComparator() {
+    return applicationComparator;
+  }
+
+  @Override
+  public ResourceCalculator getResourceCalculator() {
+    return calculator;
+  }
+
+  @Override
+  public Comparator<CSQueue> getQueueComparator() {
+    return queueComparator;
   }
 
   @Override
@@ -193,17 +206,24 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
   
   @Override
-  public synchronized void reinitialize(Configuration conf,
-      ContainerTokenSecretManager containerTokenSecretManager, RMContext rmContext) 
-  throws IOException {
+  public synchronized void
+      reinitialize(Configuration conf, RMContext rmContext) throws IOException {
     if (!initialized) {
       this.conf = new CapacitySchedulerConfiguration(conf);
+      
       this.minimumAllocation = this.conf.getMinimumAllocation();
       this.maximumAllocation = this.conf.getMaximumAllocation();
-      this.containerTokenSecretManager = containerTokenSecretManager;
+      this.calculator = this.conf.getResourceCalculator();
+
       this.rmContext = rmContext;
+      
       initializeQueues(this.conf);
+      
       initialized = true;
+      LOG.info("Initialized CapacityScheduler with " +
+          "calculator=" + getResourceCalculator().getClass() + ", " +
+          "minimumAllocation=<" + getMinimumResourceCapability() + ">, " +
+          "maximumAllocation=<" + getMaximumResourceCapability() + ">");
     } else {
 
       CapacitySchedulerConfiguration oldConf = this.conf; 
@@ -233,8 +253,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   private void initializeQueues(CapacitySchedulerConfiguration conf)
     throws IOException {
     root = 
-        parseQueue(this, conf, null, CapacitySchedulerConfiguration.ROOT, queues, queues, 
-            queueComparator, applicationComparator, noop);
+        parseQueue(this, conf, null, CapacitySchedulerConfiguration.ROOT, 
+            queues, queues, noop);
     LOG.info("Initialized root queue " + root);
   }
 
@@ -244,8 +264,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     // Parse new queues
     Map<String, CSQueue> newQueues = new HashMap<String, CSQueue>();
     CSQueue newRoot = 
-        parseQueue(this, conf, null, CapacitySchedulerConfiguration.ROOT, newQueues, queues, 
-            queueComparator, applicationComparator, noop);
+        parseQueue(this, conf, null, CapacitySchedulerConfiguration.ROOT, 
+            newQueues, queues, noop); 
     
     // Ensure all existing queues are still present
     validateExistingQueues(queues, newQueues);
@@ -298,8 +318,6 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
       CapacitySchedulerConfiguration conf, 
       CSQueue parent, String queueName, Map<String, CSQueue> queues,
       Map<String, CSQueue> oldQueues, 
-      Comparator<CSQueue> queueComparator,
-      Comparator<FiCaSchedulerApp> applicationComparator,
       QueueHook hook) throws IOException {
     CSQueue queue;
     String[] childQueueNames = 
@@ -310,15 +328,14 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
         throw new IllegalStateException(
             "Queue configuration missing child queue names for " + queueName);
       }
-      queue = new LeafQueue(csContext, queueName, parent, applicationComparator,
-                            oldQueues.get(queueName));
+      queue = 
+          new LeafQueue(csContext, queueName, parent,oldQueues.get(queueName));
       
       // Used only for unit tests
       queue = hook.hook(queue);
     } else {
       ParentQueue parentQueue = 
-        new ParentQueue(csContext, queueName, queueComparator, parent,
-                        oldQueues.get(queueName));
+        new ParentQueue(csContext, queueName, parent,oldQueues.get(queueName));
 
       // Used only for unit tests
       queue = hook.hook(parentQueue);
@@ -327,7 +344,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
       for (String childQueueName : childQueueNames) {
         CSQueue childQueue = 
           parseQueue(csContext, conf, queue, childQueueName, 
-              queues, oldQueues, queueComparator, applicationComparator, hook);
+              queues, oldQueues, hook);
         childQueues.add(childQueue);
       }
       parentQueue.setChildQueues(childQueues);
@@ -372,7 +389,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     // TODO: Fix store
     FiCaSchedulerApp SchedulerApp = 
         new FiCaSchedulerApp(applicationAttemptId, user, queue, 
-            queue.getActiveUsersManager(), rmContext, null);
+            queue.getActiveUsersManager(), rmContext);
 
     // Submit to the queue
     try {
@@ -449,7 +466,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   }
 
   private static final Allocation EMPTY_ALLOCATION = 
-      new Allocation(EMPTY_CONTAINER_LIST, Resources.createResource(0));
+      new Allocation(EMPTY_CONTAINER_LIST, Resources.createResource(0, 0));
 
   @Override
   @Lock(Lock.NoLock.class)
@@ -464,7 +481,8 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
     }
     
     // Sanity check
-    SchedulerUtils.normalizeRequests(ask, minimumAllocation.getMemory());
+    SchedulerUtils.normalizeRequests(
+        ask, calculator, getClusterResources(), minimumAllocation);
 
     // Release containers
     for (ContainerId releasedContainerId : release) {
@@ -774,18 +792,7 @@ implements ResourceScheduler, CapacitySchedulerContext, Configurable {
   @Override
   @Lock(Lock.NoLock.class)
   public void recover(RMState state) throws Exception {
-    // TODO: VINDOKVFIXME recovery
-//    applications.clear();
-//    for (Map.Entry<ApplicationId, ApplicationInfo> entry : state.getStoredApplications().entrySet()) {
-//      ApplicationId appId = entry.getKey();
-//      ApplicationInfo appInfo = entry.getValue();
-//      SchedulerApp app = applications.get(appId);
-//      app.allocate(appInfo.getContainers());
-//      for (Container c: entry.getValue().getContainers()) {
-//        Queue queue = queues.get(appInfo.getApplicationSubmissionContext().getQueue());
-//        queue.recoverContainer(clusterResource, applications.get(appId), c);
-//      }
-//    }
+    // NOT IMPLEMENTED
   }
 
   @Override

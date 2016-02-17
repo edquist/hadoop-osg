@@ -1,7 +1,7 @@
 From e1b7c5cc7793a9b2c52d4ea8ad82c55997d94822 Mon Sep 17 00:00:00 2001
 From: Harsh J <harsh@apache.org>
 Date: Thu, 21 Jun 2012 21:12:31 +0000
-Subject: [PATCH 338/545] HADOOP-8524. Allow users to get source of a Configuration parameter. (harsh)
+Subject: [PATCH 0338/1612] HADOOP-8524. Allow users to get source of a Configuration parameter. (harsh)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1352689 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f9d5618f8d6d97a2868f9a83f03b992272fefb2e)

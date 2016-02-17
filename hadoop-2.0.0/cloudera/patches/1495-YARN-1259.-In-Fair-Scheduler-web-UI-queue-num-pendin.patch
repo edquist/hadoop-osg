@@ -1,0 +1,31 @@
+From 1c4856023078014e1746c2cfc92837fb190fdd6d Mon Sep 17 00:00:00 2001
+From: Sanford Ryza <sandy@apache.org>
+Date: Mon, 14 Oct 2013 21:07:55 +0000
+Subject: [PATCH 1495/1612] YARN-1259. In Fair Scheduler web UI, queue num pending and num active apps switched. (Robert Kanter via Sandy Ryza)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1532096 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 5f145ccad257acdc2f7b160be3b960eb04471e33)
+---
+ .../webapp/dao/FairSchedulerLeafQueueInfo.java     |    4 ++--
+ 1 files changed, 2 insertions(+), 2 deletions(-)
+
+diff --git a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/dao/FairSchedulerLeafQueueInfo.java b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/dao/FairSchedulerLeafQueueInfo.java
+index f600c04..9f1dc5e 100644
+--- a/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/dao/FairSchedulerLeafQueueInfo.java
++++ b/hadoop-yarn-project/hadoop-yarn/hadoop-yarn-server/hadoop-yarn-server-resourcemanager/src/main/java/org/apache/hadoop/yarn/server/resourcemanager/webapp/dao/FairSchedulerLeafQueueInfo.java
+@@ -32,10 +32,10 @@ public class FairSchedulerLeafQueueInfo extends FairSchedulerQueueInfo {
+   }
+   
+   public int getNumActiveApplications() {
+-    return numPendingApps;
++    return numActiveApps;
+   }
+   
+   public int getNumPendingApplications() {
+-    return numActiveApps;
++    return numPendingApps;
+   }
+ }
+-- 
+1.7.0.4
+

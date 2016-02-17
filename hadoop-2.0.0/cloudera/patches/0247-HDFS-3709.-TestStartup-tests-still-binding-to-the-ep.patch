@@ -1,7 +1,7 @@
 From eebca154e79588909a93bf12dfac5ac654454366 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 24 Jul 2012 01:53:29 +0000
-Subject: [PATCH 247/545] HDFS-3709. TestStartup tests still binding to the ephemeral port. Contributed by Eli Collins
+Subject: [PATCH 0247/1612] HDFS-3709. TestStartup tests still binding to the ephemeral port. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1364865 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a9ee786a7dcfb1aaf422e9a81b0318dfa3735bab)

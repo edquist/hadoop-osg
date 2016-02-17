@@ -1,7 +1,7 @@
 From 9640ca2cd4f4f8c1a84aca96c81173ef6cf2d088 Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 24 Jul 2012 19:00:50 +0000
-Subject: [PATCH 417/545] HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp via bobby)
+Subject: [PATCH 0417/1612] HADOOP-8606. FileSystem.get may return the wrong filesystem (Daryn Sharp via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1365224 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 690729cbe3437e2763309349c9603a6a6ae83fda)

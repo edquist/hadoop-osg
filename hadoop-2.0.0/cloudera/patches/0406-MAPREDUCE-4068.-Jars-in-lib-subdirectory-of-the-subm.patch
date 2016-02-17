@@ -1,7 +1,7 @@
 From 93454746e84925916bb9ada866400a40ffcb0f1e Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 22 Aug 2012 21:18:34 +0000
-Subject: [PATCH 406/545] MAPREDUCE-4068. Jars in lib subdirectory of the submittable JAR are not added to the classpath (rkanter via tucu)
+Subject: [PATCH 0406/1612] MAPREDUCE-4068. Jars in lib subdirectory of the submittable JAR are not added to the classpath (rkanter via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1376253 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 28656c12204b06f6142b6ff01b748162cf5c8a7a)

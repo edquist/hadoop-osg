@@ -1,7 +1,7 @@
 From dd7a4d327520a4777492a3357532d8f1516699a0 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 17 May 2012 22:30:52 +0000
-Subject: [PATCH 222/545] HDFS-3391. Fix InvalidateBlocks to compare blocks including their generation stamps. Contributed by Todd Lipcon.
+Subject: [PATCH 0222/1612] HDFS-3391. Fix InvalidateBlocks to compare blocks including their generation stamps. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1339898 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 4e30d27225701aaf3da0b68040d2745eeea7ecc0)

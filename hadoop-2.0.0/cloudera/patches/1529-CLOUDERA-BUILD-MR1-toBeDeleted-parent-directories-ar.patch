@@ -1,0 +1,55 @@
+From ad8a61c447f36370ce770e9b783405d6b6e6ab1f Mon Sep 17 00:00:00 2001
+From: Robert Kanter <rkanter@cloudera.com>
+Date: Fri, 3 Jan 2014 15:23:25 -0800
+Subject: [PATCH 1529/1612] CLOUDERA-BUILD: MR1: toBeDeleted parent directories aren't being cleaned up
+
+This will go in upstream as MAPREDUCE-5706
+
+Ref: CDH-16311
+---
+ .../org/apache/hadoop/util/MRAsyncDiskService.java |   11 +++++------
+ 1 files changed, 5 insertions(+), 6 deletions(-)
+
+diff --git a/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/util/MRAsyncDiskService.java b/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/util/MRAsyncDiskService.java
+index e924ce0..a7d4977 100644
+--- a/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/util/MRAsyncDiskService.java
++++ b/hadoop-mapreduce1-project/src/mapred/org/apache/hadoop/util/MRAsyncDiskService.java
+@@ -310,7 +310,7 @@ public class MRAsyncDiskService {
+     FileStatus status = localFileSystem.getFileStatus(target);
+ 
+     if (shouldBeSecure) {
+-      deletePathsInSecureCluster(newPathName, status);
++      deletePathsInSecureCluster(target.toUri().getPath(), status);
+     } else {
+       DeleteTask task =
+           new DeleteTask(volume, pathName, newPathName, status.getOwner());
+@@ -319,7 +319,7 @@ public class MRAsyncDiskService {
+     return true;
+   }
+ 
+-  private void deletePathsInSecureCluster(String newPathName, FileStatus status)
++  private void deletePathsInSecureCluster(String absPathName, FileStatus status)
+       throws FileNotFoundException, IOException {
+     // In a secure tasktracker, the subdirectories belong
+     // to different user
+@@ -334,14 +334,13 @@ public class MRAsyncDiskService {
+ 
+         item =
+             new TaskController.DeletionContext(taskController, false, owner,
+-                newPathName + Path.SEPARATOR_CHAR + path);
++                absPathName + Path.SEPARATOR_CHAR + path);
+         cleanupQueue.addToQueue(item);
+       }
+     }
+     // queue the parent directory for cleanup
+-    item =
+-        new TaskController.DeletionContext(taskController, false,
+-            status.getOwner(), newPathName);
++    item = new PathDeletionContext(
++        new Path(absPathName), null, null, null, localFileSystem);
+     cleanupQueue.addToQueue(item);
+   }
+ 
+-- 
+1.7.0.4
+

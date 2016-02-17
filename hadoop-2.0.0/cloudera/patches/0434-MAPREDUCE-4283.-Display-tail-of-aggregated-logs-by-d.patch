@@ -1,7 +1,7 @@
 From 7b1e0bfa2669d562cc30a52697a4372f0e29841f Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Tue, 17 Jul 2012 19:01:42 +0000
-Subject: [PATCH 434/545] MAPREDUCE-4283. Display tail of aggregated logs by default (Jason Lowe via bobby)
+Subject: [PATCH 0434/1612] MAPREDUCE-4283. Display tail of aggregated logs by default (Jason Lowe via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1362608 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 8feaf094d41461758d5c09974f858e530caf452d)

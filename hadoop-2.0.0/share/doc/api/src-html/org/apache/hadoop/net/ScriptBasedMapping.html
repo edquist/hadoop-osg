@@ -267,8 +267,14 @@
 <FONT color="green">264</FONT>        public String toString() {<a name="line.264"></a>
 <FONT color="green">265</FONT>          return scriptName != null ? ("script " + scriptName) : NO_SCRIPT;<a name="line.265"></a>
 <FONT color="green">266</FONT>        }<a name="line.266"></a>
-<FONT color="green">267</FONT>      }<a name="line.267"></a>
-<FONT color="green">268</FONT>    }<a name="line.268"></a>
+<FONT color="green">267</FONT>    <a name="line.267"></a>
+<FONT color="green">268</FONT>        @Override<a name="line.268"></a>
+<FONT color="green">269</FONT>        public void reloadCachedMappings() {<a name="line.269"></a>
+<FONT color="green">270</FONT>          // Nothing to do here, since RawScriptBasedMapping has no cache, and<a name="line.270"></a>
+<FONT color="green">271</FONT>          // does not inherit from CachedDNSToSwitchMapping<a name="line.271"></a>
+<FONT color="green">272</FONT>        }<a name="line.272"></a>
+<FONT color="green">273</FONT>      }<a name="line.273"></a>
+<FONT color="green">274</FONT>    }<a name="line.274"></a>
 
 
 

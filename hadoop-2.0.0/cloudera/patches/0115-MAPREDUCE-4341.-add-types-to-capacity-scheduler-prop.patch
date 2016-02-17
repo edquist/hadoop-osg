@@ -1,7 +1,7 @@
 From 99c3bb94d2cff0b6841659379b6a7438efb83e5d Mon Sep 17 00:00:00 2001
 From: Thomas Graves <tgraves@apache.org>
 Date: Tue, 19 Jun 2012 16:17:21 +0000
-Subject: [PATCH 115/545] MAPREDUCE-4341. add types to capacity scheduler properties documentation (Karthik Kambatla via tgraves).
+Subject: [PATCH 0115/1612] MAPREDUCE-4341. add types to capacity scheduler properties documentation (Karthik Kambatla via tgraves).
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1351762 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit cfa26ceff3fabceb8a9c1b199e098af07d9886b6)

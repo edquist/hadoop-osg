@@ -1,7 +1,7 @@
 From aae13bfcd67ed730c781c876897f4351031b0b55 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Fri, 29 Jun 2012 20:57:20 +0000
-Subject: [PATCH 163/545] MAPREDUCE-4383. HadoopPipes.cc needs to include unistd.h. Contributed by Andy Isaacson
+Subject: [PATCH 0163/1612] MAPREDUCE-4383. HadoopPipes.cc needs to include unistd.h. Contributed by Andy Isaacson
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1355555 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 303fd1e5e9d0ef119945749c72a88b6161cca266)

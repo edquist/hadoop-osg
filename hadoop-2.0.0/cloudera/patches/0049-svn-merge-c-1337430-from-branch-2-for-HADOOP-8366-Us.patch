@@ -1,7 +1,7 @@
 From 0694157bd690925eaef5dfe8ed04e2f12dcf3e65 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Mon, 14 May 2012 20:57:59 -0700
-Subject: [PATCH 049/545] svn merge -c 1337430 from branch-2 for HADOOP-8366 Use ProtoBuf for RpcResponseHeader
+Subject: [PATCH 0049/1612] svn merge -c 1337430 from branch-2 for HADOOP-8366 Use ProtoBuf for RpcResponseHeader
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.0.0-alpha@1338348 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f2e8cfdfa0a592a4d6de70efd25fef5d9c253053)

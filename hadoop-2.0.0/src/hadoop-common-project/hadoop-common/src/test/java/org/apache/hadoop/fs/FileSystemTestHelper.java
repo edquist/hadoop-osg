@@ -24,8 +24,10 @@ import java.util.Random;
 
 
 import org.apache.hadoop.conf.Configuration;
+import org.apache.hadoop.security.token.Token;
 import org.junit.Assert;
 import static org.junit.Assert.*;
+import static org.mockito.Mockito.mock;
 
 /**
  * Helper class for unit tests.
@@ -59,19 +61,28 @@ public final class FileSystemTestHelper {
     return data;
   }
   
+  
+  /*
+   * get testRootPath qualified for fSys
+   */
   public static Path getTestRootPath(FileSystem fSys) {
     return fSys.makeQualified(new Path(TEST_ROOT_DIR));
   }
 
+  /*
+   * get testRootPath + pathString qualified for fSys
+   */
   public static Path getTestRootPath(FileSystem fSys, String pathString) {
     return fSys.makeQualified(new Path(TEST_ROOT_DIR, pathString));
   }
   
   
   // the getAbsolutexxx method is needed because the root test dir
-  // can be messed up by changing the working dir.
+  // can be messed up by changing the working dir since the TEST_ROOT_PATH
+  // is often relative to the working directory of process
+  // running the unit tests.
 
-  public static String getAbsoluteTestRootDir(FileSystem fSys)
+  static String getAbsoluteTestRootDir(FileSystem fSys)
       throws IOException {
     // NOTE: can't cache because of different filesystems!
     //if (absTestRootDir == null) 
@@ -217,5 +228,40 @@ public final class FileSystemTestHelper {
       Assert.assertTrue(s.isSymlink());
     }
     Assert.assertEquals(aFs.makeQualified(new Path(path)), s.getPath());
+  }
+  
+  /**
+   * Class to enable easier mocking of a FileSystem
+   * Use getRawFileSystem to retrieve the mock
+   */
+  public static class MockFileSystem extends FilterFileSystem {
+    public MockFileSystem() {
+      // it's a bit ackward to mock ourselves, but it allows the visibility
+      // of methods to be increased
+      super(mock(MockFileSystem.class));
+    }
+    @Override
+    public MockFileSystem getRawFileSystem() {
+      return (MockFileSystem) super.getRawFileSystem();
+      
+    }
+    // these basic methods need to directly propagate to the mock to be
+    // more transparent
+    @Override
+    public void initialize(URI uri, Configuration conf) throws IOException {
+      fs.initialize(uri, conf);
+    }
+    @Override
+    public String getCanonicalServiceName() {
+      return fs.getCanonicalServiceName();
+    }
+    @Override
+    public FileSystem[] getChildFileSystems() {
+      return fs.getChildFileSystems();
+    }
+    @Override // publicly expose for mocking
+    public Token<?> getDelegationToken(String renewer) throws IOException {
+      return fs.getDelegationToken(renewer);
+    }    
   }
 }

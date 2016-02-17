@@ -1,7 +1,7 @@
 From 9b01236ee8b594d5e5c8fed4295840f013816fd4 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 4 Apr 2012 12:49:10 -0700
-Subject: [PATCH 019/545] HADOOP-8245. Fix flakiness in TestZKFailoverController. Contributed by Todd Lipcon.
+Subject: [PATCH 0019/1612] HADOOP-8245. Fix flakiness in TestZKFailoverController. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1309554 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 49f0df9ec41839ab7efe6c6df05ffab889c3379c)

@@ -1,7 +1,7 @@
 From 1f698db07bfa929acb933775e8bdb25c13786d2e Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@cloudera.com>
 Date: Fri, 31 Aug 2012 15:17:03 -0700
-Subject: [PATCH 473/545] Revert "HADOOP-8551. fs -mkdir creates parent directories without the -p option (John George via bobby)"
+Subject: [PATCH 0473/1612] Revert "HADOOP-8551. fs -mkdir creates parent directories without the -p option (John George via bobby)"
 
 This reverts commit cbc2cd9d786afdae9a31359f74630e933171245d.
 ---

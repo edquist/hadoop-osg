@@ -43,6 +43,8 @@ public class DataChecksum implements Checksum {
   public static final int CHECKSUM_NULL    = 0;
   public static final int CHECKSUM_CRC32   = 1;
   public static final int CHECKSUM_CRC32C  = 2;
+  public static final int CHECKSUM_DEFAULT = 3; 
+  public static final int CHECKSUM_MIXED   = 4;
   
   private static String[] NAMES = new String[] {
     "NULL", "CRC32", "CRC32C"
@@ -87,7 +89,7 @@ public class DataChecksum implements Checksum {
                            ( (bytes[offset+2] & 0xff) << 16 ) |
                            ( (bytes[offset+3] & 0xff) << 8 )  |
                            ( (bytes[offset+4] & 0xff) );
-    return newDataChecksum( bytes[0], bytesPerChecksum );
+    return newDataChecksum( bytes[offset], bytesPerChecksum );
   }
   
   /**
@@ -416,14 +418,27 @@ public class DataChecksum implements Checksum {
   
   @Override
   public String toString() {
-    String strType;
-    if (type < NAMES.length && type > 0) {
-      strType = NAMES[type];
-    } else {
-      strType = String.valueOf(type);
-    }
+    String strType = getNameOfType(type);
     return "DataChecksum(type=" + strType +
       ", chunkSize=" + bytesPerChecksum + ")";
+  }
+
+  public static String getNameOfType(int checksumType) {
+    if (checksumType < NAMES.length && checksumType > 0) {
+      return NAMES[checksumType];
+    } else {
+      return String.valueOf(checksumType);
+    }
+  }
+
+  public static int getTypeFromName(String checksumName) {
+    for (int i = 0; i < NAMES.length; i++) {
+      if (NAMES[i].equals(checksumName)) {
+        return i;
+      }
+    }
+    throw new RuntimeException("Invalid checksum name: '" +
+        checksumName + "'");
   }
   
   /**

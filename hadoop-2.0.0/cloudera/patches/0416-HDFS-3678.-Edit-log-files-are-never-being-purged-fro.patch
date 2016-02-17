@@ -1,7 +1,7 @@
 From 24db6d6294391c7a1f0c2b6de89922186c3d6d15 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Fri, 24 Aug 2012 18:52:59 +0000
-Subject: [PATCH 416/545] HDFS-3678. Edit log files are never being purged from 2NN. Contributed by Aaron T. Myers.
+Subject: [PATCH 0416/1612] HDFS-3678. Edit log files are never being purged from 2NN. Contributed by Aaron T. Myers.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1377046 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 197678ed9782b70f037f83763e16579f3350799e)

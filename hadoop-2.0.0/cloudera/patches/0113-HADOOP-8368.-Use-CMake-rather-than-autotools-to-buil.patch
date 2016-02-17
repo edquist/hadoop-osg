@@ -1,7 +1,7 @@
 From 65cdab111d073d4ba85cfdae5ba5aada020975b3 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Sat, 2 Jun 2012 02:34:38 +0000
-Subject: [PATCH 113/545] HADOOP-8368. Use CMake rather than autotools to build native code (cmccabe via tucu)
+Subject: [PATCH 0113/1612] HADOOP-8368. Use CMake rather than autotools to build native code (cmccabe via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1345421 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5b0fc81b3898d4a6cfe9aba1be27ca80a0fef3bb)

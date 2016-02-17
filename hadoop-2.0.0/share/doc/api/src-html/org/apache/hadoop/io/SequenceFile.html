@@ -1816,10 +1816,10 @@
 <FONT color="green">1813</FONT>            UTF8 className = new UTF8();<a name="line.1813"></a>
 <FONT color="green">1814</FONT>    <a name="line.1814"></a>
 <FONT color="green">1815</FONT>            className.readFields(in);<a name="line.1815"></a>
-<FONT color="green">1816</FONT>            keyClassName = className.toString(); // key class name<a name="line.1816"></a>
+<FONT color="green">1816</FONT>            keyClassName = className.toStringChecked(); // key class name<a name="line.1816"></a>
 <FONT color="green">1817</FONT>    <a name="line.1817"></a>
 <FONT color="green">1818</FONT>            className.readFields(in);<a name="line.1818"></a>
-<FONT color="green">1819</FONT>            valClassName = className.toString(); // val class name<a name="line.1819"></a>
+<FONT color="green">1819</FONT>            valClassName = className.toStringChecked(); // val class name<a name="line.1819"></a>
 <FONT color="green">1820</FONT>          } else {<a name="line.1820"></a>
 <FONT color="green">1821</FONT>            keyClassName = Text.readString(in);<a name="line.1821"></a>
 <FONT color="green">1822</FONT>            valClassName = Text.readString(in);<a name="line.1822"></a>

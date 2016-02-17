@@ -1,7 +1,7 @@
 From 14cf38d671043597be19bb18bd383e199aa5365b Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Tue, 7 Aug 2012 20:24:01 +0000
-Subject: [PATCH 378/545] HDFS-3741. Exhaustive failure injection test for skipped RPCs. Contributed by Todd Lipcon.
+Subject: [PATCH 0378/1612] HDFS-3741. Exhaustive failure injection test for skipped RPCs. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3077@1370497 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0a184ceb59ddedaecb7ca78beb39685b89e75425)

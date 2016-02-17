@@ -1,7 +1,7 @@
 From 9184efee703a05ba1def2d02aca8db244ed06df6 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Wed, 15 Aug 2012 17:42:16 -0700
-Subject: [PATCH 390/545] HDFS-3796. Speed up edit log tests by avoiding fsync(). Contributed by Todd Lipcon.
+Subject: [PATCH 0390/1612] HDFS-3796. Speed up edit log tests by avoiding fsync(). Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1373558 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d3e5f101b731add6f460ed43633b849223fbcc91)

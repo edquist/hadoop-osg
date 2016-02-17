@@ -1,7 +1,7 @@
 From a48259b0da425c38aa6811be696b72b832b1a058 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 10 May 2012 23:15:53 +0000
-Subject: [PATCH 056/545] HADOOP-8361. Avoid out-of-memory problems when deserializing strings. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0056/1612] HADOOP-8361. Avoid out-of-memory problems when deserializing strings. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1336945 13f79535-47bb-0310-9956-ffa450edef68
 

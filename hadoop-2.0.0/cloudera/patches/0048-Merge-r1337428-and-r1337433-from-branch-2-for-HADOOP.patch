@@ -1,7 +1,7 @@
 From 53f636e530f92aca757887cb375ead411d365492 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@cloudera.com>
 Date: Mon, 14 May 2012 20:57:38 -0700
-Subject: [PATCH 048/545] Merge r1337428 and r1337433 from branch-2 for HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader
+Subject: [PATCH 0048/1612] Merge r1337428 and r1337433 from branch-2 for HADOOP-8285 Use ProtoBuf for RpcPayLoadHeader
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2.0.0-alpha@1338344 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a1ec19ac40e9474260783e7646619892b5feabbe)

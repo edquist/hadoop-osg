@@ -1,0 +1,236 @@
+From 6f021f64856e1825c3b493f2c212ee26e08caacd Mon Sep 17 00:00:00 2001
+From: Colin McCabe <cmccabe@apache.org>
+Date: Mon, 6 Jan 2014 19:30:13 +0000
+Subject: [PATCH 1533/1612] HDFS-5220 Expose group resolution time as metric (jxiang via cmccabe)
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1555986 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 1cdfdb1b364364519caa3bc90e1683bfb6b28c17)
+---
+ .../apache/hadoop/fs/CommonConfigurationKeys.java  |    5 ++-
+ .../java/org/apache/hadoop/security/Groups.java    |    1 +
+ .../hadoop/security/UserGroupInformation.java      |   30 ++++++++++++++++++++
+ .../hadoop/security/TestUserGroupInformation.java  |   28 ++++++++++++++++++-
+ .../hadoop/hdfs/server/namenode/NameNode.java      |    8 +++++
+ .../namenode/metrics/TestNameNodeMetrics.java      |    8 +++++
+ 6 files changed, 77 insertions(+), 3 deletions(-)
+
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/CommonConfigurationKeys.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/CommonConfigurationKeys.java
+index ab21603..e1fc978 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/CommonConfigurationKeys.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/fs/CommonConfigurationKeys.java
+@@ -21,7 +21,6 @@ package org.apache.hadoop.fs;
+ import org.apache.hadoop.classification.InterfaceAudience;
+ import org.apache.hadoop.classification.InterfaceStability;
+ import org.apache.hadoop.http.lib.StaticUserWebFilter;
+-import org.apache.hadoop.security.authorize.Service;
+ 
+ /** 
+  * This class contains constants for configuration keys used
+@@ -212,5 +211,7 @@ public class CommonConfigurationKeys extends CommonConfigurationKeysPublic {
+ 
+   public static final long HADOOP_SECURITY_UID_NAME_CACHE_TIMEOUT_DEFAULT =
+     4*60*60; // 4 hours
+-
++  
++  public static final String HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS =
++    "hadoop.user.group.metrics.percentiles.intervals";
+ }
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/Groups.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/Groups.java
+index d9d8781..b8da16c 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/Groups.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/Groups.java
+@@ -95,6 +95,7 @@ public class Groups {
+     List<String> groupList = impl.getGroups(user);
+     long endMs = Time.monotonicNow();
+     long deltaMs = endMs - startMs ;
++    UserGroupInformation.metrics.addGetGroups(deltaMs);
+     if (deltaMs > warningDeltaMs) {
+       LOG.warn("Potential performance problem: getGroups(user=" + user +") " +
+           "took " + deltaMs + " milliseconds.");
+diff --git a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/UserGroupInformation.java b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/UserGroupInformation.java
+index 5f84e05..6394444 100644
+--- a/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/UserGroupInformation.java
++++ b/hadoop-common-project/hadoop-common/src/main/java/org/apache/hadoop/security/UserGroupInformation.java
+@@ -18,6 +18,7 @@
+ package org.apache.hadoop.security;
+ 
+ import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_SECURITY_AUTHENTICATION;
++import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
+ 
+ import java.io.File;
+ import java.io.IOException;
+@@ -58,6 +59,8 @@ import org.apache.hadoop.io.Text;
+ import org.apache.hadoop.metrics2.annotation.Metric;
+ import org.apache.hadoop.metrics2.annotation.Metrics;
+ import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
++import org.apache.hadoop.metrics2.lib.MetricsRegistry;
++import org.apache.hadoop.metrics2.lib.MutableQuantiles;
+ import org.apache.hadoop.metrics2.lib.MutableRate;
+ import org.apache.hadoop.security.authentication.util.KerberosName;
+ import org.apache.hadoop.security.authentication.util.KerberosUtil;
+@@ -88,14 +91,27 @@ public class UserGroupInformation {
+    */
+   @Metrics(about="User and group related metrics", context="ugi")
+   static class UgiMetrics {
++    final MetricsRegistry registry = new MetricsRegistry("UgiMetrics");
++
+     @Metric("Rate of successful kerberos logins and latency (milliseconds)")
+     MutableRate loginSuccess;
+     @Metric("Rate of failed kerberos logins and latency (milliseconds)")
+     MutableRate loginFailure;
++    @Metric("GetGroups") MutableRate getGroups;
++    MutableQuantiles[] getGroupsQuantiles;
+ 
+     static UgiMetrics create() {
+       return DefaultMetricsSystem.instance().register(new UgiMetrics());
+     }
++
++    void addGetGroups(long latency) {
++      getGroups.add(latency);
++      if (getGroupsQuantiles != null) {
++        for (MutableQuantiles q : getGroupsQuantiles) {
++          q.add(latency);
++        }
++      }
++    }
+   }
+   
+   /**
+@@ -253,6 +269,20 @@ public class UserGroupInformation {
+     }
+     isInitialized = true;
+     UserGroupInformation.conf = conf;
++
++    if (metrics.getGroupsQuantiles == null) {
++      int[] intervals = conf.getInts(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS);
++      if (intervals != null && intervals.length > 0) {
++        final int length = intervals.length;
++        MutableQuantiles[] getGroupsQuantiles = new MutableQuantiles[length];
++        for (int i = 0; i < length; i++) {
++          getGroupsQuantiles[i] = metrics.registry.newQuantiles(
++            "getGroups" + intervals[i] + "s",
++            "Get groups", "ops", "latency", intervals[i]);
++        }
++        metrics.getGroupsQuantiles = getGroupsQuantiles;
++      }
++    }
+   }
+ 
+   /**
+diff --git a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/security/TestUserGroupInformation.java b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/security/TestUserGroupInformation.java
+index e47f38f..526009b 100644
+--- a/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/security/TestUserGroupInformation.java
++++ b/hadoop-common-project/hadoop-common/src/test/java/org/apache/hadoop/security/TestUserGroupInformation.java
+@@ -39,6 +39,7 @@ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
+ import org.apache.hadoop.security.UserGroupInformation.AuthenticationMethod;
+ import org.apache.hadoop.security.token.Token;
+ import org.apache.hadoop.security.token.TokenIdentifier;
++import static org.apache.hadoop.fs.CommonConfigurationKeys.HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS;
+ import static org.apache.hadoop.test.MetricsAsserts.*;
+ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
+ 
+@@ -50,6 +51,10 @@ public class TestUserGroupInformation {
+   final private static String[] GROUP_NAMES = 
+     new String[]{GROUP1_NAME, GROUP2_NAME, GROUP3_NAME};
+   
++  // Rollover interval of percentile metrics (in seconds)
++  private static final int PERCENTILES_INTERVAL = 1;
++  private static Configuration conf;
++ 
+   /**
+    * UGI should not use the default security conf, else it will collide
+    * with other classes that may change the default conf.  Using this dummy
+@@ -76,16 +81,22 @@ public class TestUserGroupInformation {
+     UserGroupInformation.setConfiguration(conf);
+     javax.security.auth.login.Configuration.setConfiguration(
+         new DummyLoginConfiguration());
++
++    TestUserGroupInformation.conf = conf;
+   }
+-  
++
+   /** Test login method */
+   @Test
+   public void testLogin() throws Exception {
++    conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
++      String.valueOf(PERCENTILES_INTERVAL));
++    UserGroupInformation.setConfiguration(conf);
+     // login from unix
+     UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
+     assertEquals(UserGroupInformation.getCurrentUser(),
+                  UserGroupInformation.getLoginUser());
+     assertTrue(ugi.getGroupNames().length >= 1);
++    verifyGroupMetrics(1);
+ 
+     // ensure that doAs works correctly
+     UserGroupInformation userGroupInfo = 
+@@ -514,6 +525,21 @@ public class TestUserGroupInformation {
+     }
+   }
+ 
++  private static void verifyGroupMetrics(
++      long groups) throws InterruptedException {
++    MetricsRecordBuilder rb = getMetrics("UgiMetrics");
++    if (groups > 0) {
++      assertCounter("GetGroupsNumOps", groups, rb);
++      double avg = getDoubleGauge("GetGroupsAvgTime", rb);
++      assertTrue(avg >= 0.0);
++
++      // Sleep for an interval+slop to let the percentiles rollover
++      Thread.sleep((PERCENTILES_INTERVAL+1)*1000);
++      // Check that the percentiles were updated
++      assertQuantileGauges("GetGroups1s", rb);
++    }
++  }
++
+   /**
+    * Test for the case that UserGroupInformation.getCurrentUser()
+    * is called when the AccessControlContext has a Subject associated
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNode.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNode.java
+index 03c2d1c..d476f15 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNode.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/NameNode.java
+@@ -430,6 +430,14 @@ public class NameNode {
+    * @param conf the configuration
+    */
+   protected void initialize(Configuration conf) throws IOException {
++    if (conf.get(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS) == null) {
++      String intervals = conf.get(DFS_METRICS_PERCENTILES_INTERVALS_KEY);
++      if (intervals != null) {
++        conf.set(HADOOP_USER_GROUP_METRICS_PERCENTILES_INTERVALS,
++          intervals);
++      }
++    }
++
+     UserGroupInformation.setConfiguration(conf);
+     loginAsNameNodeUser(conf);
+ 
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java
+index 1a200a8..ae3ac47 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/metrics/TestNameNodeMetrics.java
+@@ -47,6 +47,8 @@ import org.apache.hadoop.hdfs.server.datanode.DataNodeTestUtils;
+ import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
+ import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
+ import org.apache.hadoop.metrics2.MetricsRecordBuilder;
++import org.apache.hadoop.metrics2.MetricsSource;
++import org.apache.hadoop.metrics2.lib.DefaultMetricsSystem;
+ import org.apache.hadoop.test.MetricsAsserts;
+ import org.apache.log4j.Level;
+ import org.junit.After;
+@@ -107,6 +109,12 @@ public class TestNameNodeMetrics {
+   
+   @After
+   public void tearDown() throws Exception {
++    MetricsSource source = DefaultMetricsSystem.instance().getSource("UgiMetrics");
++    if (source != null) {
++      // Run only once since the UGI metrics is cleaned up during teardown
++      MetricsRecordBuilder rb = getMetrics(source);
++      assertQuantileGauges("GetGroups1s", rb);
++    }
+     cluster.shutdown();
+   }
+   
+-- 
+1.7.0.4
+

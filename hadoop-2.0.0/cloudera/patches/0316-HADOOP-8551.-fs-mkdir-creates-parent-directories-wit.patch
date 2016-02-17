@@ -1,7 +1,7 @@
 From cbc2cd9d786afdae9a31359f74630e933171245d Mon Sep 17 00:00:00 2001
 From: Robert Joseph Evans <bobby@apache.org>
 Date: Wed, 25 Jul 2012 13:57:54 +0000
-Subject: [PATCH 316/545] HADOOP-8551. fs -mkdir creates parent directories without the -p option (John George via bobby)
+Subject: [PATCH 0316/1612] HADOOP-8551. fs -mkdir creates parent directories without the -p option (John George via bobby)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1365589 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5c55d4a7387e2715a58f555cf8b0603dd9ce7682)

@@ -47,7 +47,6 @@ public class RmView extends TwoColumnLayout {
   protected void commonPreHead(Page.HTML<_> html) {
     set(ACCORDION_ID, "nav");
     set(initID(ACCORDION, "nav"), "{autoHeight:false, active:0}");
-    set(THEMESWITCHER_ID, "themeswitcher");
   }
 
   @Override
@@ -61,26 +60,30 @@ public class RmView extends TwoColumnLayout {
   }
 
   private String appsTableInit() {
-    AppsList list = getInstance(AppsList.class);
     // id, user, name, queue, starttime, finishtime, state, status, progress, ui
-    StringBuilder init = tableInit().
-        append(", aoColumns:[{sType:'title-numeric'}, null, null, null, ").
-        append("{sType:'title-numeric'}, {sType:'title-numeric'} , null, ").
-        append("null,{sType:'title-numeric', bSearchable:false}, null]");
+    return tableInit()
+      .append(", 'aaData': appsTableData")
+      .append(", bDeferRender: true")
+      .append(", bProcessing: true")
 
-    // Sort by id upon page load
-    init.append(", aaSorting: [[0, 'asc']]");
+      .append("\n, aoColumnDefs: ")
+      .append(getAppsTableColumnDefs())
 
-    String rows = $("rowlimit");
-    int rowLimit = rows.isEmpty() ? MAX_DISPLAY_ROWS : Integer.parseInt(rows);
-    if (list.apps.size() < rowLimit) {
-      list.rendering = Render.HTML;
-      return init.append('}').toString();
-    }
-    if (list.apps.size() > MAX_FAST_ROWS) {
-      tableInitProgress(init, list.apps.size() * 6);
-    }
-    list.rendering = Render.JS_ARRAY;
-    return init.append(", aaData:appsData}").toString();
+      // Sort by id upon page load
+      .append(", aaSorting: [[0, 'desc']]}").toString();
+  }
+  
+  protected String getAppsTableColumnDefs() {
+    StringBuilder sb = new StringBuilder();
+    return sb
+      .append("[\n")
+      .append("{'sType':'numeric', 'aTargets': [0]")
+      .append(", 'mRender': parseHadoopID }")
+
+      .append("\n, {'sType':'numeric', 'aTargets': [4, 5]")
+      .append(", 'mRender': renderHadoopDate }")
+
+      .append("\n, {'sType':'numeric', bSearchable:false, 'aTargets': [8]")
+      .append(", 'mRender': parseHadoopProgress }]").toString();
   }
 }

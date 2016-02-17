@@ -1,7 +1,7 @@
 From cc07ee75e0533c39f8559d7b3e1c6b8a432bfe71 Mon Sep 17 00:00:00 2001
 From: Uma Maheswara Rao G <umamahesh@apache.org>
 Date: Sun, 8 Jul 2012 17:56:41 +0000
-Subject: [PATCH 187/545] HDFS-3541. Deadlock between recovery, xceiver and packet responder.
+Subject: [PATCH 0187/1612] HDFS-3541. Deadlock between recovery, xceiver and packet responder.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1358798 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 6b7f1f8458b2858fbfb31243ea856a3db5436380)

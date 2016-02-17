@@ -1,7 +1,7 @@
 From 025d0277de6e961ce7769b10a6ec3052af0f1e34 Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 11 Apr 2012 05:52:31 +0000
-Subject: [PATCH 026/545] Resolve trivial compilation error after previous merge
+Subject: [PATCH 0026/1612] Resolve trivial compilation error after previous merge
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/HDFS-3042@1324570 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f77b1069c598e3fa6fa7b194b2a7a02311774395)

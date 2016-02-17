@@ -1,7 +1,7 @@
 From b19046a10ce71973cd9611023b79dd378eab2146 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Wed, 15 Aug 2012 06:40:29 +0000
-Subject: [PATCH 350/545] HADOOP-7754. Expose file descriptors from Hadoop-wrapped local FileSystems (todd and ahmed via tucu)
+Subject: [PATCH 0350/1612] HADOOP-7754. Expose file descriptors from Hadoop-wrapped local FileSystems (todd and ahmed via tucu)
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1373235 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit c31e56de3310830c682d00b5cb5c09d8bb999783)

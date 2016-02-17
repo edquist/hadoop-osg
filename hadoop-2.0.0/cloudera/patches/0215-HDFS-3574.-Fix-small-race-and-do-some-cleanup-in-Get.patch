@@ -1,7 +1,7 @@
 From 50ba6e1ea16446ebcf9adb76fa93ff6e1481cd9a Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Tue, 3 Jul 2012 20:55:10 +0000
-Subject: [PATCH 215/545] HDFS-3574. Fix small race and do some cleanup in GetImageServlet. Contributed by Todd Lipcon.
+Subject: [PATCH 0215/1612] HDFS-3574. Fix small race and do some cleanup in GetImageServlet. Contributed by Todd Lipcon.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1356937 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 70732f22b76a3857289f268888f56541327d6dbf)

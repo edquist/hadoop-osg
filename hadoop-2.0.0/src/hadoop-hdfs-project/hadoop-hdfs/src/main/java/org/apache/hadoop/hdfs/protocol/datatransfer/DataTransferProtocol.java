@@ -55,12 +55,15 @@ public interface DataTransferProtocol {
    * @param clientName client's name.
    * @param blockOffset offset of the block.
    * @param length maximum number of bytes for this read.
+   * @param sendChecksum if false, the DN should skip reading and sending
+   *        checksums
    */
   public void readBlock(final ExtendedBlock blk,
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final long blockOffset,
-      final long length) throws IOException;
+      final long length,
+      final boolean sendChecksum) throws IOException;
 
   /**
    * Write a block to a datanode pipeline.
@@ -103,6 +106,18 @@ public interface DataTransferProtocol {
       final Token<BlockTokenIdentifier> blockToken,
       final String clientName,
       final DatanodeInfo[] targets) throws IOException;
+
+  /**
+   * Request short circuit access file descriptors from a DataNode.
+   *
+   * @param blk             The block to get file descriptors for.
+   * @param blockToken      Security token for accessing the block.
+   * @param maxVersion      Maximum version of the block data the client 
+   *                        can understand.
+   */
+  public void requestShortCircuitFds(final ExtendedBlock blk,
+      final Token<BlockTokenIdentifier> blockToken,
+      int maxVersion) throws IOException;
 
   /**
    * Receive a block from a source datanode

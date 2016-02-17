@@ -40,10 +40,12 @@ import org.apache.hadoop.hdfs.protocol.DatanodeInfo;
 import org.apache.hadoop.hdfs.protocol.DatanodeInfo.AdminStates;
 import org.apache.hadoop.hdfs.protocol.HdfsConstants.DatanodeReportType;
 import org.apache.hadoop.hdfs.protocol.LocatedBlock;
+import org.apache.hadoop.hdfs.protocol.LocatedBlocks;
 import org.apache.hadoop.hdfs.server.namenode.FSNamesystem;
 import org.apache.hadoop.hdfs.server.namenode.NameNode;
 import org.apache.hadoop.hdfs.server.namenode.NameNodeAdapter;
 import org.junit.After;
+import org.junit.Assert;
 import org.junit.Before;
 import org.junit.Test;
 
@@ -327,7 +329,7 @@ public class TestDecommission {
   /**
    * Tests decommission for non federated cluster
    */
-  @Test
+  @Test(timeout=360000)
   public void testDecommission() throws IOException {
     testDecommission(1, 6);
   }
@@ -335,7 +337,7 @@ public class TestDecommission {
   /**
    * Tests recommission for non federated cluster
    */
-  @Test
+  @Test(timeout=360000)
   public void testRecommission() throws IOException {
     testRecommission(1, 6);
   }
@@ -343,7 +345,7 @@ public class TestDecommission {
   /**
    * Test decommission for federeated cluster
    */
-  @Test
+  @Test(timeout=360000)
   public void testDecommissionFederation() throws IOException {
     testDecommission(2, 2);
   }
@@ -445,7 +447,7 @@ public class TestDecommission {
    * Tests cluster storage statistics during decommissioning for non
    * federated cluster
    */
-  @Test
+  @Test(timeout=360000)
   public void testClusterStats() throws Exception {
     testClusterStats(1);
   }
@@ -454,7 +456,7 @@ public class TestDecommission {
    * Tests cluster storage statistics during decommissioning for
    * federated cluster
    */
-  @Test
+  @Test(timeout=360000)
   public void testClusterStatsFederation() throws Exception {
     testClusterStats(3);
   }
@@ -491,7 +493,7 @@ public class TestDecommission {
    * in the include file are allowed to connect to the namenode in a non
    * federated cluster.
    */
-  @Test
+  @Test(timeout=360000)
   public void testHostsFile() throws IOException, InterruptedException {
     // Test for a single namenode cluster
     testHostsFile(1);
@@ -502,7 +504,7 @@ public class TestDecommission {
    * in the include file are allowed to connect to the namenode in a 
    * federated cluster.
    */
-  @Test
+  @Test(timeout=360000)
   public void testHostsFileFederation() throws IOException, InterruptedException {
     // Test for 3 namenode federated cluster
     testHostsFile(3);
@@ -519,8 +521,8 @@ public class TestDecommission {
     // Now empty hosts file and ensure the datanode is disallowed
     // from talking to namenode, resulting in it's shutdown.
     ArrayList<String>list = new ArrayList<String>();
-    final String badHostname = "BOGUSHOST";
-    list.add(badHostname);
+    final String bogusIp = "127.0.30.1";
+    list.add(bogusIp);
     writeConfigFile(hostsFile, list);
     
     for (int j = 0; j < numNameNodes; j++) {
@@ -544,7 +546,56 @@ public class TestDecommission {
       assertEquals("There should be 2 dead nodes", 2, info.length);
       DatanodeID id = cluster.getDataNodes().get(0).getDatanodeId();
       assertEquals(id.getHostName(), info[0].getHostName());
-      assertEquals(badHostname, info[1].getHostName());
+      assertEquals(bogusIp, info[1].getHostName());
     }
+  }
+  
+  @Test(timeout=120000)
+  public void testDecommissionWithOpenfile() throws IOException, InterruptedException {
+    LOG.info("Starting test testDecommissionWithOpenfile");
+    
+    //At most 4 nodes will be decommissioned
+    startCluster(1, 7, conf);
+        
+    FileSystem fileSys = cluster.getFileSystem(0);
+    FSNamesystem ns = cluster.getNamesystem(0);
+    
+    String openFile = "/testDecommissionWithOpenfile.dat";
+           
+    writeFile(fileSys, new Path(openFile), (short)3);   
+    // make sure the file was open for write
+    FSDataOutputStream fdos =  fileSys.append(new Path(openFile)); 
+    
+    LocatedBlocks lbs = NameNodeAdapter.getBlockLocations(cluster.getNameNode(0), openFile, 0, fileSize);
+              
+    DatanodeInfo[] dnInfos4LastBlock = lbs.getLastLocatedBlock().getLocations();
+    DatanodeInfo[] dnInfos4FirstBlock = lbs.get(0).getLocations();
+    
+    ArrayList<String> nodes = new ArrayList<String>();
+    ArrayList<DatanodeInfo> dnInfos = new ArrayList<DatanodeInfo>();
+   
+    for (DatanodeInfo datanodeInfo : dnInfos4FirstBlock) {
+      DatanodeInfo found = datanodeInfo;
+      for (DatanodeInfo dif: dnInfos4LastBlock) {
+        if (datanodeInfo.equals(dif)) {
+         found = null;         
+        }
+      }
+      if (found != null) {
+        nodes.add(found.getXferAddr());
+        dnInfos.add(found);
+      }
+    }
+    //decommission one of the 3 nodes which have last block
+    nodes.add(dnInfos4LastBlock[0].getXferAddr());
+    dnInfos.add(dnInfos4LastBlock[0]);
+    
+    writeConfigFile(excludeFile, nodes);
+    refreshNodes(ns, conf);  
+    for (DatanodeInfo dn : dnInfos) {
+      waitNodeState(dn, AdminStates.DECOMMISSIONED);
+    }           
+
+    fdos.close();
   }
 }

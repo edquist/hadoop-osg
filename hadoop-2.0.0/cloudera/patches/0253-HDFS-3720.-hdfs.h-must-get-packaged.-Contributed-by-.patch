@@ -1,7 +1,7 @@
 From 0ae0a286b959cfa0d13c559c34870d5356bf4d70 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Wed, 25 Jul 2012 21:21:14 +0000
-Subject: [PATCH 253/545] HDFS-3720. hdfs.h must get packaged. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0253/1612] HDFS-3720. hdfs.h must get packaged. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1365759 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit c9e568c736d555926480b97bd077d997215b5ec9)

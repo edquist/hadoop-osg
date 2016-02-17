@@ -46,12 +46,12 @@ import org.apache.hadoop.fs.Path;
 import org.apache.hadoop.io.DataInputBuffer;
 import org.apache.hadoop.io.DataOutputBuffer;
 import org.apache.hadoop.io.IOUtils;
+import org.apache.hadoop.io.MapFile;
 import org.apache.hadoop.io.RandomDatum;
 import org.apache.hadoop.io.SequenceFile;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
 import org.apache.hadoop.io.SequenceFile.CompressionType;
-import org.apache.hadoop.io.compress.snappy.LoadSnappy;
 import org.apache.hadoop.io.compress.zlib.BuiltInGzipDecompressor;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibDeflater;
 import org.apache.hadoop.io.compress.zlib.BuiltInZlibInflater;
@@ -68,6 +68,7 @@ import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
 import org.junit.Assert;
+import org.junit.Assume;
 import org.junit.Test;
 import static org.junit.Assert.*;
 
@@ -99,14 +100,9 @@ public class TestCodec {
   
   @Test
   public void testSnappyCodec() throws IOException {
-    if (LoadSnappy.isAvailable()) {
-      if (LoadSnappy.isLoaded()) {
-        codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
-        codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
-      }
-      else {
-        Assert.fail("Snappy native available but Hadoop native not");
-      }
+    if (SnappyCodec.isNativeCodeLoaded()) {
+      codecTest(conf, seed, 0, "org.apache.hadoop.io.compress.SnappyCodec");
+      codecTest(conf, seed, count, "org.apache.hadoop.io.compress.SnappyCodec");
     }
   }
   
@@ -514,6 +510,50 @@ public class TestCodec {
     LOG.info("SUCCESS! Completed SequenceFileCodecTest with codec \"" + codecClass + "\"");
   }
   
+  /**
+   * Regression test for HADOOP-8423: seeking in a block-compressed
+   * stream would not properly reset the block decompressor state.
+   */
+  @Test
+  public void testSnappyMapFile() throws Exception {
+    Assume.assumeTrue(SnappyCodec.isNativeCodeLoaded());
+    codecTestMapFile(SnappyCodec.class, CompressionType.BLOCK, 100);
+  }
+  
+  private void codecTestMapFile(Class<? extends CompressionCodec> clazz,
+      CompressionType type, int records) throws Exception {
+    
+    FileSystem fs = FileSystem.get(conf);
+    LOG.info("Creating MapFiles with " + records  + 
+            " records using codec " + clazz.getSimpleName());
+    Path path = new Path(new Path(
+        System.getProperty("test.build.data", "/tmp")),
+      clazz.getSimpleName() + "-" + type + "-" + records);
+
+    LOG.info("Writing " + path);
+    createMapFile(conf, fs, path, clazz.newInstance(), type, records);
+    MapFile.Reader reader = new MapFile.Reader(path, conf);
+    Text key1 = new Text("002");
+    assertNotNull(reader.get(key1, new Text()));
+    Text key2 = new Text("004");
+    assertNotNull(reader.get(key2, new Text()));
+  }
+  
+  private static void createMapFile(Configuration conf, FileSystem fs, Path path, 
+      CompressionCodec codec, CompressionType type, int records) throws IOException {
+    MapFile.Writer writer = 
+        new MapFile.Writer(conf, path,
+            MapFile.Writer.keyClass(Text.class),
+            MapFile.Writer.valueClass(Text.class),
+            MapFile.Writer.compression(type, codec));
+    Text key = new Text();
+    for (int j = 0; j < records; j++) {
+        key.set(String.format("%03d", j));
+        writer.append(key, key);
+    }
+    writer.close();
+  }
+
   public static void main(String[] args) throws IOException {
     int count = 10000;
     String codecClass = "org.apache.hadoop.io.compress.DefaultCodec";
@@ -677,6 +717,55 @@ public class TestCodec {
       r.close();
       new File(filename).delete();
     }
+  }
+
+  @Test
+  public void testGzipLongOverflow() throws IOException {
+    LOG.info("testGzipLongOverflow");
+
+    // Don't use native libs for this test.
+    Configuration conf = new Configuration();
+    conf.setBoolean(CommonConfigurationKeys.IO_NATIVE_LIB_AVAILABLE_KEY, false);
+    assertFalse("ZlibFactory is using native libs against request",
+        ZlibFactory.isNativeZlibLoaded(conf));
+
+    // Ensure that the CodecPool has a BuiltInZlibInflater in it.
+    Decompressor zlibDecompressor = ZlibFactory.getZlibDecompressor(conf);
+    assertNotNull("zlibDecompressor is null!", zlibDecompressor);
+    assertTrue("ZlibFactory returned unexpected inflator",
+        zlibDecompressor instanceof BuiltInZlibInflater);
+    CodecPool.returnDecompressor(zlibDecompressor);
+
+    // Now create a GZip text file.
+    String tmpDir = System.getProperty("test.build.data", "/tmp/");
+    Path f = new Path(new Path(tmpDir), "testGzipLongOverflow.bin.gz");
+    BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(
+      new GZIPOutputStream(new FileOutputStream(f.toString()))));
+
+    final int NBUF = 1024 * 4 + 1;
+    final char[] buf = new char[1024 * 1024];
+    for (int i = 0; i < buf.length; i++) buf[i] = '\0';
+    for (int i = 0; i < NBUF; i++) {
+      bw.write(buf);
+    }
+    bw.close();
+
+    // Now read it back, using the CodecPool to establish the
+    // decompressor to use.
+    CompressionCodecFactory ccf = new CompressionCodecFactory(conf);
+    CompressionCodec codec = ccf.getCodec(f);
+    Decompressor decompressor = CodecPool.getDecompressor(codec);
+    FileSystem fs = FileSystem.getLocal(conf);
+    InputStream is = fs.open(f);
+    is = codec.createInputStream(is, decompressor);
+    BufferedReader br = new BufferedReader(new InputStreamReader(is));
+    for (int j = 0; j < NBUF; j++) {
+      int n = br.read(buf);
+      assertEquals("got wrong read length!", n, buf.length);
+      for (int i = 0; i < buf.length; i++)
+        assertEquals("got wrong byte!", buf[i], '\0');
+    }
+    br.close();
   }
 
   public void testGzipCodecWrite(boolean useNative) throws IOException {

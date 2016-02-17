@@ -1,7 +1,7 @@
 From 04a988cfb1f8f87034cbfa987c9a91644f805f43 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Tue, 28 Aug 2012 01:41:13 +0000
-Subject: [PATCH 439/545] HDFS-3856. TestHDFSServerPorts failure is causing surefire fork failure. Contributed by Colin Patrick McCabe
+Subject: [PATCH 0439/1612] HDFS-3856. TestHDFSServerPorts failure is causing surefire fork failure. Contributed by Colin Patrick McCabe
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1377934 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit d6851209608f5bdfecff253759230ab9089a1e8c)

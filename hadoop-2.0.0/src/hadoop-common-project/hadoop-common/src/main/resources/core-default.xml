@@ -80,9 +80,17 @@
 
 <property>
   <name>hadoop.security.group.mapping</name>
-  <value>org.apache.hadoop.security.ShellBasedUnixGroupsMapping</value>
+  <value>org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback</value>
   <description>
-    Class for user to group mapping (get groups for a given user) for ACL
+    Class for user to group mapping (get groups for a given user) for ACL. 
+    The default implementation,
+    org.apache.hadoop.security.JniBasedUnixGroupsMappingWithFallback, 
+    will determine if the Java Native Interface (JNI) is available. If JNI is 
+    available the implementation will use the API within hadoop to resolve a 
+    list of groups for a user. If JNI is not available then the shell 
+    implementation, ShellBasedUnixGroupsMapping, is used.  This implementation 
+    shells out to the Linux/Unix environment with the 
+    <code>bash -c groups</code> command to resolve a list of groups for a user.
   </description>
 </property>
 
@@ -94,6 +102,15 @@
     containing the user->group mapping. When this duration has expired,
     then the implementation of the group mapping provider is invoked to get
     the groups of the user and then cached back.
+  </description>
+</property>
+
+<property>
+  <name>hadoop.security.groups.cache.warn.after.ms</name>
+  <value>5000</value>
+  <description>
+    If looking up a single user to group takes longer than this amount of
+    milliseconds, we will log a warning message.
   </description>
 </property>
 
@@ -205,6 +222,17 @@
 </property>
 
 <property>
+  <name>hadoop.security.group.mapping.ldap.directory.search.timeout</name>
+  <value>10000</value>
+  <description>
+    The attribute applied to the LDAP SearchControl properties to set a
+    maximum time limit when searching and awaiting a result.
+    Set to 0 if infinite wait period is desired.
+    Default is 10 seconds. Units in milliseconds.
+  </description>
+</property>
+
+<property>
   <name>hadoop.security.service.user.name.key</name>
   <value></value>
   <description>
@@ -212,6 +240,17 @@
     servers, this configuration is required for specifying the principal
     name to use for the service when the client wishes to make an RPC call.
   </description>
+</property>
+
+
+<property>
+    <name>hadoop.security.uid.cache.secs</name>
+    <value>14400</value>
+    <description>
+        This is the config controlling the validity of the entries in the cache
+        containing the userId to userName and groupId to groupName used by
+        NativeIO getFstat().
+    </description>
 </property>
 
 <property>
@@ -461,6 +500,31 @@
 </property>
 
 <property>
+  <name>fs.s3n.multipart.uploads.enabled</name>
+  <value>false</value>
+  <description>Setting this property to true enables multiple uploads to
+  native S3 filesystem. When uploading a file, it is split into blocks
+  if the size is larger than fs.s3n.multipart.uploads.block.size.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3n.multipart.uploads.block.size</name>
+  <value>67108864</value>
+  <description>The block size for multipart uploads to native S3 filesystem.
+  Default size is 64MB.
+  </description>
+</property>
+
+<property>
+  <name>fs.s3n.multipart.copy.block.size</name>
+  <value>5368709120</value>
+  <description>The block size for multipart copy in native S3 filesystem.
+  Default size is 5GB.
+  </description>
+</property>
+
+<property>
   <name>io.seqfile.compress.blocksize</name>
   <value>1000000</value>
   <description>The minimum block size for compression in block compressed 
@@ -543,6 +607,14 @@
   <value>10</value>
   <description>Indicates the number of retries a client will make to establish
                a server connection.
+  </description>
+</property>
+
+<property>
+  <name>ipc.client.connect.timeout</name>
+  <value>20000</value>
+  <description>Indicates the number of milliseconds a client will wait for the 
+               socket to establish a server connection.
   </description>
 </property>
 
@@ -885,7 +957,6 @@
   <value>${user.home}/hadoop-http-auth-signature-secret</value>
   <description>
     The signature secret for signing the authentication tokens.
-    If not set a random secret is generated at startup time.
     The same secret should be used for JT/NN/DN/TT configurations.
   </description>
 </property>
@@ -1083,6 +1154,14 @@
 </property>
 
 <property>
+  <name>hadoop.ssl.enabled.protocols</name>
+  <value>TLSv1</value>
+  <description>
+    Protocols supported by the ssl.
+  </description>
+</property>
+
+<property>
   <name>hadoop.jetty.logs.serve.aliases</name>
   <value>true</value>
   <description>
@@ -1090,5 +1169,81 @@
   </description>
 </property>
 
+<property>
+  <name>fs.permissions.umask-mode</name>
+  <value>022</value>
+  <description>
+    The umask used when creating files and directories.
+    Can be in octal or in symbolic. Examples are:
+    "022" (octal for u=rwx,g=r-x,o=r-x in symbolic),
+    or "u=rwx,g=rwx,o=" (symbolic for 007 in octal).
+  </description>
+</property>
+
+<!-- ha properties -->
+
+<property>
+  <name>ha.health-monitor.connect-retry-interval.ms</name>
+  <value>1000</value>
+  <description>
+    How often to retry connecting to the service.
+  </description>
+</property>
+
+<property>
+  <name>ha.health-monitor.check-interval.ms</name>
+  <value>1000</value>
+  <description>
+    How often to check the service.
+  </description>
+</property>
+
+<property>
+  <name>ha.health-monitor.sleep-after-disconnect.ms</name>
+  <value>1000</value>
+  <description>
+    How long to sleep after an unexpected RPC error.
+  </description>
+</property>
+
+<property>
+  <name>ha.health-monitor.rpc-timeout.ms</name>
+  <value>45000</value>
+  <description>
+    Timeout for the actual monitorHealth() calls.
+  </description>
+</property>
+
+<property>
+  <name>ha.failover-controller.new-active.rpc-timeout.ms</name>
+  <value>60000</value>
+  <description>
+    Timeout that the FC waits for the new active to become active
+  </description>
+</property>
+
+<property>
+  <name>ha.failover-controller.graceful-fence.rpc-timeout.ms</name>
+  <value>5000</value>
+  <description>
+    Timeout that the FC waits for the old active to go to standby
+  </description>
+</property>
+
+<property>
+  <name>ha.failover-controller.graceful-fence.connection.retries</name>
+  <value>1</value>
+  <description>
+    FC connection retries for graceful fencing
+  </description>
+</property>
+
+<property>
+  <name>ha.failover-controller.cli-check.rpc-timeout.ms</name>
+  <value>20000</value>
+  <description>
+    Timeout that the CLI (manual) FC waits for monitorHealth, getServiceState
+  </description>
+</property>
 
 </configuration>

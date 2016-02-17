@@ -30,8 +30,8 @@ import org.apache.hadoop.net.NetworkTopology;
 import org.apache.hadoop.yarn.api.records.NodeHealthStatus;
 import org.apache.hadoop.yarn.api.records.Priority;
 import org.apache.hadoop.yarn.api.records.Resource;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.Store;
-import org.apache.hadoop.yarn.server.resourcemanager.recovery.StoreFactory;
+import org.apache.hadoop.yarn.api.records.ResourceRequest;
+import org.apache.hadoop.yarn.conf.YarnConfiguration;
 import org.apache.hadoop.yarn.server.resourcemanager.resource.Resources;
 import org.apache.hadoop.yarn.server.resourcemanager.rmnode.RMNode;
 import org.junit.After;
@@ -45,9 +45,8 @@ public class TestResourceManager {
   
   @Before
   public void setUp() throws Exception {
-    Configuration conf = new Configuration();
-    Store store = StoreFactory.getStore(conf);
-    resourceManager = new ResourceManager(store);
+    Configuration conf = new YarnConfiguration();
+    resourceManager = new ResourceManager();
     resourceManager.init(conf);
   }
 
@@ -57,9 +56,9 @@ public class TestResourceManager {
 
   private org.apache.hadoop.yarn.server.resourcemanager.NodeManager
       registerNode(String hostName, int containerManagerPort, int httpPort,
-          String rackName, int memory) throws IOException {
+          String rackName, Resource capability) throws IOException {
     return new org.apache.hadoop.yarn.server.resourcemanager.NodeManager(
-        hostName, containerManagerPort, httpPort, rackName, memory,
+        hostName, containerManagerPort, httpPort, rackName, capability,
         resourceManager.getResourceTrackerService(), resourceManager
             .getRMContext());
   }
@@ -73,13 +72,15 @@ public class TestResourceManager {
     // Register node1
     String host1 = "host1";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
-      registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, memory);
+      registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(memory, 1));
     nm1.heartbeat();
     
     // Register node2
     String host2 = "host2";
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm2 = 
-      registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, memory/2);
+      registerNode(host2, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(memory/2, 1));
     nm2.heartbeat();
 
     // Submit an application
@@ -91,7 +92,7 @@ public class TestResourceManager {
     
     // Application resource requirements
     final int memory1 = 1024;
-    Resource capability1 = Resources.createResource(memory1);
+    Resource capability1 = Resources.createResource(memory1, 1);
     Priority priority1 = 
       org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.create(1);
     application.addResourceRequestSpec(priority1, capability1);
@@ -100,7 +101,7 @@ public class TestResourceManager {
     application.addTask(t1);
         
     final int memory2 = 2048;
-    Resource capability2 = Resources.createResource(memory2);
+    Resource capability2 = Resources.createResource(memory2, 1);
     Priority priority0 = 
       org.apache.hadoop.yarn.server.resourcemanager.resource.Priority.create(0); // higher
     application.addResourceRequestSpec(priority0, capability2);
@@ -122,7 +123,7 @@ public class TestResourceManager {
     Task t2 = new Task(application, priority1, new String[] {host1, host2});
     application.addTask(t2);
 
-    Task t3 = new Task(application, priority0, new String[] {RMNode.ANY});
+    Task t3 = new Task(application, priority0, new String[] {ResourceRequest.ANY});
     application.addTask(t3);
 
     // Send resource requests to the scheduler
@@ -163,7 +164,8 @@ public class TestResourceManager {
     String host1 = "host1";
     final int memory = 4 * 1024;
     org.apache.hadoop.yarn.server.resourcemanager.NodeManager nm1 = 
-      registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, memory);
+      registerNode(host1, 1234, 2345, NetworkTopology.DEFAULT_RACK, 
+          Resources.createResource(memory, 1));
     nm1.heartbeat();
     nm1.heartbeat();
     Collection<RMNode> values = resourceManager.getRMContext().getRMNodes().values();

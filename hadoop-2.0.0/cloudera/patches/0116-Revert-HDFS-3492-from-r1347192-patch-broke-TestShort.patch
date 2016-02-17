@@ -1,7 +1,7 @@
 From 109772d285a6e42360c59b3fe13f14125bf89dab Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Thu, 7 Jun 2012 21:06:13 +0000
-Subject: [PATCH 116/545] Revert HDFS-3492 from r1347192: patch broke TestShortCircuitLocalRead
+Subject: [PATCH 0116/1612] Revert HDFS-3492 from r1347192: patch broke TestShortCircuitLocalRead
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1347796 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 0b658968a062a1f43e2ab01a11678dc8e9928ec6)

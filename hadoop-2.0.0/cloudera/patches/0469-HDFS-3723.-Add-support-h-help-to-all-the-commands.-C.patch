@@ -1,7 +1,7 @@
 From 33bfec221502676255b1218c25bbcfd1c10719cf Mon Sep 17 00:00:00 2001
 From: Suresh Srinivas <suresh@apache.org>
 Date: Wed, 15 Aug 2012 00:28:41 +0000
-Subject: [PATCH 469/545] HDFS-3723. Add support -h, -help to all the commands. Contributed by Jing Zhao
+Subject: [PATCH 0469/1612] HDFS-3723. Add support -h, -help to all the commands. Contributed by Jing Zhao
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1373173 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 071fa7bb1f8de527831f7ddcc363987b6a9cc545)

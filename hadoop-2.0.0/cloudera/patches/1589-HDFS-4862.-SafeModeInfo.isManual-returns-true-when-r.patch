@@ -1,0 +1,162 @@
+From 3d0ba0327e4a45d978085c621b6ea5ced10a92bb Mon Sep 17 00:00:00 2001
+From: Kihwal Lee <kihwal@apache.org>
+Date: Fri, 7 Jun 2013 01:18:27 +0000
+Subject: [PATCH 1589/1612] HDFS-4862. SafeModeInfo.isManual() returns true when resources are low even if it wasn't entered into manually. Contributed by Ravi Prakash.
+
+git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1490487 13f79535-47bb-0310-9956-ffa450edef68
+(cherry picked from commit 78bbb10aa0605769eb1ff7d496f16f790e5252af)
+
+Conflicts:
+	hadoop-hdfs-project/hadoop-hdfs/CHANGES.txt
+	hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+---
+ .../hadoop/hdfs/server/namenode/FSNamesystem.java  |   29 ++++++++++++-------
+ .../hdfs/server/namenode/TestFSNamesystem.java     |   27 ++++++++++++++++++
+ 2 files changed, 45 insertions(+), 11 deletions(-)
+
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+index 549782c..84f8d15 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/main/java/org/apache/hadoop/hdfs/server/namenode/FSNamesystem.java
+@@ -4113,7 +4113,6 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       this.replQueueThreshold = 1.5f; // can never be reached
+       this.blockTotal = -1;
+       this.blockSafe = -1;
+-      this.reached = -1;
+       this.resourcesLow = resourcesLow;
+       enter();
+       reportStatus("STATE* Safe mode is ON.", true);
+@@ -4293,17 +4292,17 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     private synchronized void decrementSafeBlockCount(short replication) {
+       if (replication == safeReplication-1) {
+         this.blockSafe--;
+-        assert blockSafe >= 0 || isManual();
++        //blockSafe is set to -1 in manual / low resources safemode
++        assert blockSafe >= 0 || isManual() || areResourcesLow();
+         checkMode();
+       }
+     }
+ 
+     /**
+-     * Check if safe mode was entered manually or automatically (at startup, or
+-     * when disk space is low).
++     * Check if safe mode was entered manually
+      */
+     private boolean isManual() {
+-      return extension == Integer.MAX_VALUE && !resourcesLow;
++      return extension == Integer.MAX_VALUE;
+     }
+ 
+     /**
+@@ -4342,11 +4341,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       } else {
+         leaveMsg = "Safe mode will be turned off automatically";
+       }
+-      if(isManual()) {
+-        if(upgradeManager.getUpgradeState())
++      if(isManual() && !areResourcesLow()) {
++        if(upgradeManager.getUpgradeState()) {
+           return leaveMsg + " upon completion of " + 
+             "the distributed upgrade: upgrade progress = " + 
+             upgradeManager.getUpgradeStatus() + "%";
++        }
+         leaveMsg = "Use \"hdfs dfsadmin -safemode leave\" to turn safe mode off";
+       }
+ 
+@@ -4384,7 +4384,8 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+         }
+         msg += " " + leaveMsg;
+       }
+-      if(reached == 0 || isManual()) {  // threshold is not reached or manual       
++      // threshold is not reached or manual or resources low
++      if(reached == 0 || (isManual() && !areResourcesLow())) {
+         return msg + ".";
+       }
+       // extension period is in progress
+@@ -4532,7 +4533,12 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+     SafeModeInfo safeMode = this.safeMode;
+     if (safeMode == null)
+       return false;
+-    return !safeMode.isManual() && safeMode.isOn();
++    // If the NN is in safemode, and not due to manual / low resources, we
++    // assume it must be because of startup. If the NN had low resources during
++    // startup, we assume it came out of startup safemode and it is now in low
++    // resources safemode
++    return !safeMode.isManual() && !safeMode.areResourcesLow()
++      && safeMode.isOn();
+   }
+ 
+   @Override
+@@ -4641,7 +4647,7 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+   }
+ 
+   /**
+-   * Enter safe mode manually.
++   * Enter safe mode. If resourcesLow is false, then we assume it is manual
+    * @throws IOException
+    */
+   void enterSafeMode(boolean resourcesLow) throws IOException {
+@@ -4666,8 +4672,9 @@ public class FSNamesystem implements Namesystem, FSClusterStats,
+       }
+       if (resourcesLow) {
+         safeMode.setResourcesLow();
++      } else {
++        safeMode.setManual();
+       }
+-      safeMode.setManual();
+       if (isEditlogOpenForWrite) {
+         getEditLog().logSyncAll();
+       }
+diff --git a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
+index 4a66cba..04bdf41 100644
+--- a/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
++++ b/hadoop-hdfs-project/hadoop-hdfs/src/test/java/org/apache/hadoop/hdfs/server/namenode/TestFSNamesystem.java
+@@ -20,6 +20,7 @@ package org.apache.hadoop.hdfs.server.namenode;
+ 
+ import static org.apache.hadoop.hdfs.DFSConfigKeys.DFS_NAMENODE_EDITS_DIR_KEY;
+ import static org.junit.Assert.assertEquals;
++import static org.junit.Assert.assertTrue;
+ 
+ import java.io.IOException;
+ import java.net.URI;
+@@ -30,6 +31,7 @@ import org.apache.hadoop.hdfs.DFSTestUtil;
+ import org.apache.hadoop.hdfs.HdfsConfiguration;
+ import org.apache.hadoop.hdfs.server.common.HdfsServerConstants.NamenodeRole;
+ import org.junit.Test;
++import org.mockito.Mockito;
+ 
+ public class TestFSNamesystem {
+ 
+@@ -64,4 +66,29 @@ public class TestFSNamesystem {
+     leaseMan = fsn.getLeaseManager();
+     assertEquals(0, leaseMan.countLease());
+   }
++
++  @Test
++  /**
++   * Test that isInStartupSafemode returns true only during startup safemode
++   * and not also during low-resource safemode
++   */
++  public void testStartupSafemode() throws IOException {
++    Configuration conf = new Configuration();
++    FSImage fsImage = Mockito.mock(FSImage.class);
++    FSEditLog fsEditLog = Mockito.mock(FSEditLog.class);
++    Mockito.when(fsImage.getEditLog()).thenReturn(fsEditLog);
++    FSNamesystem fsn = new FSNamesystem(conf, fsImage);
++
++    fsn.leaveSafeMode(false);
++    assertTrue("After leaving safemode FSNamesystem.isInStartupSafeMode still "
++      + "returned true", !fsn.isInStartupSafeMode());
++    assertTrue("After leaving safemode FSNamesystem.isInSafeMode still returned"
++      + " true", !fsn.isInSafeMode());
++
++    fsn.enterSafeMode(true);
++    assertTrue("After entering safemode due to low resources FSNamesystem."
++      + "isInStartupSafeMode still returned true", !fsn.isInStartupSafeMode());
++    assertTrue("After entering safemode due to low resources FSNamesystem."
++      + "isInSafeMode still returned false",  fsn.isInSafeMode());
++  }
+ }
+-- 
+1.7.0.4
+

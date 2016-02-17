@@ -1,7 +1,7 @@
 From 6cee94df8665e8a81fcd819edf8ab6a73e457aa4 Mon Sep 17 00:00:00 2001
 From: Aaron Twining Myers <atm@apache.org>
 Date: Thu, 12 Jul 2012 01:23:37 +0000
-Subject: [PATCH 199/545] HADOOP-8585. Fix initialization circularity between UserGroupInformation and HadoopConfiguration. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0199/1612] HADOOP-8585. Fix initialization circularity between UserGroupInformation and HadoopConfiguration. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1360499 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a24fc5d0177b1589c596d59170b14dc94aceda25)

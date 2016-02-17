@@ -1,7 +1,7 @@
 From 5015147006f842aa73273a29c0edc0df08078d74 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 12 Jul 2012 19:59:20 +0000
-Subject: [PATCH 220/545] HDFS-3641. Move server Util time methods to common and use now instead of System#currentTimeMillis. Contributed by Eli Collins
+Subject: [PATCH 0220/1612] HDFS-3641. Move server Util time methods to common and use now instead of System#currentTimeMillis. Contributed by Eli Collins
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1360896 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 151495a9bd1e98e99bdaa8607b1e83c653853c75)

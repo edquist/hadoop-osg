@@ -1,7 +1,7 @@
 From b0e321a31606318c958b8035d3c51452c25abf31 Mon Sep 17 00:00:00 2001
 From: Eli Collins <eli@apache.org>
 Date: Thu, 31 May 2012 21:02:08 +0000
-Subject: [PATCH 083/545] HDFS-3484. hdfs fsck doesn't work if NN HTTP address is set to 0.0.0.0 even if NN RPC address is configured. Contributed by Aaron T. Myers
+Subject: [PATCH 0083/1612] HDFS-3484. hdfs fsck doesn't work if NN HTTP address is set to 0.0.0.0 even if NN RPC address is configured. Contributed by Aaron T. Myers
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1344908 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit a5d1ecbf87c2b8cc5881914ff92f57af7dd363f1)

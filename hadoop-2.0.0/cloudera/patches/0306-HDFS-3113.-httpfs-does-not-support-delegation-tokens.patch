@@ -1,7 +1,7 @@
 From c2a8653ba5ebedd71f4bf5d9d9eb7ecffcad0712 Mon Sep 17 00:00:00 2001
 From: Alejandro Abdelnur <tucu@apache.org>
 Date: Thu, 26 Jul 2012 13:41:09 +0000
-Subject: [PATCH 306/545] HDFS-3113. httpfs does not support delegation tokens.
+Subject: [PATCH 0306/1612] HDFS-3113. httpfs does not support delegation tokens.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/branches/branch-2@1365989 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit f7c98cf64c5763b668ad43eddf40e1276186d173)

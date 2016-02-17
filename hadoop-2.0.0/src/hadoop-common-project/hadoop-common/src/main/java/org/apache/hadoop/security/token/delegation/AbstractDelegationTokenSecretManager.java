@@ -27,8 +27,10 @@ import java.io.DataInputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Set;
 
 import javax.crypto.SecretKey;
 
@@ -84,6 +86,11 @@ extends AbstractDelegationTokenIdentifier>
   private long tokenMaxLifetime;
   private long tokenRemoverScanInterval;
   private long tokenRenewInterval;
+  /**
+   * Whether to store a token's tracking ID in its TokenInformation.
+   * Can be overridden by a subclass.
+   */
+  protected boolean storeTokenTrackingId;
   private Thread tokenRemoverThread;
   protected volatile boolean running;
 
@@ -100,6 +107,7 @@ extends AbstractDelegationTokenIdentifier>
     this.tokenMaxLifetime = delegationTokenMaxLifetime;
     this.tokenRenewInterval = delegationTokenRenewInterval;
     this.tokenRemoverScanInterval = delegationTokenRemoverScanInterval;
+    this.storeTokenTrackingId = false;
   }
 
   /** should be called before this object is used */
@@ -144,6 +152,10 @@ extends AbstractDelegationTokenIdentifier>
     return;
   }
   
+  protected void logExpireToken(TokenIdent ident) throws IOException {
+    return;
+  }
+
   /** 
    * Update the current master key 
    * This is called once by startThreads before tokenRemoverThread is created, 
@@ -210,7 +222,7 @@ extends AbstractDelegationTokenIdentifier>
     LOG.info("Creating password for identifier: " + identifier);
     byte[] password = createPassword(identifier.getBytes(), currentKey.getKey());
     currentTokens.put(identifier, new DelegationTokenInformation(now
-        + tokenRenewInterval, password));
+        + tokenRenewInterval, password, getTrackingIdIfEnabled(identifier)));
     return password;
   }
 
@@ -227,6 +239,21 @@ extends AbstractDelegationTokenIdentifier>
       throw new InvalidToken("token (" + identifier.toString() + ") is expired");
     }
     return info.getPassword();
+  }
+
+  protected String getTrackingIdIfEnabled(TokenIdent ident) {
+    if (storeTokenTrackingId) {
+      return ident.getTrackingId();
+    }
+    return null;
+  }
+
+  public synchronized String getTokenTrackingId(TokenIdent identifier) {
+    DelegationTokenInformation info = currentTokens.get(identifier);
+    if (info == null) {
+      return null;
+    }
+    return info.getTrackingId();
   }
 
   /**
@@ -289,8 +316,9 @@ extends AbstractDelegationTokenIdentifier>
           + " is trying to renew a token with " + "wrong password");
     }
     long renewTime = Math.min(id.getMaxDate(), now + tokenRenewInterval);
+    String trackingId = getTrackingIdIfEnabled(id);
     DelegationTokenInformation info = new DelegationTokenInformation(renewTime,
-        password);
+        password, trackingId);
 
     if (currentTokens.get(id) == null) {
       throw new InvalidToken("Renewal request for unknown token");
@@ -348,9 +376,17 @@ extends AbstractDelegationTokenIdentifier>
   public static class DelegationTokenInformation {
     long renewDate;
     byte[] password;
+    String trackingId;
+
     public DelegationTokenInformation(long renewDate, byte[] password) {
+      this(renewDate, password, null);
+    }
+
+    public DelegationTokenInformation(long renewDate, byte[] password,
+        String trackingId) {
       this.renewDate = renewDate;
       this.password = password;
+      this.trackingId = trackingId;
     }
     /** returns renew date */
     public long getRenewDate() {
@@ -360,17 +396,31 @@ extends AbstractDelegationTokenIdentifier>
     byte[] getPassword() {
       return password;
     }
+    /** returns tracking id */
+    public String getTrackingId() {
+      return trackingId;
+    }
   }
   
   /** Remove expired delegation tokens from cache */
-  private synchronized void removeExpiredToken() {
+  private void removeExpiredToken() throws IOException {
     long now = Time.now();
-    Iterator<DelegationTokenInformation> i = currentTokens.values().iterator();
-    while (i.hasNext()) {
-      long renewDate = i.next().getRenewDate();
-      if (now > renewDate) {
-        i.remove();
+    Set<TokenIdent> expiredTokens = new HashSet<TokenIdent>();
+    synchronized (this) {
+      Iterator<Map.Entry<TokenIdent, DelegationTokenInformation>> i =
+          currentTokens.entrySet().iterator();
+      while (i.hasNext()) {
+        Map.Entry<TokenIdent, DelegationTokenInformation> entry = i.next();
+        long renewDate = entry.getValue().getRenewDate();
+        if (renewDate < now) {
+          expiredTokens.add(entry.getKey());
+          i.remove();
+        }
       }
+    }
+    // don't hold lock on 'this' to avoid edit log updates blocking token ops
+    for (TokenIdent ident : expiredTokens) {
+      logExpireToken(ident);
     }
   }
 

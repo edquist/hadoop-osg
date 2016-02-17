@@ -1,7 +1,7 @@
 From 21484a6d4a0064f7611eda27739382030fa02bfa Mon Sep 17 00:00:00 2001
 From: Todd Lipcon <todd@apache.org>
 Date: Wed, 23 May 2012 20:42:48 +0000
-Subject: [PATCH 077/545] HDFS-2982. Startup performance suffers when there are many edit log segments. Contributed by Colin Patrick McCabe.
+Subject: [PATCH 0077/1612] HDFS-2982. Startup performance suffers when there are many edit log segments. Contributed by Colin Patrick McCabe.
 
 git-svn-id: https://svn.apache.org/repos/asf/hadoop/common/trunk@1342042 13f79535-47bb-0310-9956-ffa450edef68
 (cherry picked from commit 5e11f5247bb38530675657c1af44d57ffcec75a1)
