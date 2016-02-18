@@ -32,6 +32,7 @@
 #include <strings.h>
 #include <sys/socket.h>
 #include <pthread.h>
+#include <unistd.h>
 #include <iostream>
 #include <fstream>
 
