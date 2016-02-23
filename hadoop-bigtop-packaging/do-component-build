@@ -88,11 +88,6 @@ mkdir -p hadoop-mapreduce1-project/build/hadoop-${MR1_VERSION}/docs/
 
 mv hadoop-mapreduce1-project/build/hadoop-${MR1_VERSION} hadoop-mapreduce1-project/build/hadoop-mr1
 
-if [ -n "$DO_MAVEN_DEPLOY" ]; then
-# Change to cloudera/maven directory, and install
-# (and if called from CDH nightly build, deploy) artifacts into Maven repository
-fi
-
 # Create a manifest for the hadoop-0.20-client
 (cd hadoop-mapreduce1-project/cloudera/maven-packaging/hadoop-client ; mvn -B assembly:single)
 (cd hadoop-mapreduce1-project/cloudera/maven-packaging/hadoop-client/target/hadoop-client*/client ; ls) > hadoop-mapreduce1-project/build/hadoop-mr1/hadoop-client.list
